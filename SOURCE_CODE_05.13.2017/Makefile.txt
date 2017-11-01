@@ -1,0 +1,65 @@
+# Makefile for offline CASACNP:
+#
+# f95 -v
+# gcc version 4.4.7 20120313 (Red Hat 4.4.7-4) (GCC)
+
+PROG = ./casaclm_mimics_corpse_test
+
+#FC = ifort                    # compiler on both cherax and shine (-CB = check bounds)
+#FFLAGS = -O0 -CB
+
+FC = f95                    
+#FFLAGS = -g -C -fbacktrace -fbounds-check
+#FFLAGS = -g -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8 -fcheck=all -Wall
+FFLAGS = -g -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8
+
+LIB_NETCDF=	/usr/local/netcdf/lib 
+INCS=	/usr/local/include
+
+$(PROG): casaoffline_driver_clm.o 
+	$(FC) $(FFLAGS) -o $(PROG) casaoffline_driver_clm.o casa_inout.o mimics_inout.o \
+	casa_cnp.o mimics_cycle.o casa_vegsoil.o casa_variable.o mimics_variable.o \
+	corpse_variable.o corpse_soil_carbon.o corpse_inout.o corpse_cycle.o -L$(LIB_NETCDF) -lnetcdff
+
+casaoffline_driver_clm.o: casaoffline_driver_clm.f90 casa_vegsoil.o casa_cnp.o mimics_cycle.o \
+	casa_variable.o mimics_variable.o corpse_variable.o casa_inout.o mimics_inout.o corpse_inout.o corpse_cycle.o
+	$(FC) $(FFLAGS) -c casaoffline_driver_clm.f90 
+
+casa_vegsoil.o: casa_vegsoil.f90 casa_variable.o
+	$(FC) $(FFLAGS) -c casa_vegsoil.f90
+
+casa_variable.o: casa_variable.f90 
+	$(FC) $(FFLAGS) -c casa_variable.f90
+
+mimics_variable.o: mimics_variable.f90 
+	$(FC) $(FFLAGS) -c mimics_variable.f90
+
+casa_inout.o: casa_inout.f90 casa_vegsoil.o casa_variable.o casa_cnp.o mimics_cycle.o mimics_inout.o corpse_inout.o \
+	corpse_cycle.o corpse_inout.o
+	$(FC) $(FFLAGS) -c -I$(INCS) casa_inout.f90
+
+mimics_inout.o: mimics_inout.f90 casa_variable.o mimics_variable.o 
+	$(FC) $(FFLAGS) -c -I$(INCS) mimics_inout.f90
+
+mimics_cycle.o: mimics_cycle.f90 casa_variable.o mimics_variable.o 
+	$(FC) $(FFLAGS) -c -I$(INCS) mimics_cycle.f90
+
+casa_cnp.o: casa_cnp.f90 casa_vegsoil.o casa_variable.o
+	$(FC) $(FFLAGS) -c casa_cnp.f90
+
+corpse_soil_carbon.o: corpse_soil_carbon.f90
+	$(FC) $(FFLAGS) -c corpse_soil_carbon.f90
+
+corpse_variable.o: corpse_variable.f90 corpse_soil_carbon.o
+	$(FC) $(FFLAGS) -c corpse_variable.f90
+
+corpse_inout.o: corpse_inout.f90 corpse_variable.o 
+	$(FC) $(FFLAGS) -c -I$(INCS) corpse_inout.f90
+
+corpse_cycle.o: corpse_cycle.f90 corpse_variable.o corpse_soil_carbon.o
+	$(FC) $(FFLAGS) -c -I$(INCS) corpse_cycle.f90
+
+clean:
+	rm -f *.o $(PROG) *.mod
+	ln -s $(NCMOD) ./netcdf.mod
+
