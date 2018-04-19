@@ -124,8 +124,8 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
   integer :: npt, ihr, jj, doy
   integer :: badLitter
   real    :: zeroThreshold
-  real :: air_filled_porosity, theta_frzn
-  real,dimension(mp) :: theta
+  real    :: air_filled_porosity
+  real,dimension(mp) :: theta_liq, theta_frzn, fT, fW
 
   ! Variables to hold the daily litter inputs from the CASACNP model
   real,dimension(nspecies):: daily_leaflitter_input
@@ -133,7 +133,10 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
   real,dimension(nspecies):: daily_exudate_input
 
   zeroThreshold = -10.0e-5
-  theta(:) = 0.0
+  theta_liq(:) = 0.0
+  theta_frzn(:) = 0.0
+  fT(:) = 0.0
+  fW(:) = 0.0
 
   if (iptToSave_corpse > 0) then
       open(215,file=sPtFileNameCORPSE, access='APPEND')
@@ -146,11 +149,11 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
       ! Only the daily_exudate_input(LABILE) value will be reset to non-zero value. -mdh 2/8/2017
       daily_exudate_input(:) = 0
 
-      ! Ben said that theta is actually fraction of water-filled pore space, not volumetric swc. -mdh 2/27/2017
-      !!theta = casamet%moistavg(npt) ! mean volumetric soil water content (0.0 - 1.0)
-      theta(npt) = casamet%moistavg(npt)/soil%ssat(npt) ! fraction of liquid water-filled pore space (0.0 - 1.0)
-
       IF(casamet%iveg2(npt) /= icewater) THEN
+
+          ! Ben said that theta_liq is actually fraction of water-filled pore space, not volumetric swc. -mdh 2/27/2017
+          !!theta_liq = casamet%moistavg(npt) ! mean volumetric soil water content (0.0 - 1.0)
+          theta_liq(npt) = min(1.0, casamet%moistavg(npt)/soil%ssat(npt)) ! fraction of liquid water-filled pore space (0.0 - 1.0)
 
           ! New output variable to track daily CO2 respiration losses when cwd decomposes to structural litter. -mdh 2/6/2017
           if (idoy == 1) then
@@ -166,15 +169,28 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
           !! daily_exudate_input = annual_exudate_input*dt
           !! Divide by 1000 to convert gC/m2/yr to kgC/m2/yr. -mdh 11/18/2016
           daily_exudate_input(LABILE) = exudate_npp_frac(LABILE)*casaflux%CnppAn(npt)*dt/1000.0
-   
-          ! Convert litter inputs from gC/m2 to kgC/m2
-          daily_leaflitter_input(LABILE) = cleaf2met(npt)/1000.0
-          daily_leaflitter_input(RECALCTRNT) = (cleaf2str(npt) + cwd2str(npt))/1000.0
-          daily_leaflitter_input(DEADMICRB) = 0.0
+          
+          if (litter_option == 2) then
+            ! Litter inputs are split between above ground and soil pools
+            ! Convert litter inputs from gC/m2 to kgC/m2
+            daily_leaflitter_input(LABILE) = cleaf2met(npt)/1000.0
+            daily_leaflitter_input(RECALCTRNT) = (cleaf2str(npt) + cwd2str(npt))/1000.0
+            daily_leaflitter_input(DEADMICRB) = 0.0
   
-          daily_rootlitter_input(LABILE) = croot2met(npt)/1000.0
-          daily_rootlitter_input(RECALCTRNT) = croot2str(npt)/1000.0
-          daily_rootlitter_input(DEADMICRB) = 0.0
+            daily_rootlitter_input(LABILE) = croot2met(npt)/1000.0
+            daily_rootlitter_input(RECALCTRNT) = croot2str(npt)/1000.0
+            daily_rootlitter_input(DEADMICRB) = 0.0
+          else
+            ! All litter inputs go into soil pools
+            ! Convert litter inputs from gC/m2 to kgC/m2i
+            daily_leaflitter_input(LABILE) = 0.0
+            daily_leaflitter_input(RECALCTRNT) = 0.0
+            daily_leaflitter_input(DEADMICRB) = 0.0
+  
+            daily_rootlitter_input(LABILE) = (croot2met(npt) + cleaf2met(npt))/1000.0
+            daily_rootlitter_input(RECALCTRNT) = (croot2str(npt) + cleaf2str(npt) + cwd2str(npt))/1000.0
+            daily_rootlitter_input(DEADMICRB) = 0.0
+          endif
 
           !Reduce labile root litter inputs by the amount of daily_exudate_input.  
           !Reduce daily_exudate_input if the flux exceeds this labile litter input. - mdh 2/8/2017
@@ -236,16 +252,22 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
                   call add_carbon_to_rhizosphere(pt(npt)%soil(jj),daily_exudate_input)
           
                   ! Update using casamet%frznmoistavg(npt) variable. -mdh 3/13/2107
-                  !air_filled_porosity = 1.0-theta(npt)
-                  theta_frzn = casamet%frznmoistavg(npt)/soil%ssat(npt) ! fraction of frozen water-filled pore space (0.0 - 1.0)
-                  air_filled_porosity = max(0.0, 1.0-theta(npt)-theta_frzn)
+                  !air_filled_porosity = 1.0-theta_liq(npt)
+                  theta_frzn(npt) = min(1.0, casamet%frznmoistavg(npt)/soil%ssat(npt)) ! fraction of frozen water-filled pore space (0.0 - 1.0)
+                  air_filled_porosity = max(0.0, 1.0-theta_liq(npt)-theta_frzn(npt))
+
+                  ! fW(npt)=(theta_liq(npt)**3+0.001)*max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor)
+                  fW(npt) = (theta_liq(npt)**3+0.001)*max((air_filled_porosity)**2.5,0.003)
+!                 fW(npt) = max(0.05*0.022600567942709, fW(npt))  !WW added 12.14.2017 to put lower limit on CORPSE, similar to MIMICS
+                  fW(npt) = max(0.0001                , fW(npt))  !WW added 12.16.2017 to put lower limit on CORPSE, similar to MIMICS
+                  fT(npt) = 0.0 ! placeholder for future output, if needed
 
                   call update_pool(pool=pt(npt)%soil(jj), &
                                T=T, &
-                               theta=theta(npt),&
+                               theta_liq=theta_liq(npt),&
                                air_filled_porosity=air_filled_porosity, &
-                               liquid_water=theta(npt), &
-                               frozen_water=theta_frzn, &
+                               liquid_water=theta_liq(npt), &
+                               frozen_water=theta_frzn(npt), &
                                dt=dt,&
                                layerThickness=pt(npt)%dz(jj), &
                                fast_C_loss_rate=pt(npt)%fast_C_loss_rate, &
@@ -263,17 +285,17 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
               enddo
       
               ! Update using casamet%frznmoistavg(npt) variable. -mdh 3/13/2107
-              !air_filled_porosity = 1.0-theta(npt)
-              theta_frzn = casamet%frznmoistavg(npt)/soil%ssat(npt) ! fraction of frozen water-filled pore space (0.0 - 1.0)
-              air_filled_porosity = max(0.0, 1.0-theta(npt)-theta_frzn)
+              !air_filled_porosity = 1.0-theta_liq(npt)
+              theta_frzn(npt) = min(1.0, casamet%frznmoistavg(npt)/soil%ssat(npt)) ! fraction of frozen water-filled pore space (0.0 - 1.0)
+              air_filled_porosity = max(0.0, 1.0-theta_liq(npt)-theta_frzn(npt))
 
               !Do the decomposition etc for the litter layer
               call update_pool(pool=pt(npt)%litterlayer,&
                            T=T, &
-                           theta=theta(npt), &
+                           theta_liq=theta_liq(npt), &
                            air_filled_porosity=air_filled_porosity, &
-                           liquid_water=theta(npt), &
-                           frozen_water=theta_frzn, &
+                           liquid_water=theta_liq(npt), &
+                           frozen_water=theta_frzn(npt), &
                            dt=dt,&
                            layerThickness=pt(npt)%dz(1),&
                            fast_C_loss_rate=pt(npt)%fast_C_loss_rate, &
@@ -316,10 +338,12 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
       if (mod(timestep,recordtime) .eq. 0) then
           do jj=1,num_lyr
               !call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), casamet%moistavg(npt), casamet%tsoilavg(npt))
-              call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta(npt), casamet%tsoilavg(npt))
+              call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), &
+                                    theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt))
           enddo
           !call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, casamet%moistavg(npt), casamet%tsoilavg(npt))
-          call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta(npt), casamet%tsoilavg(npt))
+          call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), &
+                                theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt))
 
           if (casamet%ijgcm(npt) .eq. iptToSave_corpse) then
               !ATTENTION: TO DO
@@ -332,11 +356,11 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
 
       ! Accumulate C pools and fluxes every day
       do jj=1,num_lyr
-          call corpse_caccum(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta(npt), casamet%tsoilavg(npt), &
-                             doy,casamet%ijgcm(npt))
+          call corpse_caccum(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), theta_frzn(npt),  &
+                             fT(npt), fW(npt), casamet%tsoilavg(npt), doy, casamet%ijgcm(npt))
       enddo
-      call corpse_caccum(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta(npt), casamet%tsoilavg(npt), &
-                         doy,casamet%ijgcm(npt))
+      call corpse_caccum(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), theta_frzn(npt),  &
+                         fT(npt), fW(npt), casamet%tsoilavg(npt), doy, casamet%ijgcm(npt))
 
   enddo
 
