@@ -1,3 +1,6 @@
+module load tool/netcdf/4.3.2/gcc
+rm *.o *.mod
+make -f Makefile.txt casaclm_mimics_corpse_test
 
 Code Updates 11/07/2016
 Melannie Hartman
@@ -483,4 +486,17 @@ of transient weather files to be read over and over mloop times. This can be use
 way of doing spinups.  The option initcasa=0 or initcasa=1 read a single met.nc file over and
 over, and the size of this file was limited to 5-7 years.
 
+----------------------------------------------------------------------------------------------------
+11/6/2017
+
+Started with code in /project/tss/wwieder/CASACLM/SOURCE_CODE_11.02.2017_mimTHETA2
+
+1) Streamline netCDF tools so only necessary fields are written to met files (omit NPP, LAI)
+Done. Needs testing!
+
+2) Echo CASA, MIMICS, and CORPSE parameter files as they are read
+Done. Needs testing!
+   
+3) Echo CASA, MIMICS, and CORPSE restart files being read upon initialization.  
+Done. Needs testing!
 
