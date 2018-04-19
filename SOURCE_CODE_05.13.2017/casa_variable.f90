@@ -219,6 +219,9 @@ MODULE casavariable
                                        ratioNPsoil,   &
                                        ratioNCsoilmin,&
                                        ratioNCsoilmax
+
+    REAL(r_2), DIMENSION(:),POINTER :: fT, fW, thetaLiq
+
   END TYPE casa_pool
 
   !! casa_annual_pool is used to store average annual pools
@@ -240,7 +243,10 @@ MODULE casavariable
                                        PsoilAn
 
     REAL(r_2), DIMENSION(:),POINTER :: tairAn,        &
-                                       tsoilAn 
+                                       tsoilAn,       &
+                                       fTAn,          &
+                                       fWAn,          &
+                                       thetaLiqAn
 
   END TYPE casa_annual_pool
 
@@ -492,7 +498,10 @@ SUBROUTINE alloc_casavariable(mp,mvtype,mst,ms)
            casapool%ratioNPsoil(arraysize,msoil),     &
            casapool%ratioNCsoilnew(arraysize,msoil),  &
            casapool%ratioNCsoilmin(arraysize,msoil),  &
-           casapool%ratioNCsoilmax(arraysize,msoil))
+           casapool%ratioNCsoilmax(arraysize,msoil),  &
+           casapool%fT(arraysize),                    &
+           casapool%fW(arraysize),                    &
+           casapool%thetaLiq(arraysize))
 
   !! Added new variable type. -MDH 9/29/2014
   ALLOCATE(casapoolAn%CplantAn(arraysize,mplant),        &
@@ -505,7 +514,10 @@ SUBROUTINE alloc_casavariable(mp,mvtype,mst,ms)
            casapoolAn%NlitterAn(arraysize,mlitter),      &
            casapoolAn%PlitterAn(arraysize,mlitter),      &
            casapoolAn%tairAn(arraysize),                 &
-           casapoolAn%tsoilAn(arraysize))
+           casapoolAn%tsoilAn(arraysize),                &
+           casapoolAn%fTAn(arraysize),                   &
+           casapoolAn%fWAn(arraysize),                   &
+           casapoolAn%thetaLiqAn(arraysize))
 
   ALLOCATE(casaflux%Cgpp(arraysize),                     &
            casaflux%Cnpp(arraysize),                     &

@@ -54,13 +54,16 @@ MODULE corpsevariable
         real,allocatable :: Rtot(:,:)             ! dimensions nspecies, nlines
         real,allocatable :: protectedProd(:,:)    ! dimensions nspecies, nlines
         real,allocatable :: Ts(:)                 ! dimension nlines
-        real,allocatable :: theta(:)              ! dimension nlines
+        real,allocatable :: thetaLiq(:)           ! dimension nlines
+        real,allocatable :: thetaFrzn(:)          ! dimension nlines
+        real,allocatable :: fT(:)                 ! dimensions nlines (Placeholder, not currently written to output -mdh 11/27/2017) 
+        real,allocatable :: fW(:)                 ! dimensions nlines  
         real,allocatable :: time(:)               ! dimension nlines
         real             :: cwd2co2(366)          ! dimension 1..days in a year (added 2/6/2017)
         integer :: linesWritten=0
         integer,allocatable::ncohorts(:)
         ! Annual means for the simulation (added 3/28/2016)
-        ! These are updated in subroutine corpse_caccum.  Mean calculated ?? (TO DO)
+        ! These are updated in subroutine corpse_caccum.  
         integer :: nYear=0                        ! counter for current year being simulated
         real,allocatable :: litterCan(:,:)        ! dimensions nspecies, nlines
         real,allocatable :: protectedCan(:,:)     ! dimensions nspecies, nlines            
@@ -68,7 +71,10 @@ MODULE corpsevariable
         real,allocatable :: CO2an(:)              ! dimensions nlines
         real,allocatable :: totalCan(:)           ! dimensions nlines
         real,allocatable :: TsAn(:)               ! dimensions nlines
-        real,allocatable :: thetaAn(:)            ! dimensions nlines               
+        real,allocatable :: thetaLiqAn(:)         ! dimensions nlines               
+        real,allocatable :: thetaFrznAn(:)        ! dimensions nlines           
+        real,allocatable :: fTAn(:)               ! dimensions nlines (Placeholder, not currently written to output -mdh 11/27/2017) 
+        real,allocatable :: fWAn(:)               ! dimensions nlines      
         real,allocatable :: timeAn(:)             ! dimensions nlines               
     end type outputvars
 
@@ -102,7 +108,10 @@ MODULE corpsevariable
         integer :: soilCid(nspecies)         ! NetCDF variable ID for unprotected soil carbon
         integer :: litterCid(nspecies)       ! NetCDF variable ID for unprotected litter layer carbon
         integer :: Tsid                      ! NetCDF variable ID for soil temperature
-        integer :: thetaid                   ! NetCDF variable ID for soil moisture
+        integer :: thetaLiqid                ! NetCDF variable ID for liquid soil moisture
+        integer :: thetaFrznid               ! NetCDF variable ID for frozen soil moisture
+!       integer :: fTid                      ! NetCDF variable ID for liquid soil moisture
+        integer :: fWid                      ! NetCDF variable ID for frozen soil moisture
         integer :: soil_livingMicrobeid      ! NetCDF variable ID for living soil microbe carbon
         integer :: litter_livingMicrobeid    ! NetCDF variable ID for living litter layer microbe carbon
         integer :: soil_CO2id                ! NetCDF variable ID for soil heterotrophic respiration C 
@@ -134,15 +143,15 @@ MODULE corpsevariable
     !Parameters for this test model run, in namelist file
     namelist /CORPSE_casa_nml/ initial_C, &
                                exudate_npp_frac, &
-                               rhizosphere_frac
+                               rhizosphere_frac, &
+                               litter_option
     
     real:: initial_C(nspecies)             ! initial carbon pools for litter and soil layers
     !!real:: annual_exudate_input(nspecies)
     real:: exudate_npp_frac(nspecies)
     real:: rhizosphere_frac
-
-    real::theta    !volumetric soil water content (0.0-1.0); 
-    real::T        !soil temperature (K)
+    integer:: litter_option
+    real::T           !soil temperature (K)
     
     integer::recordtime  !How often to record output data (# of timestep(hours))
     !!integer::maxSteps  !Maximum number of CORPSE time steps in the simulation.   
@@ -162,7 +171,7 @@ MODULE corpsevariable
     character(len=100) :: sPtFileNameCORPSE
     integer :: iptToSave_corpse
 
-    
+ 
 CONTAINS
 
 !----------------------------------------------------------------------------------------------------

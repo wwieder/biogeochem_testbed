@@ -585,7 +585,7 @@ SUBROUTINE casa_xratesoil(xklitter,xksoil,veg,soil,casamet,casabiome)
 
   xklitter(:) = 1.0
   xksoil(:)   = 1.0
-  fwps(:)     =  casamet%moistavg(:)/soil%ssat(:)
+  fwps(:)     =  min(1.0, casamet%moistavg(:)/soil%ssat(:))
   tsavg(:)    =  casamet%tsoilavg(:) 
 
   ! BP changed the WHERE construct to DO-IF for Mk3L (jun2010)
@@ -598,6 +598,10 @@ SUBROUTINE casa_xratesoil(xklitter,xksoil,veg,soil,casamet,casabiome)
                xkwater(npt)=1.0
     xklitter(npt) = casabiome%xkoptlitter(veg%iveg(npt)) * xktemp(npt) * xkwater(npt)
     xksoil(npt)   = casabiome%xkoptsoil(veg%iveg(npt))   * xktemp(npt) * xkwater(npt)
+
+    casapool%thetaLiq(npt) = fwps(npt)
+    casapool%fT(npt) = xktemp(npt)
+    casapool%fW(npt) = xkwater(npt)
 
     !print *, 'xratesoil: ', npt, casamet%moistavg(npt),soil%ssat(npt),casamet%tsoilavg(npt),xksoil(npt)
     !print *, 'xklitter: ', npt, tsavg(npt), xklitter(npt), xktemp(npt), xkwater(npt)
@@ -662,8 +666,8 @@ SUBROUTINE casa_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool, &
                              /(max(1.0e-10,casapool%Nplant(:,froot))*casabiome%ftransNPtoL(veg%iveg(:),froot))) &
                              * casabiome%fracLigninplant(veg%iveg(:),froot) 
 
-    casaflux%fromPtoL(:,metb,leaf)    = max(0.001, 0.85 - 0.018 *ratioLignintoN(:,leaf)) 
-    casaflux%fromPtoL(:,metb,froot)   = max(0.001, 0.85 - 0.018 *ratioLignintoN(:,froot))
+    casaflux%fromPtoL(:,metb,leaf)    = max(0.001, (0.75*(0.85 - 0.013 *ratioLignintoN(:,leaf))))  ! WW modified to reflect MIMICS parameterization
+    casaflux%fromPtoL(:,metb,froot)   = max(0.001, (0.75*(0.85 - 0.013 *ratioLignintoN(:,froot)))) ! provides lower fMET estimates, Dec 6, 2017
     casaflux%fromPtoL(:,str,leaf)    = 1.0 - casaflux%fromPtoL(:,metb,leaf)
     casaflux%fromPtoL(:,str,froot)   = 1.0 - casaflux%fromPtoL(:,metb,froot) 
     casaflux%fromPtoL(:,cwd,wood)    = 1.0
