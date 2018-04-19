@@ -44,7 +44,10 @@
 ! for each grid cell are read directly from a file rather than assigned
 ! from soil type (1-7).
 !
-! Melannie D. Hartman, March 2014 - September 2016
+! Melannie D. Hartman, March 2014 - November 2017
+! Removed NPP and LAI from met.nc files. -mdh 11/6/2017
+! Echo CASA parameter values as they are read in (subroutine casa_readbiome). -mdh 11/6/2017
+! Echo restart file contents (subroutine casa_init). -mdh 11/6/2017
 !--------------------------------------------------------------------------------
 
 SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
@@ -57,6 +60,7 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
   implicit none
   character(len=100)  fname_cnpbiome
   character(len=100)  filename_soilprop
+  character(len=200)  buffer
   integer mvt,mst
   integer  i,iv1,nv,ns,nv0,nv1,nv2,nv3,nv4,nv5,nv6,nv7,nv8,nv9,nv10,nv11,npt,iv,is,iso
   real(r_2),    dimension(mvt)          :: leafage,frootage,woodage
@@ -66,7 +70,7 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
   real(r_2),    dimension(mvt,mplant)   :: ratioCNplant
   !! Added (-MDH 6/9/2014)
   !!real(r_2),  dimension(mvt,msoil)    :: ratioCNsoil
-  REAL(r_2),    DIMENSION(mvt,msoil)    :: ratioCNsoil,ratioCNsoilmin,ratioCNsoilmax
+  real(r_2),    dimension(mvt,msoil)    :: ratioCNsoil,ratioCNsoilmin,ratioCNsoilmax
   real(r_2),    dimension(ms)           :: depthsoila,depthsoilb
   real(r_2),    dimension(mvt)          :: xfNminloss, xfNminleach, xnfixrate
   real(r_2),    dimension(mvt)          :: cleaf,cwood,cfroot, &
@@ -85,9 +89,9 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
                 xratioNPwoodmin,xratioNPwoodmax,                 &
                 xratioNPfrootmin,xratioNPfrootmax 
 
-  REAL(r_2), DIMENSION(mvt)          :: xxnpmax,xq10soil,xxkoptlitter,xxkoptsoil,xprodptase, &
-                                        xcostnpup,xmaxfinelitter,xmaxcwd,xnintercept,xnslope
-  REAL(r_2), DIMENSION(mso)          :: xxkplab,xxkpsorb,xxkpocc
+  real(r_2),    dimension(mvt)          :: xxnpmax,xq10soil,xxkoptlitter,xxkoptsoil,xprodptase, &
+                                           xcostnpup,xmaxfinelitter,xmaxcwd,xnintercept,xnslope
+  real(r_2),    dimension(mso)          :: xxkplab,xxkpsorb,xxkpocc
 
   real(r_2),    dimension(mvt)          :: xfherbivore,xxkleafcoldmax, xxkleafdrymax
   real(r_2),    dimension(mvt)          :: xkuplabp
@@ -121,8 +125,13 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
 !  soil%swilt(:) = wwilt(soil%isoilm(:))
 !  soil%ssat(:)  = wsat(soil%isoilm(:))
    
+   write(*,*)
+   write(*,*) "Reading soil properties from file ", filename_soilprop, "..."
    open(121,file=filename_soilprop)
-   read(121, *)		! Read past column header
+
+   read(121,'(a)') buffer    ! Read past column header
+!  write(*,*) trim(buffer)
+
    do i=1,mp
       read(121,*,IOSTAT=IOstatus) ipt,lat,lon,soil%sand(i),soil%clay(i),soil%silt(i),soil%swilt(i),soil%sfc(i),soil%ssat(i)
       if (IOstatus .lt. 0) then
@@ -134,25 +143,34 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
          print *, "An error occurred while reading file ", TRIM(filename_soilprop)
          STOP
       endif
+!     write(*,122) ipt,lat,lon,soil%sand(i),soil%clay(i),soil%silt(i),soil%swilt(i),soil%sfc(i),soil%ssat(i)
+!     122 format(i6,',',2(f10.4,','),6(f8.4,','))
    enddo
+   write(*,*) "Done reading soil properties from file ", filename_soilprop, "..."
 
 !------------------------------------------------------------------------------------------------------------------------------------------
 
 ! calculate veg%froot(mp,ms) here
 
 !=========================================
+      write(*,*)
+      write(*,*) "Reading CASA biome-specific parameters from file ", fname_cnpbiome, "..."
       open(101,file=fname_cnpbiome)
       do i=1,3
-         read(101,*) 
+         read(101,'(a)') buffer 
+         write(*,*) trim(buffer)
       enddo
   
       do nv=1,mvt
          read(101,*) nv0,casabiome%ivt2(nv)
+         write(*,*) nv0,casabiome%ivt2(nv)
          ! print *, nv,nv0,casabiome%ivt2(nv)
       enddo
 
-      read(101,*)
-      read(101,*)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
 ! Added clabileage(nv),slax(nv) to end of list (-MDH 6/29/2014)
       do nv=1,mvt
          read(101,*) nv1,casabiome%kroot(nv),casabiome%rootdepth(nv),      &
@@ -162,57 +180,92 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
                      metage(nv),strage(nv),cwdage(nv),  &
                      micage(nv),slowage(nv),passage(nv), & 
                      clabileage(nv),slax(nv)
+         write(*,'(i2,1x,18(f12.4,1x))') nv1,casabiome%kroot(nv),casabiome%rootdepth(nv),      &
+                     casabiome%kuptake(nv),casabiome%krootlen(nv),         &
+                     casabiome%kminN(nv), casabiome%kuplabP(nv),           &
+                     xfherbivore(nv),leafage(nv),woodage(nv),frootage(nv), &
+                     metage(nv),strage(nv),cwdage(nv),  &
+                     micage(nv),slowage(nv),passage(nv), & 
+                     clabileage(nv),slax(nv)
          !print *, 'nv1',nv,nv1
       enddo  
 
-      read(101,*)
-      read(101,*)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
       do nv=1,mvt
          read(101,*) nv2,casabiome%fracnpptoP(nv,leaf),casabiome%fracnpptoP(nv,wood), &
+                         casabiome%fracnpptoP(nv,froot),casabiome%rmplant(nv,leaf),   &
+                         casabiome%rmplant(nv,wood),casabiome%rmplant(nv,froot)
+         write(*,'(i2,1x,6(f12.4,1x))') nv2,casabiome%fracnpptoP(nv,leaf),casabiome%fracnpptoP(nv,wood), &
                          casabiome%fracnpptoP(nv,froot),casabiome%rmplant(nv,leaf),   &
                          casabiome%rmplant(nv,wood),casabiome%rmplant(nv,froot)
          !print *, 'nv2', nv2
       enddo 
 
-      read(101,*)
-      read(101,*)
-! Added ratioCNsoilmin and ratioCNsoilmax for mic, slow, and pass (-MDH 6/29/2014)
-! Added glaimax, glaimin (-MDH 6/29/2014)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+!     Added ratioCNsoilmin and ratioCNsoilmax for mic, slow, and pass (-MDH 6/29/2014)
+!     Added glaimax, glaimin (-MDH 6/29/2014)
       do nv=1,mvt
-         read(101,*) nv2, ratioCNplant(nv,leaf),ratioCNplant(nv,wood),   &
-         ratioCNplant(nv,froot),                                         &
-         casabiome%ftransNPtoL(nv,leaf), casabiome%ftransNPtoL(nv,wood), &
-         casabiome%ftransNPtoL(nv,froot),                                & 
-         casabiome%fracligninplant(nv,leaf),                             &
-         casabiome%fracligninplant(nv,wood),                             &
-         casabiome%fracligninplant(nv,froot),                            &
-         ratioCNsoil(nv,mic),ratioCNsoil(nv,slow),ratioCNsoil(nv,pass),  &
+         read(101,*) nv3, ratioCNplant(nv,leaf),ratioCNplant(nv,wood),   &
+             ratioCNplant(nv,froot),                                         &
+             casabiome%ftransNPtoL(nv,leaf), casabiome%ftransNPtoL(nv,wood), &
+             casabiome%ftransNPtoL(nv,froot),                                & 
+             casabiome%fracligninplant(nv,leaf),                             &
+             casabiome%fracligninplant(nv,wood),                             &
+             casabiome%fracligninplant(nv,froot),                            &
+             ratioCNsoil(nv,mic),ratioCNsoil(nv,slow),ratioCNsoil(nv,pass),  &
+             ratioCNsoilmin(nv,mic),ratioCNsoilmin(nv,slow),ratioCNsoilmin(nv,pass),  &
+             ratioCNsoilmax(nv,mic),ratioCNsoilmax(nv,slow),ratioCNsoilmax(nv,pass),  &
+   !         xfherbivore(nv),casabiome%ratiofrootleaf(nv),                  &
+             casabiome%glaimax(nv),casabiome%glaimin(nv)
 
-         ratioCNsoilmin(nv,mic),ratioCNsoilmin(nv,slow),ratioCNsoilmin(nv,pass),  &
-         ratioCNsoilmax(nv,mic),ratioCNsoilmax(nv,slow),ratioCNsoilmax(nv,pass),  &
-!         xfherbivore(nv),casabiome%ratiofrootleaf(nv),                  &
-         casabiome%glaimax(nv),casabiome%glaimin(nv)
+         write(*,'(i2,1x,20(f12.4,1x))') nv3, ratioCNplant(nv,leaf),ratioCNplant(nv,wood),   &
+             ratioCNplant(nv,froot),                                         &
+             casabiome%ftransNPtoL(nv,leaf), casabiome%ftransNPtoL(nv,wood), &
+             casabiome%ftransNPtoL(nv,froot),                                & 
+             casabiome%fracligninplant(nv,leaf),                             &
+             casabiome%fracligninplant(nv,wood),                             &
+             casabiome%fracligninplant(nv,froot),                            &
+             ratioCNsoil(nv,mic),ratioCNsoil(nv,slow),ratioCNsoil(nv,pass),  &
+             ratioCNsoilmin(nv,mic),ratioCNsoilmin(nv,slow),ratioCNsoilmin(nv,pass),  &
+             ratioCNsoilmax(nv,mic),ratioCNsoilmax(nv,slow),ratioCNsoilmax(nv,pass),  &
+   !         xfherbivore(nv),casabiome%ratiofrootleaf(nv),                  &
+             casabiome%glaimax(nv),casabiome%glaimin(nv)
 
-         !print *, 'nv22',nv2
-
-      enddo
-
-      read(101,*)
-      read(101,*)
-      do nv=1,mvt
-         read(101,*) nv3,                                              &
-         cleaf(nv),cwood(nv),cfroot(nv),cmet(nv),cstr(nv),ccwd(nv), &
-         cmic(nv), cslow(nv),cpass(nv)
          !print *, 'nv3',nv3
 
       enddo
 
-      read(101,*)
-      read(101,*)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
       do nv=1,mvt
-         read(101,*) nv4,phen%TKshed(nv),xxkleafcoldmax(nv),casabiome%xkleafcoldexp(nv),   &
-         xxkleafdrymax(nv),casabiome%xkleafdryexp(nv)
+         read(101,*) nv4,                                              &
+             cleaf(nv),cwood(nv),cfroot(nv),cmet(nv),cstr(nv),ccwd(nv), &
+             cmic(nv), cslow(nv),cpass(nv)
+         write(*,'(i2,1x,9(f12.4,1x))') nv4,                                              &
+             cleaf(nv),cwood(nv),cfroot(nv),cmet(nv),cstr(nv),ccwd(nv), &
+             cmic(nv), cslow(nv),cpass(nv)
          !print *, 'nv4',nv4
+
+      enddo
+
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      do nv=1,mvt
+         read(101,*) nv5,phen%TKshed(nv),xxkleafcoldmax(nv),casabiome%xkleafcoldexp(nv),   &
+             xxkleafdrymax(nv),casabiome%xkleafdryexp(nv)
+         write(*,'(i2,1x,5(f12.4,1x))') nv5,phen%TKshed(nv),xxkleafcoldmax(nv),casabiome%xkleafcoldexp(nv),   &
+             xxkleafdrymax(nv),casabiome%xkleafdryexp(nv)
+         !print *, 'nv5',nv5
       enddo
 
 !      read(101,*)
@@ -224,39 +277,51 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
 !
 !      enddo
 
-      read(101,*)
-      read(101,*)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
       do nv=1,mvt
          read(101,*) nv6, &
-         casabiome%ratioNCplantmin(nv,leaf),casabiome%ratioNCplantmax(nv,leaf), &
-         casabiome%ratioNCplantmin(nv,wood),casabiome%ratioNCplantmax(nv,wood), &
-         casabiome%ratioNCplantmin(nv,froot),casabiome%ratioNCplantmax(nv,froot), &
-         xfNminloss(nv), xfNminleach(nv),xnfixrate(nv)
-
-!        print *, 'nv6',nv6, casabiome%ratioNCplantmin(nv,leaf),casabiome%ratioNCplantmax(nv,leaf), &
-!        casabiome%ratioNCplantmin(nv,wood),casabiome%ratioNCplantmax(nv,wood), &
-!        casabiome%ratioNCplantmin(nv,froot),casabiome%ratioNCplantmax(nv,froot), &
-!        xfNminloss(nv), xfNminleach(nv),xnfixrate(nv)
-
+             casabiome%ratioNCplantmin(nv,leaf),casabiome%ratioNCplantmax(nv,leaf), &
+             casabiome%ratioNCplantmin(nv,wood),casabiome%ratioNCplantmax(nv,wood), &
+             casabiome%ratioNCplantmin(nv,froot),casabiome%ratioNCplantmax(nv,froot), &
+             xfNminloss(nv), xfNminleach(nv),xnfixrate(nv)
+         write(*,'(i2,1x,9(f12.4,1x))') nv6, &
+             casabiome%ratioNCplantmin(nv,leaf),casabiome%ratioNCplantmax(nv,leaf), &
+             casabiome%ratioNCplantmin(nv,wood),casabiome%ratioNCplantmax(nv,wood), &
+             casabiome%ratioNCplantmin(nv,froot),casabiome%ratioNCplantmax(nv,froot), &
+             xfNminloss(nv), xfNminleach(nv),xnfixrate(nv)
       enddo
-      read(101,*)
-      read(101,*)
+
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
       do nv=1,mvt
          read(101,*) nv7,nleaf(nv),nwood(nv),nfroot(nv), &
                      nmet(nv),nstr(nv), ncwd(nv), &
                      nmic(nv),nslow(nv),npass(nv),xnsoilmin(nv)
-!        print *, 'nv7',nv7, nleaf(nv),nwood(nv),nfroot(nv), &
-!                    nmet(nv),nstr(nv), ncwd(nv), &
-!                    nmic(nv),nslow(nv),npass(nv),xnsoilmin(nv)
+         write(*,'(i2,1x,10(f12.4,1x))') nv7,nleaf(nv),nwood(nv),nfroot(nv), &
+                     nmet(nv),nstr(nv), ncwd(nv), &
+                     nmic(nv),nslow(nv),npass(nv),xnsoilmin(nv)
       enddo
-      read(101,*)
-      read(101,*)
+
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
       do nv=1,mvt
          read(101,*) nv8,xratioNPleafmin,xratioNPleafmax,      &
-         xratioNPwoodmin,xratioNPwoodmax,                      &
-         xratioNPfrootmin,xratioNPfrootmax,                    &
-         casabiome%ftransPPtoL(nv,leaf), casabiome%ftransPPtoL(nv,wood), &
-         casabiome%ftransPPtoL(nv,froot)
+             xratioNPwoodmin,xratioNPwoodmax,                      &
+             xratioNPfrootmin,xratioNPfrootmax,                    &
+             casabiome%ftransPPtoL(nv,leaf), casabiome%ftransPPtoL(nv,wood), &
+             casabiome%ftransPPtoL(nv,froot)
+         write(*,'(i2,1x,9(f12.4,1x))') nv8,xratioNPleafmin,xratioNPleafmax,      &
+             xratioNPwoodmin,xratioNPwoodmax,                      &
+             xratioNPfrootmin,xratioNPfrootmax,                    &
+             casabiome%ftransPPtoL(nv,leaf), casabiome%ftransPPtoL(nv,wood), &
+             casabiome%ftransPPtoL(nv,froot)
 
 !!       !! ratioPcpplantmin/ratioPcpplantmin are not defined for casabiome in this version (-MDH 6/9/2014)
 !!       casabiome%ratioPcplantmin(nv,leaf)  = 1.0/(xratioNPleafmin*ratioCNplant(nv,leaf))
@@ -267,46 +332,65 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
 !!       casabiome%ratioPcplantmax(nv,froot) = 1.0/(xratioNPfrootmax*ratioCNplant(nv,froot))
          !print *, 'nv8',nv8
 
-    !! Added (-MDH 6/9/2014)
-    casabiome%ratioNPplantmin(nv,leaf)  = xratioNPleafmin
-    casabiome%ratioNPplantmax(nv,leaf)  = xratioNPleafmax
-    casabiome%ratioNPplantmin(nv,wood)  = xratioNPwoodmin
-    casabiome%ratioNPplantmax(nv,wood)  = xratioNPwoodmax
-    casabiome%ratioNPplantmin(nv,froot) = xratioNPfrootmin
-    casabiome%ratioNPplantmax(nv,froot) = xratioNPfrootmax
+         !! Added (-MDH 6/9/2014)
+         casabiome%ratioNPplantmin(nv,leaf)  = xratioNPleafmin
+         casabiome%ratioNPplantmax(nv,leaf)  = xratioNPleafmax
+         casabiome%ratioNPplantmin(nv,wood)  = xratioNPwoodmin
+         casabiome%ratioNPplantmax(nv,wood)  = xratioNPwoodmax
+         casabiome%ratioNPplantmin(nv,froot) = xratioNPfrootmin
+         casabiome%ratioNPplantmax(nv,froot) = xratioNPfrootmax
 
       enddo
-      read(101,*)
-      read(101,*)
+
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
 ! Added xxkplab(iso),xxkpsorb(iso),xxkpocc(iso) to end of list (-MDH 6/29/2014)
       do iso=1,mso
          read(101,*) nv9,xkmlabp(iso),xpsorbmax(iso),xfPleach(iso), &
                      ratioNPsoil(iso,mic),ratioNPsoil(iso,slow),ratioNPsoil(iso,pass), &
                      xxkplab(iso),xxkpsorb(iso),xxkpocc(iso)
+         write(*,'(i2,1x,9(f12.4,1x))')  nv9,xkmlabp(iso),xpsorbmax(iso),xfPleach(iso), &
+                     ratioNPsoil(iso,mic),ratioNPsoil(iso,slow),ratioNPsoil(iso,pass), &
+                     xxkplab(iso),xxkpsorb(iso),xxkpocc(iso)
 
          !print *, 'nv9',nv9
       enddo
-      read(101,*)
-      read(101,*)
+
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
       do nv=1,mvt
          read(101,*) nv10, xpleaf(nv),xpwood(nv),xpfroot(nv),xpmet(nv),xpstr(nv),xpcwd(nv), &
+                          xpmic(nv),xpslow(nv),xppass(nv),xplab(nv),xpsorb(nv),xpocc(nv)
+         write(*,'(i2,1x,12(f12.4,1x))') nv10, xpleaf(nv),xpwood(nv),xpfroot(nv),xpmet(nv),xpstr(nv),xpcwd(nv), &
                           xpmic(nv),xpslow(nv),xppass(nv),xplab(nv),xpsorb(nv),xpocc(nv)
          !print *, 'nv10',nv10
       enddo
 
 ! Added this new section (-MDH 6/29/2014)
  !@@@@@@@@@@@@@@@@@@@@@@@@@
-  READ(101,*)
-  READ(101,*)
-  DO nv=1,mvt
-    READ(101,*) nv11, &
-         xxnpmax(nv),xq10soil(nv),xxkoptlitter(nv),xxkoptsoil(nv),xprodptase(nv), &
-         xcostnpup(nv),xmaxfinelitter(nv),xmaxcwd(nv),xnintercept(nv),xnslope(nv)                   
-         !print *, 'nv11',nv11
-  ENDDO
+
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)') buffer
+      write(*,*) trim(buffer)
+      DO nv=1,mvt
+        read(101,*) nv11, &
+             xxnpmax(nv),xq10soil(nv),xxkoptlitter(nv),xxkoptsoil(nv),xprodptase(nv), &
+             xcostnpup(nv),xmaxfinelitter(nv),xmaxcwd(nv),xnintercept(nv),xnslope(nv)                   
+        write(*,'(i2,1x,10(f12.4,1x))') nv11, &
+             xxnpmax(nv),xq10soil(nv),xxkoptlitter(nv),xxkoptsoil(nv),xprodptase(nv), &
+             xcostnpup(nv),xmaxfinelitter(nv),xmaxcwd(nv),xnintercept(nv),xnslope(nv)                   
+        !print *, 'nv11',nv11
+
+      ENDDO
 !@@@@@@@@@@@@@@@@@@@@@
 
       close(101)
+      write(*,*) "Done reading CASA biome-specific parameters from file ", fname_cnpbiome, "..."
 
       fracroot   = 0.0
       depthsoila = 0.0
@@ -379,7 +463,7 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
     casabiome%rmplant(nv,:)       = casabiome%rmplant(nv,:)*deltcasa 
     casabiome%kclabrate(nv)       = deltcasa/clabileage(nv)
 
-!! Added back this ection (-MDH 6/30/2014)
+!! Added back this section (-MDH 6/30/2014)
           totroot(nv) = (1.0-exp(-casabiome%kroot(nv)*casabiome%rootdepth(nv)))
           do ns=1,ms
              fracroot(nv,ns) = (exp(-casabiome%kroot(nv)*min(casabiome%rootdepth(nv),depthsoila(ns)))  & 
@@ -746,10 +830,11 @@ use phenvariable
   integer  np,npt,npz,nl,ns,nland,nlandz,mp,ms,mst
   real(r_2) nyearz,ivtz,istz,latz,lonz,areacellz,glaiz,slaz,isoz
 
-  print *, 'initial pool file: ',filename_cnpipool
   print *, 'initcasa ', initcasa
   !phen%phase = 2
 IF (initcasa>=1) then
+      write(*,*) 
+      write(*,*) "Reading initial CASACNP pool file: ", filename_cnpipool, "..."
       open(99,file=filename_cnpipool)
       do npt =1, mp
 !! Commented out this section (-MDH 6/14/2014)
@@ -786,6 +871,12 @@ IF (initcasa>=1) then
                    casamet%glai(npt),slaz,phen%phase(npt), &
                    casapool%clabile(npt),casapool%cplant(npt,:),  &
                    casapool%clitter(npt,:),casapool%csoil(npt,:)
+!       write(*,123) nyearz,npz,ivtz,istz,isoz,latz,lonz,areacellz, &
+!                  casamet%glai(npt),slaz,phen%phase(npt), &
+!                  casapool%clabile(npt),casapool%cplant(npt,:),  &
+!                  casapool%clitter(npt,:),casapool%csoil(npt,:)
+!       123 format(f4.0,',',i4,',',3(f4.0,','),5(f18.6,','),i6,',',4(f18.6,','))
+ 
       CASE(2)
         READ(99,*) nyearz,npz,ivtz,istz,isoz,latz,lonz,areacellz, &
                    casamet%glai(npt),slaz,phen%phase(npt), &
@@ -793,6 +884,14 @@ IF (initcasa>=1) then
                    casapool%clitter(npt,:),casapool%csoil(npt,:),       &
                    casapool%nplant(npt,:),casapool%nlitter(npt,:),      &
                    casapool%nsoil(npt,:),casapool%nsoilmin(npt)
+!       write(*,124) nyearz,npz,ivtz,istz,isoz,latz,lonz,areacellz, &
+!                  casamet%glai(npt),slaz,phen%phase(npt), &
+!                  casapool%clabile(npt),casapool%cplant(npt,:),   &
+!                  casapool%clitter(npt,:),casapool%csoil(npt,:),       &
+!                  casapool%nplant(npt,:),casapool%nlitter(npt,:),      &
+!                  casapool%nsoil(npt,:),casapool%nsoilmin(npt)
+!       124 format(f4.0,',',i4,',',3(f4.0,','),5(f18.6,','),i6,',',8(f18.6,','))
+
       CASE(3)
         READ(99,*) nyearz,npz,ivtz,istz,isoz,latz,lonz,areacellz, &
                    casamet%glai(npt),slaz,phen%phase(npt), &
@@ -803,9 +902,21 @@ IF (initcasa>=1) then
                    casapool%pplant(npt,:),casapool%plitter(npt,:),      &
                    casapool%psoil(npt,:),casapool%psoillab(npt),        &
                    casapool%psoilsorb(npt),casapool%psoilocc(npt)
+!       write(*,125) nyearz,npz,ivtz,istz,isoz,latz,lonz,areacellz, &
+!                  casamet%glai(npt),slaz,phen%phase(npt), &
+!                  casapool%clabile(npt),casapool%cplant(npt,:),   &
+!                  casapool%clitter(npt,:),casapool%csoil(npt,:),       &
+!                  casapool%nplant(npt,:),casapool%nlitter(npt,:),      &
+!                  casapool%nsoil(npt,:),casapool%nsoilmin(npt),        &
+!                  casapool%pplant(npt,:),casapool%plitter(npt,:),      &
+!                  casapool%psoil(npt,:),casapool%psoillab(npt),        &
+!                  casapool%psoilsorb(npt),casapool%psoilocc(npt)
+!       125 format(f4.0,',',i4,',',3(f4.0,','),5(f18.6,','),i6,',',14(f18.6,','))
+
       END SELECT 
       enddo
     close(99)
+    write(*,*) "Done reading initial CASACNP pool file: ", filename_cnpipool, "..."
 endif
 !  reset labile C pool
     casapool%clabile = 0.0    
@@ -921,6 +1032,11 @@ implicit none
 !  Added calculations for average temperatures. -MDH 08/17/2015
    casapoolAn%tairAn=casapoolAn%tairAn * xyear
    casapoolAn%tsoilAn=casapoolAn%tsoilAn * xyear
+
+!  Added calculations for f(T) and f(W). -MDH 11/20/2017
+   casapoolAn%fTAn=casapoolAn%fTAn * xyear
+   casapoolAn%fWAn=casapoolAn%fWAn * xyear
+   casapoolAn%thetaLiqAn=casapoolAn%thetaLiqAn * xyear
 
    if (icycle > 1) then
       casapoolAn%NsoilAn=casapoolAn%NsoilAn * xyear
@@ -1089,6 +1205,7 @@ implicit none
    clitterinput = clitterinput * xyear
    csoilinput   = csoilinput   * xyear
 
+
   if (writeToRestartCSVfile) then
       nout=104
       open(nout,file=filename_cnpflux)
@@ -1157,7 +1274,6 @@ integer n
   casaflux%ClitInptMetAn = casaflux%ClitInptMetAn + casaflux%ClitInptMet
   casaflux%ClitInptStrucAn = casaflux%ClitInptStrucAn + casaflux%ClitInptStruc
 
-
   if(icycle >1) then
      casabal%FNdepyear   = casabal%FNdepyear   + casaflux%Nmindep    * deltpool
      casabal%FNfixyear   = casabal%FNfixyear   + casaflux%Nminfix    * deltpool
@@ -1192,6 +1308,9 @@ integer n
 
 casapoolAn%tairAn(:) = casapoolAn%tairAn(:) + casamet%tairk(:) - tkzeroc
 casapoolAn%tsoilAn(:) = casapoolAn%tsoilAn(:) + casamet%tsoilavg(:) - tkzeroc
+casapoolAn%fTAn(:) = casapoolAn%fTAn(:) + casapool%fT(:) 
+casapoolAn%fWAn(:) = casapoolAn%fWAn(:) + casapool%fW(:)
+casapoolAn%thetaLiqAn(:) = casapoolAn%thetaLiqAn(:) + casapool%thetaLiq(:)
 
 do n=1,3
   casapoolAn%CsoilAn(:,n) = casapoolAn%CsoilAn(:,n) + casapool%Csoil(:,n)
@@ -1250,6 +1369,15 @@ SUBROUTINE biogeochem(iYrCnt,idoy,nppScalar)
   call casa_allocation(veg,soil,casabiome,casaflux,casapool,casamet,phen)
   call casa_xrateplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome, &
                        casamet,phen)
+
+  casapool%fT(:) = 0.0 
+  casapool%fW(:) = 0.0 
+  casapool%thetaLiq(:) = 0.0 
+
+  mimicspool%fT(:) = 0.0 
+  mimicspool%fW(:) = 0.0
+  mimicspool%thetaLiq(:) = 0.0
+  mimicspool%thetaFrzn(:) = 0.0
 
   if (isomModel == CASACNP) then
 
@@ -1451,10 +1579,12 @@ SUBROUTINE GetMetNcFileDim(filename_cnpmet, ms, myear)
 END SUBROUTINE GetMetNcFileDim
 
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, xtairk, &
+!SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, xtairk, &
+!                         xndepDay, xtsoil, xmoist, xfrznmoist)
+SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, xtairk, &
                          xndepDay, xtsoil, xmoist, xfrznmoist)
 !  !DESCRIPTION
-!   Read variables xlai, xcnpp, xcgpp, xtairk, xtsoil, xmoist, and xfrznmoist (if it exists) 
+!   Read variables xcgpp, xtairk, xtsoil, xmoist, and xfrznmoist (if it exists) 
 !     from the met.nc file.  
 !   Dimensions of arrays must be known by first calling GetMetNcFileDim.
 !     Note: I had lots of trouble with segmentation faults when I either tried to
@@ -1472,8 +1602,8 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, xta
       integer, intent(in) :: mp			        ! number of points with valid data
       integer, intent(in) :: ms				! number of soil layers
       integer, intent(inout) :: myear			! number of years in the met file
-      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xlai	  ! xlai(mp,ndays) daily LAI (m2/m2)
-      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xcnpp    ! xcnpp(mp,ndays) daily NPP (gC/m2/day)
+!     real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xlai	  ! xlai(mp,ndays) daily LAI (m2/m2)
+!     real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xcnpp    ! xcnpp(mp,ndays) daily NPP (gC/m2/day)
       real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xcgpp    ! xcgpp(mp,ndays) daily GPP (gC/m2/day)
       real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xndepDay ! xndepDay(mp,ndays) daily N deposition (gN/m2/day)
       real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xtairk   ! xtairk(mp,ndays) daily average air temperature (K)
@@ -1650,22 +1780,22 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, xta
 
       ! lai(nlon, nlat, ndays) 
 
-      if (verbose .ge. 1) print *, "  Reading xlai..."
-      status = nf_inq_varid(ncid, "xlai", varid)
-      if (status /= nf_noerr) call handle_err(status, "xlai")
-
-      status = nf_get_var(ncid, varid, lai, start3, count3)
-      if (status /= nf_noerr) call handle_err(status, "xlai")
+!     if (verbose .ge. 1) print *, "  Reading xlai..."
+!     status = nf_inq_varid(ncid, "xlai", varid)
+!     if (status /= nf_noerr) call handle_err(status, "xlai")
+!
+!     status = nf_get_var(ncid, varid, lai, start3, count3)
+!     if (status /= nf_noerr) call handle_err(status, "xlai")
 
 
       ! cnpp(nlon, nlat, ndays) 
  
-      if (verbose .ge. 1) print *, "  Reading xcnpp..."
-      status = nf_inq_varid(ncid, "xcnpp", varid)
-      if (status /= nf_noerr) call handle_err(status, "xcnpp")
- 
-      status = nf_get_var(ncid, varid, cnpp, start3, count3)
-      if (status /= nf_noerr) call handle_err(status, "xcnpp")
+!     if (verbose .ge. 1) print *, "  Reading xcnpp..."
+!     status = nf_inq_varid(ncid, "xcnpp", varid)
+!     if (status /= nf_noerr) call handle_err(status, "xcnpp")
+!
+!     status = nf_get_var(ncid, varid, cnpp, start3, count3)
+!     if (status /= nf_noerr) call handle_err(status, "xcnpp")
  
 
       ! cgpp(nlon, nlat, ndays) 
@@ -1731,7 +1861,7 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, xta
           status = nf_get_var(ncid, varid, frznmoist, start4, count4)
           if (status /= nf_noerr) call handle_err(status, "xfrznmoist")
       else
-          write(*,*) '    xfrznmoist does not exist in the file ', trim(filename_cnpmet)
+          write(*,*) '    WARNING: xfrznmoist does not exist in the file ', trim(filename_cnpmet)
           write(*,*) '    Soil frozen moisture will be zet to 0.0'
       endif
  
@@ -1759,7 +1889,7 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, xta
 
       cellCnt = 0
       npt = 0
-      !Fill xlai, xcnpp, xcgpp, xtairk, xndepDay, xtsoil, xmoist, and xfrznmoist with non-missing data only
+      !Fill xcgpp, xtairk, xndepDay, xtsoil, xmoist, and xfrznmoist with non-missing data only
       do i = 1, nlon
          do j = 1, nlat
             cellCnt = cellCnt+1
@@ -1772,8 +1902,8 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, xta
                do iday = 1, ndays
                   ! Segmentation fault was occurring on next assignment until
                   ! I passed in the dimensions to these variables. -MDH 2/17/2014
-                  xlai(npt,iday) = lai(i,j,iday)
-                  xcnpp(npt,iday) = cnpp(i,j,iday)
+                  !xlai(npt,iday) = lai(i,j,iday)
+                  !xcnpp(npt,iday) = cnpp(i,j,iday)
                   xcgpp(npt,iday) = cgpp(i,j,iday)
                   xtairk(npt,iday) = tairk(i,j,iday)
                   xndepDay(npt,iday) = ndep(i,j,iday)
@@ -1994,6 +2124,8 @@ END SUBROUTINE ReadMetNcFile
       integer :: varid_tsoilC			! NetCDF variable ID for soil temperature (C)
       integer :: varid_litInptMet               ! NetCDF variable ID for metabolic litter inputs
       integer :: varid_litInptStruc	        ! NetCDF variable ID for structural litter inputs
+      integer :: varid_fT, varid_fW	        ! NetCDF variable ID soil temperature and moisture decomposition rate multipliers
+      integer :: varid_thetaLiq                 ! NetCDF variable ID liquid soil moisture fraction
       character(len=100) :: attr_name		! String for assigning global and variable attributes
       character(len=100) :: attr_units		! String for assigning global and variable attributes
       character(len=10)  :: date_string		! String for assigning date to global attributes
@@ -2196,6 +2328,15 @@ END SUBROUTINE ReadMetNcFile
 
    status = nf_def_var(ncid, 'litInptStruc', NF_REAL, 3, dims, varid_litInptStruc)
    if (status /= nf_noerr) call handle_err(status, "litInptStruc")
+
+   status = nf_def_var(ncid, 'thetaLiq', NF_REAL, 3, dims, varid_thetaLiq)
+   if (status /= nf_noerr) call handle_err(status, "thetaLiq")
+
+   status = nf_def_var(ncid, 'fT', NF_REAL, 3, dims, varid_fT)
+   if (status /= nf_noerr) call handle_err(status, "f(T)")
+
+   status = nf_def_var(ncid, 'fW', NF_REAL, 3, dims, varid_fW)
+   if (status /= nf_noerr) call handle_err(status, "f(W)")
 
 
    ! Global attributes
@@ -2421,6 +2562,21 @@ END SUBROUTINE ReadMetNcFile
    attr_name = 'Structural Litter Inputs'
    attr_units = 'gC m-2 yr-1'
    call PutVariableAttributeReal(ncid, varid_litInptStruc, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of thetaLiq variable
+   attr_name = 'Fraction of liquid soil water saturation (0.0-1.0)'
+   attr_units = 'fraction'
+   call PutVariableAttributeReal(ncid, varid_thetaLiq, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of f(T) variable
+   attr_name = 'soil temperature multiplier on decomposition rate (0.0-1.0)'
+   attr_units = 'multiplier'
+   call PutVariableAttributeReal(ncid, varid_fT, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of f(W) variable
+   attr_name = 'soil moisture multiplier on decomposition rate (0.0-1.0)'
+   attr_units = 'multiplier'
+   call PutVariableAttributeReal(ncid, varid_fW, attr_name, attr_units, MISSING_VALUE)
 
 
    ! --------------- End the definition phase so that variables can be written to the file ---------------
@@ -2708,6 +2864,43 @@ END SUBROUTINE ReadMetNcFile
    status =  nf_put_var(ncid, varid_litInptStruc, var7, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(litInptStruc)")
 
+
+!  f(T) and f(W) output added 11/20/2017. ThetaLiq added 11/27/2017.
+!  casaflux%fTAn(npt)  - mean annual soil temperature multiplier on decomposition rate (0.0-1.0+)
+!  casaflux%fWAn(npt)  - mean annual soil moisure multiplier on decomposition rate (0.0-1.0)
+!  casaflux%thetaLiqAn(npt)  - mean annual fraction of liquid water saturation (0.0-1.0)
+
+   var1(:,:,:) = MISSING_VALUE
+   var2(:,:,:) = MISSING_VALUE
+   var3(:,:,:) = MISSING_VALUE
+
+   itime = 1
+   do npt = 1, mp
+      ilon = casamet%ilon(npt)
+      ilat = casamet%ilat(npt)
+      if (casamet%ijgcm(npt) .ne. clmgrid%cellid(ilon,ilat)) then
+         print *, 'WritePoolFluxNcFile_casacnp_annual: casamet%ijgcm(', npt, ')=', casamet%ijgcm(npt)
+         print *, '   clmgrid%cellid(', ilon, ',', ilat, ')=', clmgrid%cellid(ilon,ilat)
+         STOP
+      endif
+      var1(ilon,ilat,itime) = casapoolAn%fTAn(npt)
+      var2(ilon,ilat,itime) = casapoolAn%fWAn(npt)
+      var3(ilon,ilat,itime) = casapoolAn%thetaLiqAn(npt)
+   enddo
+
+!! status =  nf_put_var(ncid, varid_fT, var1, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_fT, start3, count3, var1)
+   if (status /= nf_noerr) call handle_err(status, "put_var(fT)")
+ 
+!! status =  nf_put_var(ncid, varid_fW, var2, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_fW, start3, count3, var2)
+   if (status /= nf_noerr) call handle_err(status, "put_var(fW)")
+
+!! status =  nf_put_var(ncid, varid_thetaLiq, var3, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_thetaLiq, start3, count3, var3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(thetaLiq)")
+
+
    deallocate(var1,var2,var3,var4,var5,var6,var7,IGBP_PFT,landarea)
 
    status = nf_close(ncid)
@@ -2788,6 +2981,8 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       integer :: varid_tsoilC			! NetCDF variable ID for soil temperature (C)
       integer :: varid_litInptMet               ! NetCDF variable ID for metabolic litter inputs
       integer :: varid_litInptStruc	        ! NetCDF variable ID for structural litter inputs
+      integer :: varid_fT, varid_fW	        ! NetCDF variable ID for soil temperature and moisture decomposition rate modifiers
+      integer :: varid_thetaLiq                 ! NetCDF variable ID for fraction of liquid soil water saturation
       character*100 :: attr_name		! String for assigning global and variable attributes
       character*100 :: attr_units		! String for assigning global and variable attributes
       character*10 :: date_string		! String for assigning date to global attributes
@@ -2836,6 +3031,9 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
 !       casapool%nsoil(npt,MIC)	 	- microbial soil N (gN/m2)
 !       casapool%nsoil(npt,SLOW)	- slow soil N (gN/m2)
 !       casapool%nsoil(npt,PASS)	- passive soil N (gN/m2)
+!       casaflux%fT(npt)                - temperature effect on soil decomposition rate 
+!       casaflux%fW(npt)                - moisture effect on soil decomposition rate 
+!       casaflux%thetaLiq(npt)          - fraction of liquid soil water saturation (0.0-1.0)
 
    dims(1) = 0
    dims(2) = 0
@@ -2992,6 +3190,16 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
 
       status = nf_def_var(ncid, 'litInptStruc', NF_REAL, 3, dims, varid_litInptStruc)
       if (status /= nf_noerr) call handle_err(status, "litInptStruc")
+
+      status = nf_def_var(ncid, 'thetaLiq', NF_REAL, 3, dims, varid_thetaLiq)
+      if (status /= nf_noerr) call handle_err(status, "thetaLiq")
+
+      status = nf_def_var(ncid, 'fT', NF_REAL, 3, dims, varid_fT)
+      if (status /= nf_noerr) call handle_err(status, "fT")
+
+      status = nf_def_var(ncid, 'fW', NF_REAL, 3, dims, varid_fW)
+      if (status /= nf_noerr) call handle_err(status, "fW")
+
 
       ! Global attributes
       attr_name = 'CASACNP model output'
@@ -3216,7 +3424,22 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       attr_name = 'Structural Litter Inputs'
       attr_units = 'gC m-2 day-1'
       call PutVariableAttributeReal(ncid, varid_litInptStruc, attr_name, attr_units, MISSING_VALUE)
-   
+
+      ! Attributes of thetaLiq variable
+      attr_name = 'fraction of liquid soil water saturation (0.0-1.0)'
+      attr_units = 'fraction'
+      call PutVariableAttributeReal(ncid, varid_thetaLiq, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of f(T) variable
+      attr_name = 'soil temperature multiplier on decomposition rate (0.0-1.0)'
+      attr_units = 'multiplier'
+      call PutVariableAttributeReal(ncid, varid_fT, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of f(W) variable
+      attr_name = 'soil moisture multiplier on decomposition rate (0.0-1.0)'
+      attr_units = 'multiplier'
+      call PutVariableAttributeReal(ncid, varid_fW, attr_name, attr_units, MISSING_VALUE)
+
    
       ! --------------- End the definition phase so that variables can be written to the file ---------------
       status = nf_enddef(ncid)
@@ -3371,6 +3594,15 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
 
       status = nf_inq_varid(ncid, 'litInptStruc',varid_litInptStruc)
       if (status /= nf_noerr) call handle_err(status, "litInptStruc")
+
+      status = nf_inq_varid(ncid, 'thetaLiq',varid_thetaLiq)
+      if (status /= nf_noerr) call handle_err(status, "thetaLiq")
+
+      status = nf_inq_varid(ncid, 'fT',varid_fT)
+      if (status /= nf_noerr) call handle_err(status, "f(T)")
+
+      status = nf_inq_varid(ncid, 'fW',varid_fW)
+      if (status /= nf_noerr) call handle_err(status, "f(W)")
 
    endif  !end iday==1
 
@@ -3632,6 +3864,42 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
    status =  nf_put_vara_real(ncid, varid_litInptStruc, start3, count3, var7)
    if (status /= nf_noerr) call handle_err(status, "put_var(litInptStruc)")
 
+
+!  f(T) and f(W) output added 11/20/2017. ThetaLiq added 11/27/2017
+!  casapool%fT(npt)  - daily soil temperature multiplier on decomposition rate (0.0-1.0+)
+!  casapool%fW(npt)  - daily soil moisure multiplier on decomposition rate (0.0-1.0)
+!  casapool%thetaLiq(npt)  - fraction of liquid soil water saturation (0.0-1.0)
+
+   var1(:,:,:) = MISSING_VALUE
+   var2(:,:,:) = MISSING_VALUE
+   var3(:,:,:) = MISSING_VALUE
+
+   itime = 1
+   do npt = 1, mp
+      ilon = casamet%ilon(npt)
+      ilat = casamet%ilat(npt)
+      if (casamet%ijgcm(npt) .ne. clmgrid%cellid(ilon,ilat)) then
+         print *, 'WritePoolFluxNcFile_casacnp_annual: casamet%ijgcm(', npt, ')=', casamet%ijgcm(npt)
+         print *, '   clmgrid%cellid(', ilon, ',', ilat, ')=', clmgrid%cellid(ilon,ilat)
+         STOP
+      endif
+      var1(ilon,ilat,itime) = casapool%fT(npt)
+      var2(ilon,ilat,itime) = casapool%fW(npt)
+      var3(ilon,ilat,itime) = casapool%thetaLiq(npt)
+   enddo
+
+!! status =  nf_put_var(ncid, varid_fT, var1, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_fT, start3, count3, var1)
+   if (status /= nf_noerr) call handle_err(status, "put_var(fT)")
+ 
+!! status =  nf_put_var(ncid, varid_fW, var2, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_fW, start3, count3, var2)
+   if (status /= nf_noerr) call handle_err(status, "put_var(fW)")
+
+!! status =  nf_put_var(ncid, varid_thetaLiq, var3, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_thetaLiq, start3, count3, var3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(thetaLiq)")
+
    deallocate(var1,var2,var3,var4,var5,var6,var7)
 
    status = nf_close(ncid)
@@ -3686,7 +3954,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
    real(r_2), dimension(:,:),   allocatable   :: xndepDay
    real(r_2), dimension(:,:),   allocatable   :: xcnpp
    real(r_2), dimension(:,:),   allocatable   :: xcgpp
-   real(r_2), dimension(:,:),   allocatable   :: xlai
+!  real(r_2), dimension(:,:),   allocatable   :: xlai
    character(len=100) fnpp,fwb,ftgg,ftairk
 !  real(r_2), dimension(:),     allocatable   :: totynpp
    real(r_2), dimension(:,:),   allocatable   :: monlai
@@ -3718,7 +3986,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
 
       !Segmentation fault occurred on this allocation when it was in ReadMetNcFile.
       !Variables are allocated here instead.
-      allocate(xlai(1:mp,1:myear*mdyear))
+!     allocate(xlai(1:mp,1:myear*mdyear))
       allocate(xcnpp(1:mp,1:myear*mdyear))
       allocate(xcgpp(1:mp,1:myear*mdyear))
       allocate(xtairk(1:mp,1:myear*mdyear))
@@ -3726,7 +3994,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
       allocate(xtsoil(1:mp,1:ms,1:myear*mdyear))
       allocate(xmoist(1:mp,1:ms,1:myear*mdyear))
       allocate(xfrznmoist(1:mp,1:ms,1:myear*mdyear))
-      xlai(:,:) = 0.0
+      !xlai(:,:) = 0.0
       xcnpp(:,:) = 0.0
       xcgpp(:,:) = 0.0
       xtairk(:,:) = 0.0
@@ -3735,8 +4003,11 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
       xmoist(:,:,:) = 0.0
       xfrznmoist(:,:,:) = 0.0
 
-      call ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, &
+!     call ReadMetNcFile(filename_cnpmet, mp, ms, myear, xlai, xcnpp, xcgpp, &
+!                        xtairk, xndepDay, xtsoil, xmoist, xfrznmoist)
+      call ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, &
                          xtairk, xndepDay, xtsoil, xmoist, xfrznmoist)
+      xcnpp = xcgpp / 2.0  !Initialization only
 
       ! Compute the average air temperature over the entre simulation period.
       yavgtair(:) = 0.0
@@ -3806,21 +4077,21 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
         !! Initialize average daily pool values over the most recent myear years for 
         !! CASACNP. For output only. These daily values are accumulated in casa_cnppool 
         !! and the daily mean is computed in casa_poolout.  -MDH 9/29/2014
-        casapoolAn%CsoilAn=0.0; casapoolAn%CplantAn=0.0; casapoolAn%ClitterAn=0.0;
-        casapoolAn%NsoilAn=0.0; casapoolAn%NplantAn=0.0; casapoolAn%NlitterAn=0.0;
-        casapoolAn%PsoilAn=0.0; casapoolAn%PplantAn=0.0; casapoolAn%PlitterAn=0.0;
-        casaflux%ClitInptMetAn = 0.0; casaflux%ClitInptStrucAn = 0.0;
+        casapoolAn%CsoilAn=0.0; casapoolAn%CplantAn=0.0; casapoolAn%ClitterAn=0.0
+        casapoolAn%NsoilAn=0.0; casapoolAn%NplantAn=0.0; casapoolAn%NlitterAn=0.0
+        casapoolAn%PsoilAn=0.0; casapoolAn%PplantAn=0.0; casapoolAn%PlitterAn=0.0
+        casaflux%ClitInptMetAn = 0.0; casaflux%ClitInptStrucAn = 0.0
+        casapoolAn%tairAn=0.0; casapoolAn%tsoilAn=0.0
+        casapoolAn%fTAn=0.0; casapoolAn%fWAn=0.0; casapoolAn%thetaLiqAn=0.0;
    
         !! Initialize average annual fluxes and average daily pool values over the 
         !! most recent myear years for MIMICS. For output only. These fluxes and pools 
         !! are accumulated in mimics_caccum (mimics_cycle.f90). The means are computed 
         !! in mimics_poolfluxout (mimics_cycle.f90). -MDH 01/26/2015
-        mimicsfluxAn%ClitInputAn=0.0; mimicsfluxAn%ChrespAn=0.0; 
-        mimicspoolAn%ClitterAn=0.0;   mimicspoolAn%CmicrobeAn=0.0; mimicspoolAn%CsoilAn=0.0;
+        mimicsfluxAn%ClitInputAn=0.0; mimicsfluxAn%ChrespAn=0.0 
+        mimicspoolAn%ClitterAn=0.0;   mimicspoolAn%CmicrobeAn=0.0; mimicspoolAn%CsoilAn=0.0
+        mimicspoolAn%fTAn=0.0;   mimicspoolAn%fWAn=0.0; mimicspoolAn%thetaLiqAn=0.0; mimicspoolAn%thetaFrznAn=0.0
    
-        !! Output average annual air and soil temperatures. -MDH 08/17/2015
-        casapoolAn%tairAn=0.0;casapoolAn%tsoilAn=0.0;
-
         iYrCnt = iYrCnt + 1
         if (initcasa < 2) then
             wrtYr = iYrCnt

@@ -15,6 +15,7 @@
 !
 ! History:
 !   1/5/2015 - Created
+!   11/7/2017 - Echo contents of parameter and restart files
 !--------------------------------------------------------------------------------
 
 SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
@@ -32,8 +33,10 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   integer, INTENT(IN) :: mvtype ! number of vegetation (biome) types
 
   ! Local variables
+  integer   :: ioErr
   integer   :: npt, nP, nv, nv1
   real(r_2) :: Pscalar, kmod_val(6)
+  character(len=200) :: buffer 
 
   open(101,file=fname_mimicsbiome)
 
@@ -45,7 +48,10 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
 
   ! Fixed parameters
   ! TO DO - check input file variable name to assure corrert placement of parameter values
-  read(101,*) 
+  write(*,*)
+  write(*,*) "Reading MIMICS parameters from file ", trim(fname_mimicsbiome), "..."
+  read(101,*) buffer
+  write(*,*) trim(buffer)
  
   read(101,*) mimicsbiome%Vslope(R1) 
   read(101,*) mimicsbiome%Vslope(R2) 
@@ -54,12 +60,28 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   read(101,*) mimicsbiome%Vslope(K2)
   read(101,*) mimicsbiome%Vslope(K3) 
 
+  write(*,'(2x,a13,2x,f10.6)') 'Vslope(R1)=', mimicsbiome%Vslope(R1) 
+  write(*,'(2x,a13,2x,f10.6)') 'Vslope(R2)=', mimicsbiome%Vslope(R2) 
+  write(*,'(2x,a13,2x,f10.6)') 'Vslope(R3)=', mimicsbiome%Vslope(R3)
+  write(*,'(2x,a13,2x,f10.6)') 'Vslope(K1)=', mimicsbiome%Vslope(K1)
+  write(*,'(2x,a13,2x,f10.6)') 'Vslope(K2)=', mimicsbiome%Vslope(K2)
+  write(*,'(2x,a13,2x,f10.6)') 'Vslope(K3)=', mimicsbiome%Vslope(K3) 
+
+
   read(101,*) mimicsbiome%Vint(R1) 
   read(101,*) mimicsbiome%Vint(R2) 
   read(101,*) mimicsbiome%Vint(R3)
   read(101,*) mimicsbiome%Vint(K1)
   read(101,*) mimicsbiome%Vint(K2)
   read(101,*) mimicsbiome%Vint(K3) 
+
+  write(*,'(2x,a13,2x,f10.6)') 'Vint(R1)=', mimicsbiome%Vint(R1) 
+  write(*,'(2x,a13,2x,f10.6)') 'Vint(R2)=', mimicsbiome%Vint(R2) 
+  write(*,'(2x,a13,2x,f10.6)') 'Vint(R3)=', mimicsbiome%Vint(R3)
+  write(*,'(2x,a13,2x,f10.6)') 'Vint(K1)=', mimicsbiome%Vint(K1)
+  write(*,'(2x,a13,2x,f10.6)') 'Vint(K2)=', mimicsbiome%Vint(K2)
+  write(*,'(2x,a13,2x,f10.6)') 'Vint(K3)=', mimicsbiome%Vint(K3)
+
 
   read(101,*) mimicsbiome%av(R1) 
   read(101,*) mimicsbiome%av(R2) 
@@ -68,12 +90,28 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   read(101,*) mimicsbiome%av(K2)
   read(101,*) mimicsbiome%av(K3) 
 
+  write(*,'(2x,a13,2x,f12.8)') 'av(R1)=', mimicsbiome%av(R1) 
+  write(*,'(2x,a13,2x,f12.8)') 'av(R2)=', mimicsbiome%av(R2) 
+  write(*,'(2x,a13,2x,f12.8)') 'av(R3)=', mimicsbiome%av(R3)
+  write(*,'(2x,a13,2x,f12.8)') 'av(K1)=', mimicsbiome%av(K1)
+  write(*,'(2x,a13,2x,f12.8)') 'av(K2)=', mimicsbiome%av(K2)
+  write(*,'(2x,a13,2x,f12.8)') 'av(K3)=', mimicsbiome%av(K3) 
+
+
   read(101,*) mimicsbiome%Kslope(R1) 
   read(101,*) mimicsbiome%Kslope(R2) 
   read(101,*) mimicsbiome%Kslope(R3)  
   read(101,*) mimicsbiome%Kslope(K1)  
   read(101,*) mimicsbiome%Kslope(K2) 
   read(101,*) mimicsbiome%Kslope(K3) 
+
+  write(*,'(2x,a13,2x,f10.6)') 'Kslope(R1)=', mimicsbiome%Kslope(R1) 
+  write(*,'(2x,a13,2x,f10.6)') 'Kslope(R2)=', mimicsbiome%Kslope(R2) 
+  write(*,'(2x,a13,2x,f10.6)') 'Kslope(R3)=', mimicsbiome%Kslope(R3)  
+  write(*,'(2x,a13,2x,f10.6)') 'Kslope(K1)=', mimicsbiome%Kslope(K1)  
+  write(*,'(2x,a13,2x,f10.6)') 'Kslope(K2)=', mimicsbiome%Kslope(K2) 
+  write(*,'(2x,a13,2x,f10.6)') 'Kslope(K3)=', mimicsbiome%Kslope(K3) 
+
 
   read(101,*) mimicsbiome%Kint(R1) 
   read(101,*) mimicsbiome%Kint(R2) 
@@ -82,12 +120,28 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   read(101,*) mimicsbiome%Kint(K2) 
   read(101,*) mimicsbiome%Kint(K3)
 
+  write(*,'(2x,a13,2x,f10.6)') 'Kint(R1)=', mimicsbiome%Kint(R1) 
+  write(*,'(2x,a13,2x,f10.6)') 'Kint(R2)=', mimicsbiome%Kint(R2) 
+  write(*,'(2x,a13,2x,f10.6)') 'Kint(R3)=', mimicsbiome%Kint(R3)  
+  write(*,'(2x,a13,2x,f10.6)') 'Kint(K1)=', mimicsbiome%Kint(K1)  
+  write(*,'(2x,a13,2x,f10.6)') 'Kint(K2)=', mimicsbiome%Kint(K2) 
+  write(*,'(2x,a13,2x,f10.6)') 'Kint(K3)=', mimicsbiome%Kint(K3)
+
+
   read(101,*) mimicsbiome%ak(R1) 
   read(101,*) mimicsbiome%ak(R2) 
   read(101,*) mimicsbiome%ak(R3)
   read(101,*) mimicsbiome%ak(K1)
   read(101,*) mimicsbiome%ak(K2)
   read(101,*) mimicsbiome%ak(K3) 
+
+  write(*,'(2x,a13,2x,f10.6)') 'ak(R1)=', mimicsbiome%ak(R1) 
+  write(*,'(2x,a13,2x,f10.6)') 'ak(R2)=', mimicsbiome%ak(R2) 
+  write(*,'(2x,a13,2x,f10.6)') 'ak(R3)=', mimicsbiome%ak(R3)
+  write(*,'(2x,a13,2x,f10.6)') 'ak(K1)=', mimicsbiome%ak(K1)
+  write(*,'(2x,a13,2x,f10.6)') 'ak(K2)=', mimicsbiome%ak(K2)
+  write(*,'(2x,a13,2x,f10.6)') 'ak(K3)=', mimicsbiome%ak(K3) 
+
 
   read(101,*) mimicsbiome%Vmod(R1)
   read(101,*) mimicsbiome%Vmod(R2)
@@ -96,6 +150,14 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   read(101,*) mimicsbiome%Vmod(K2)
   read(101,*) mimicsbiome%Vmod(K3)
 
+  write(*,'(2x,a13,2x,f10.6)') 'Vmod(R1)=', mimicsbiome%Vmod(R1)
+  write(*,'(2x,a13,2x,f10.6)') 'Vmod(R2)=', mimicsbiome%Vmod(R2)
+  write(*,'(2x,a13,2x,f10.6)') 'Vmod(R3)=', mimicsbiome%Vmod(R3)
+  write(*,'(2x,a13,2x,f10.6)') 'Vmod(K1)=', mimicsbiome%Vmod(K1)
+  write(*,'(2x,a13,2x,f10.6)') 'Vmod(K2)=', mimicsbiome%Vmod(K2)
+  write(*,'(2x,a13,2x,f10.6)') 'Vmod(K3)=', mimicsbiome%Vmod(K3)
+
+
   read(101,*) kmod_val(R1)
   read(101,*) kmod_val(R2)
   read(101,*) kmod_val(R3)
@@ -103,73 +165,153 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   read(101,*) kmod_val(K2)
   read(101,*) kmod_val(K3)
 
+  write(*,'(2x,a13,2x,f10.6)') 'kmod_val(R1)=', kmod_val(R1)
+  write(*,'(2x,a13,2x,f10.6)') 'kmod_val(R2)=', kmod_val(R2)
+  write(*,'(2x,a13,2x,f10.6)') 'kmod_val(R3)=', kmod_val(R3)
+  write(*,'(2x,a13,2x,f10.6)') 'kmod_val(K1)=', kmod_val(K1)
+  write(*,'(2x,a13,2x,f10.6)') 'kmod_val(K2)=', kmod_val(K2)
+  write(*,'(2x,a13,2x,f10.6)') 'kmod_val(K3)=', kmod_val(K3)
+
+
   read(101,*) mimicsbiome%KO(1)
   read(101,*) mimicsbiome%KO(2)
+
+  write(*,'(2x,a13,2x,f10.6)') 'KO(1)=', mimicsbiome%KO(1)
+  write(*,'(2x,a13,2x,f10.6)') 'KO(2)=', mimicsbiome%KO(2)
+
 
   read(101,*) mimicsbiome%MGE(1)
   read(101,*) mimicsbiome%MGE(2)
   read(101,*) mimicsbiome%MGE(3)
   read(101,*) mimicsbiome%MGE(4)
 
+  write(*,'(2x,a13,2x,f10.6)') 'MGE(1)=', mimicsbiome%MGE(1)
+  write(*,'(2x,a13,2x,f10.6)') 'MGE(2)=', mimicsbiome%MGE(2)
+  write(*,'(2x,a13,2x,f10.6)') 'MGE(3)=', mimicsbiome%MGE(3)
+  write(*,'(2x,a13,2x,f10.6)') 'MGE(4)=', mimicsbiome%MGE(4)
+
+
   read(101,*) mimicsbiome%tau_r(1)
   read(101,*) mimicsbiome%tau_r(2)
 
+  write(*,'(2x,a13,2x,f10.6)') 'tau_r(1)=', mimicsbiome%tau_r(1)
+  write(*,'(2x,a13,2x,f10.6)') 'tau_r(2)=', mimicsbiome%tau_r(2)
+
+
   read(101,*) mimicsbiome%tau_k(1)
   read(101,*) mimicsbiome%tau_k(2)
+
+  write(*,'(2x,a13,2x,f10.6)') 'tau_k(1)=', mimicsbiome%tau_k(1)
+  write(*,'(2x,a13,2x,f10.6)') 'tau_k(2)=', mimicsbiome%tau_k(2)
+
 
   read(101,*) mimicsbiome%tauModDenom
   read(101,*) mimicsbiome%tauMod_MIN
   read(101,*) mimicsbiome%tauMod_MAX
 
+  write(*,'(2x,a13,2x,f10.6)') 'tauModDenom=', mimicsbiome%tauModDenom
+  write(*,'(2x,a13,2x,f10.6)') 'tauMod_MIN=', mimicsbiome%tauMod_MIN
+  write(*,'(2x,a13,2x,f10.6)') 'tauMod_MAX=', mimicsbiome%tauMod_MAX
+
+
   read(101,*) mimicsbiome%fPHYS_r(1)
   read(101,*) mimicsbiome%fPHYS_r(2)
 
+  write(*,'(2x,a13,2x,f10.6)') 'fPHYS_r(1)=', mimicsbiome%fPHYS_r(1)
+  write(*,'(2x,a13,2x,f10.6)') 'fPHYS_r(2)=', mimicsbiome%fPHYS_r(2)
+
+
   read(101,*) mimicsbiome%fPHYS_K(1)
   read(101,*) mimicsbiome%fPHYS_K(2)
+
+  write(*,'(2x,a13,2x,f10.6)') 'fPHYS_K(1)=', mimicsbiome%fPHYS_K(1)
+  write(*,'(2x,a13,2x,f10.6)') 'fPHYS_K(2)=', mimicsbiome%fPHYS_K(2)
+
 
   read(101,*) mimicsbiome%fCHEM_r(1)
   read(101,*) mimicsbiome%fCHEM_r(2)
   read(101,*) mimicsbiome%fCHEM_r(3)
 
+  write(*,'(2x,a13,2x,f10.6)') 'fCHEM_r(1)=', mimicsbiome%fCHEM_r(1)
+  write(*,'(2x,a13,2x,f10.6)') 'fCHEM_r(2)=', mimicsbiome%fCHEM_r(2)
+  write(*,'(2x,a13,2x,f10.6)') 'fCHEM_r(3)=', mimicsbiome%fCHEM_r(3)
+
+
   read(101,*) mimicsbiome%fCHEM_K(1)
   read(101,*) mimicsbiome%fCHEM_K(2)
   read(101,*) mimicsbiome%fCHEM_K(3)
 
+  write(*,'(2x,a13,2x,f10.6)') 'fCHEM_K(1)=', mimicsbiome%fCHEM_K(1)
+  write(*,'(2x,a13,2x,f10.6)') 'fCHEM_K(2)=', mimicsbiome%fCHEM_K(2)
+  write(*,'(2x,a13,2x,f10.6)') 'fCHEM_K(3)=', mimicsbiome%fCHEM_K(3)
+
+
   read(101,*) mimicsbiome%fSOM_p(1)
   read(101,*) mimicsbiome%fSOM_p(2)
+
+  write(*,'(2x,a13,2x,f10.6)') 'fSOM_p(1)=', mimicsbiome%fSOM_p(1)
+  write(*,'(2x,a13,2x,f10.6)') 'fSOM_p(2)=', mimicsbiome%fSOM_p(2)
+
 
   read(101,*) mimicsbiome%phys_scalar(1)
   read(101,*) mimicsbiome%phys_scalar(2)
 
+  write(*,'(2x,a15,2x,f10.6)') 'phys_scalar(1)=', mimicsbiome%phys_scalar(1)
+  write(*,'(2x,a15,2x,f10.6)') 'phys_scalar(2)=', mimicsbiome%phys_scalar(2)
+
+
   read(101,*) mimicsbiome%Fi(metbc)
   read(101,*) mimicsbiome%Fi(struc)
+
+  write(*,'(2x,a13,2x,f10.6)') 'Fi(metbc)=', mimicsbiome%Fi(metbc)
+  write(*,'(2x,a13,2x,f10.6)') 'Fi(struc)=',mimicsbiome%Fi(struc)
+
 
   read(101,*) mimicsbiome%fmet_p(1)
   read(101,*) mimicsbiome%fmet_p(2)
   read(101,*) mimicsbiome%fmet_p(3)
 
-! write(*,*) 'mimicsbiome%MGE(1) =', mimicsbiome%MGE(1)
-! write(*,*) 'mimicsbiome%MGE(2) =', mimicsbiome%MGE(2)
-! write(*,*) 'mimicsbiome%MGE(3) =', mimicsbiome%MGE(3)
-! write(*,*) 'mimicsbiome%MGE(4) =', mimicsbiome%MGE(4)
-
-  write(*,*) 'mimicsbiome%fmet_p(1) =', mimicsbiome%fmet_p(1)
-  write(*,*) 'mimicsbiome%fmet_p(2) =', mimicsbiome%fmet_p(2)
-  write(*,*) 'mimicsbiome%fmet_p(3) =', mimicsbiome%fmet_p(3)
+  write(*,'(2x,a13,2x,f10.6)') 'fmet_p(1)=', mimicsbiome%fmet_p(1)
+  write(*,'(2x,a13,2x,f10.6)') 'fmet_p(2)=', mimicsbiome%fmet_p(2)
+  write(*,'(2x,a13,2x,f10.6)') 'fmet_p(3)=', mimicsbiome%fmet_p(3)
 
 
   !Biome-specific parameters
-  read(101,*) 
-  read(101,*) 
+  read(101,*) buffer
+  write(*,*) trim(buffer)
+  read(101,*) buffer
+  write(*,*) trim(buffer)
   do nv=1,mvtype
      read(101,*) nv1,mimicsbiome%depth(nv)
+     write(*,'(2x,i2,2x,f7.2)') nv1,mimicsbiome%depth(nv)
      if (mimicsbiome%depth(nv) <= 0.0) then
         write(*,*) 'Error in ', trim(filename_mimicsbiome),' (depth <= 0): depth(',nv,')=',mimicsbiome%depth(nv)
         STOP
      endif
   end do
 
+  ! The fWFunction switch determines what water function to use (CASACNP=1,MIMICS=2,CORPSE=3)
+  ! If this parameter was not inserted (unexpected EOF), then default to MIMICS f(W)=1.0
+  read(101,*,IOSTAT=ioErr) mimicsbiome%fWFunction
+  if (ioErr .eq. 0) THEN
+    write(*,'(2x,a11,2x,i2)') 'fWFunction=', mimicsbiome%fWFunction
+    if (mimicsbiome%fWFunction .eq. CASACNP) then
+      write(*,*) '  Using f(W) function from CASACNP...'
+    elseif (mimicsbiome%fWFunction .eq. CORPSE) then
+      write(*,*) '  Using f(W) function from CORPSE...'
+    else
+      write(*,*) '  Using f(W)=1.0 from MIMICS...'
+      mimicsbiome%fWFunction = MIMICS
+    endif
+  else
+    ! Error or EOF. Default to MIMICS f(W)=1.0
+    write(*,*) '  Using f(W)=1.0 from MIMICS...'
+    mimicsbiome%fWFunction = MIMICS
+  endif
+
+
   close(101)
+  write(*,*) "Done reading MIMICS parameters from file ", trim(fname_mimicsbiome), "..."
 
   ! Calculate cell-specific parameters
   do npt=1,mp
@@ -229,8 +371,7 @@ SUBROUTINE mimics_init(filename_mimicsipool,mp,ms,mst)
   !Local Variables
   integer   :: np,npt,npz,nl,ns,nland,nlandz
   real(r_2) :: nyearz,ivtz,latz,lonz,areacellz
-
-  print *, 'initial MIMICS pool file: ',filename_mimicsipool
+  character(len=200) :: buffer
 
   mimicspool%LITm(:) = 0.0
   mimicspool%LITs(:) = 0.0 
@@ -252,18 +393,29 @@ SUBROUTINE mimics_init(filename_mimicsipool,mp,ms,mst)
 
   !If not a spinup run (initcasa .ne. 0) read initial pool values from file
   if (initcasa >= 1) then
+      write(*,*)
+      write(*,*) "Reading initial MIMICS pool file: ", trim(filename_mimicsipool), "..."
       open(105,file=filename_mimicsipool)
-      read(105,*)  ! Skip past header line
+      read(105,*)  buffer ! Skip past header line
+      !write(*,*) trim(buffer)
       do npt =1, mp
           read(105,*) nyearz,npz,ivtz,latz,lonz,areacellz,         &
                       mimicspool%LITm(npt), mimicspool%LITs(npt),  &
                       mimicspool%MICr(npt), mimicspool%MICk(npt),  &
                       mimicspool%SOMa(npt), mimicspool%SOMc(npt), mimicspool%SOMp(npt)
 
+!         write(*,123) nyearz,npz,ivtz,latz,lonz,areacellz,         &
+!                     mimicspool%LITm(npt), mimicspool%LITs(npt),  &
+!                     mimicspool%MICr(npt), mimicspool%MICk(npt),  &
+!                     mimicspool%SOMa(npt), mimicspool%SOMc(npt), mimicspool%SOMp(npt)
+!
+! 123 format(f4.0,',',i4,',',f4.0,',',10(f8.4,','))
+
           !ATTENTION: Check npz, ivtz, latz, lonz, areacellz against values read by casa_init
           !TO DO
       end do
       close(105)
+      print *, "Done reading initial MIMICS pool file: ", filename_mimicsipool, "..."
   endif
 
   ! check for negative pool sizes
@@ -329,6 +481,10 @@ SUBROUTINE mimics_poolfluxout(filename_mimicsepool,mp,iYrCnt,myear,writeToRestar
   mimicspoolAn%ClitterAn(:,:)  = mimicspoolAn%ClitterAn(:,:)  * xyear
   mimicspoolAn%CmicrobeAn(:,:) = mimicspoolAn%CmicrobeAn(:,:) * xyear
   mimicspoolAn%CsoilAn(:,:)    = mimicspoolAn%CsoilAn(:,:)    * xyear
+  mimicspoolAn%thetaLiqAn(:)   = mimicspoolAn%thetaLiqAn(:)   * xyear
+  mimicspoolAn%thetaFrznAn(:)  = mimicspoolAn%thetaFrznAn(:)  * xyear
+  mimicspoolAn%fTAn(:)         = mimicspoolAn%fTAn(:)         * xyear
+  mimicspoolAn%fWAn(:)         = mimicspoolAn%fWAn(:)         * xyear
 
   !Divide by number of simulation years to get average annual flux
   mimicsfluxAn%ChrespAn(:)      = mimicsfluxAn%ChrespAn(:) * xyear2    
@@ -465,6 +621,10 @@ END SUBROUTINE mimics_poolfluxout
       integer :: varid_cHresp			! NetCDF variable ID for soil heterotrophic respiration C
       integer :: varid_cLitIn_m			! NetCDF variable ID for metabolic litter Input C
       integer :: varid_cLitIn_s			! NetCDF variable ID for structural litter Input C
+      integer :: varid_thetaLiq	        	! NetCDF variable ID for fraction of liquid soil water saturation
+      integer :: varid_thetaFrzn        	! NetCDF variable ID for fraction of frozen soil water saturation
+!     integer :: varid_fT	        	! NetCDF variable ID for soil temperature amultiplier on decompostion
+      integer :: varid_fW        		! NetCDF variable ID for soil moisture multiplier on decompostion
       character*100 :: attr_name		! String for assigning global and variable attributes
       character*100 :: attr_units		! String for assigning global and variable attributes
       character*10 :: date_string		! String for assigning date to global attributes
@@ -483,7 +643,11 @@ END SUBROUTINE mimics_poolfluxout
       real(4), allocatable :: var8(:,:,:)	! gridded output variable
       real(4), allocatable :: var9(:,:,:)	! gridded output variable
       real(4), allocatable :: var10(:,:,:)	! gridded output variable
-      real(4) :: time                          ! time in years (1..ntimes)
+      real(4), allocatable :: var11(:,:,:)	! gridded output variable
+      real(4), allocatable :: var12(:,:,:)	! gridded output variable
+      real(4), allocatable :: var13(:,:,:)	! gridded output variable
+      real(4), allocatable :: var14(:,:,:)	! gridded output variable
+      real(4) :: time                           ! time in years (1..ntimes)
 
       if (verbose .ge. 0) print *, "Writing output to file ", trim(filename_ncOut), "..."
 
@@ -600,11 +764,23 @@ END SUBROUTINE mimics_poolfluxout
    status = nf_def_var(ncid, 'cHresp', NF_REAL, 3, dims, varid_cHresp)
    if (status /= nf_noerr) call handle_err(status, "cHresp")
 
-  status = nf_def_var(ncid, 'cLitInput_metbc', NF_REAL, 3, dims, varid_cLitIn_m)
+   status = nf_def_var(ncid, 'cLitInput_metbc', NF_REAL, 3, dims, varid_cLitIn_m)
    if (status /= nf_noerr) call handle_err(status, "cLitInput_metbc")
 
-  status = nf_def_var(ncid, 'cLitInput_struc', NF_REAL, 3, dims, varid_cLitIn_s)
+   status = nf_def_var(ncid, 'cLitInput_struc', NF_REAL, 3, dims, varid_cLitIn_s)
    if (status /= nf_noerr) call handle_err(status, "cLitInput_struc")
+
+   status = nf_def_var(ncid, 'thetaLiq', NF_REAL, 3, dims, varid_thetaLiq)
+   if (status /= nf_noerr) call handle_err(status, "thetaLiq")
+
+   status = nf_def_var(ncid, 'thetaFrzn', NF_REAL, 3, dims, varid_thetaFrzn)
+   if (status /= nf_noerr) call handle_err(status, "thetaFrzn")
+
+!  status = nf_def_var(ncid, 'fT', NF_REAL, 3, dims, varid_fT)
+!  if (status /= nf_noerr) call handle_err(status, "f(T)")
+
+   status = nf_def_var(ncid, 'fW', NF_REAL, 3, dims, varid_fW)
+   if (status /= nf_noerr) call handle_err(status, "f(W)")
 
 
    ! Global attributes
@@ -747,6 +923,26 @@ END SUBROUTINE mimics_poolfluxout
    attr_units = 'gC m-2'
    call PutVariableAttributeReal(ncid, varid_cSOMp, attr_name, attr_units, MISSING_VALUE)
 
+   ! Attributes of thetaLiq variable
+   attr_name = 'fraction of liquid soil water saturation (0.0-1.0)'
+   attr_units = 'fraction'
+   call PutVariableAttributeReal(ncid, varid_thetaLiq, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of thetaFrzn variable
+   attr_name = 'fraction of frozen soil water saturation (0.0-1.0)'
+   attr_units = 'fraction'
+   call PutVariableAttributeReal(ncid, varid_thetaFrzn, attr_name, attr_units, MISSING_VALUE)
+
+!  ! Attributes of fT variable
+!  attr_name = 'soil temperature multiplier on decomposition (0.0-1.0)'
+!  attr_units = 'multiplier'
+!  call PutVariableAttributeReal(ncid, varid_fT, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of fW variable
+   attr_name = 'soil moisture multiplier on decomposition (0.0-1.0)'
+   attr_units = 'multiplier'
+   call PutVariableAttributeReal(ncid, varid_fW, attr_name, attr_units, MISSING_VALUE)
+
 
 
    ! --------------- End the definition phase so that variables can be written to the file ---------------
@@ -801,6 +997,10 @@ END SUBROUTINE mimics_poolfluxout
    allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var9(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var10(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
+   allocate(var11(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
+   allocate(var12(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
+   allocate(var13(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
+   allocate(var14(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
 
 !  Average annual values for fluxes and pools
 !  mimicsfluxAn%CLitInputAn(npt,METBC)	- metabolic litter inputs (gC/m2/yr)
@@ -813,6 +1013,10 @@ END SUBROUTINE mimics_poolfluxout
 !  mimicspoolAn%CsoilAn(npt,AVAL)	- available SOM pool (gC/m2)
 !  mimicspoolAn%CsoilAn(npt,CHEM)	- chemically protected SOM pool (gC/m2)
 !  mimicspoolAn%CsoilAn(npt,PHYS)	- physically protected SOM pool (gC/m2)
+!  mimicspoolAn%thetaLiqAn(npt)         - MIMICS mean annual fraction of liquid water saturation
+!  mimicspoolAn%thetaFrznAn(npt)        - MIMICS mean annual fraction of frozen water saturation
+!  mimicspoolAn%fTAn(npt)               - MIMICS mean annual soil temperature function
+!  mimicspoolAn%fWAn(npt)               - MIMICS mean annual soil moisture function
 
    IGBP_PFT(:,:) = MISSING_INT
    landarea(:,:) = MISSING_VALUE
@@ -826,6 +1030,10 @@ END SUBROUTINE mimics_poolfluxout
    var8(:,:,:) = MISSING_VALUE
    var9(:,:,:) = MISSING_VALUE
    var10(:,:,:) = MISSING_VALUE
+   var11(:,:,:) = MISSING_VALUE
+   var12(:,:,:) = MISSING_VALUE
+   var13(:,:,:) = MISSING_VALUE
+   var14(:,:,:) = MISSING_VALUE
 
    itime = 1
    do npt = 1, mp
@@ -864,6 +1072,10 @@ END SUBROUTINE mimics_poolfluxout
       var6(ilon,ilat,itime)  = mimicspoolAn%CsoilAn(npt,AVAL)
       var7(ilon,ilat,itime)  = mimicspoolAn%CsoilAn(npt,CHEM)
       var8(ilon,ilat,itime)  = mimicspoolAn%CsoilAn(npt,PHYS)
+      var11(ilon,ilat,itime) = mimicspoolAn%thetaLiqAn(npt)   
+      var12(ilon,ilat,itime) = mimicspoolAn%thetaFrznAn(npt) 
+!     var13(ilon,ilat,itime) = mimicspoolAn%fTAn(npt)   
+      var14(ilon,ilat,itime) = mimicspoolAn%fWAn(npt) 
    end do
 
    ! IGBP PFT
@@ -911,8 +1123,20 @@ END SUBROUTINE mimics_poolfluxout
    status =  nf_put_var(ncid, varid_cSOMp, var8, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(cSOMp)")
 
+   status =  nf_put_var(ncid, varid_thetaLiq, var11, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(thetaLiq)")
 
-   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,IGBP_PFT,landarea)
+   status =  nf_put_var(ncid, varid_thetaFrzn, var12, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(thetaFrzn)")
+
+!  status =  nf_put_var(ncid, varid_fT, var13, start3, count3)
+!  if (status /= nf_noerr) call handle_err(status, "put_var(fT)")
+
+   status =  nf_put_var(ncid, varid_fW, var14, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(fW)")
+
+
+   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,var11,var12,var13,var14,IGBP_PFT,landarea)
 
    status = nf_close(ncid)
 
@@ -980,6 +1204,10 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       integer :: varid_cHresp			! NetCDF variable ID for soil heterotrophic respiration C
       integer :: varid_cLitIn_m			! NetCDF variable ID for metabolic litter Input C
       integer :: varid_cLitIn_s			! NetCDF variable ID for structural litter Input C
+      integer :: varid_thetaLiq	        	! NetCDF variable ID for fraction of liquid soil water saturation
+      integer :: varid_thetaFrzn        	! NetCDF variable ID for fraction of frozen soil water saturation
+!     integer :: varid_fT	        	! NetCDF variable ID for soil temperature amultiplier on decompostion
+      integer :: varid_fW        		! NetCDF variable ID for soil moisture multiplier on decompostion
       character*100 :: attr_name		! String for assigning global and variable attributes
       character*100 :: attr_units		! String for assigning global and variable attributes
       character*10 :: date_string		! String for assigning date to global attributes
@@ -1000,6 +1228,10 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       real(4), allocatable :: var8(:,:,:)	! gridded output variable
       real(4), allocatable :: var9(:,:,:)	! gridded output variable
       real(4), allocatable :: var10(:,:,:)	! gridded output variable
+      real(4), allocatable :: var11(:,:,:)	! gridded output variable
+      real(4), allocatable :: var12(:,:,:)	! gridded output variable
+      real(4), allocatable :: var13(:,:,:)	! gridded output variable
+      real(4), allocatable :: var14(:,:,:)	! gridded output variable
       real(r_2) :: unitConv		        ! mgC/cm3 * depth(cm)* (1g/10^3mg)*(10^4cm2)/m2 = gC/m2
 
       if (verbose .gt. 0) print *, iday, "Writing output to file ", trim(filename_ncOut), "..."
@@ -1124,6 +1356,18 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    
       status = nf_def_var(ncid, 'cLitInput_struc', NF_REAL, 3, dims, varid_cLitIn_s)
       if (status /= nf_noerr) call handle_err(status, "cLitInput_struc")
+
+      status = nf_def_var(ncid, 'thetaLiq', NF_REAL, 3, dims, varid_thetaLiq)
+      if (status /= nf_noerr) call handle_err(status, "thetaLiq")
+
+      status = nf_def_var(ncid, 'thetaFrzn', NF_REAL, 3, dims, varid_thetaFrzn)
+      if (status /= nf_noerr) call handle_err(status, "thetaFrzn")
+
+!     status = nf_def_var(ncid, 'fT', NF_REAL, 3, dims, varid_fT)
+!     if (status /= nf_noerr) call handle_err(status, "f(T)")
+
+      status = nf_def_var(ncid, 'fW', NF_REAL, 3, dims, varid_fW)
+      if (status /= nf_noerr) call handle_err(status, "f(W)")
    
    
       ! Global attributes
@@ -1266,7 +1510,26 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       attr_units = 'gC m-2'
       call PutVariableAttributeReal(ncid, varid_cSOMp, attr_name, attr_units, MISSING_VALUE)
    
+      ! Attributes of thetaLiq variable
+      attr_name = 'fraction of liquid soil water saturation (0.0-1.0)'
+      attr_units = 'fraction'
+      call PutVariableAttributeReal(ncid, varid_thetaLiq, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of thetaFrzn variable
+      attr_name = 'fraction of frozen soil water saturation (0.0-1.0)'
+      attr_units = 'fraction'
+      call PutVariableAttributeReal(ncid, varid_thetaFrzn, attr_name, attr_units, MISSING_VALUE)
+
+!     ! Attributes of fT variable
+!     attr_name = 'soil temperature multiplier on decomposition (0.0-1.0)'
+!     attr_units = 'multiplier'
+!     call PutVariableAttributeReal(ncid, varid_fT, attr_name, attr_units, MISSING_VALUE)
    
+      ! Attributes of fW variable
+      attr_name = 'soil moisture multiplier on decomposition (0.0-1.0)'
+      attr_units = 'multiplier'
+      call PutVariableAttributeReal(ncid, varid_fW, attr_name, attr_units, MISSING_VALUE)
+
    
       ! --------------- End the definition phase so that variables can be written to the file ---------------
       status = nf_enddef(ncid)
@@ -1350,34 +1613,46 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       ! get variable ids when iday > 1
 
       status = nf_inq_varid(ncid, 'cLITm',varid_cLITm)
-      if (status /= nf_noerr) call handle_err(status, "cLITm")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cLITm)")
    
       status = nf_inq_varid(ncid, 'cLITs', varid_cLITs)
-      if (status /= nf_noerr) call handle_err(status, "cLITs")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cLITs)")
    
       status = nf_inq_varid(ncid, 'cMICr', varid_cMICr)
-      if (status /= nf_noerr) call handle_err(status, "cMICr")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cMICr)")
    
       status = nf_inq_varid(ncid, 'cMICk', varid_cMICk)
-      if (status /= nf_noerr) call handle_err(status, "cMICk")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cMICk)")
    
       status = nf_inq_varid(ncid, 'cSOMa', varid_cSOMa)
-      if (status /= nf_noerr) call handle_err(status, "cSOMa")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cSOMa)")
    
       status = nf_inq_varid(ncid, 'cSOMc', varid_cSOMc)
-      if (status /= nf_noerr) call handle_err(status, "cSOMc")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cSOMc)")
    
       status = nf_inq_varid(ncid, 'cSOMp', varid_cSOMp)
-      if (status /= nf_noerr) call handle_err(status, "cSOMp")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cSOMp)")
    
       status = nf_inq_varid(ncid, 'cHresp', varid_cHresp)
-      if (status /= nf_noerr) call handle_err(status, "cHresp")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cHresp)")
    
       status = nf_inq_varid(ncid, 'cLitInput_metbc', varid_cLitIn_m)
-      if (status /= nf_noerr) call handle_err(status, "cLitInput_metbc")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cLitInput_metbc)")
    
       status = nf_inq_varid(ncid, 'cLitInput_struc', varid_cLitIn_s)
-      if (status /= nf_noerr) call handle_err(status, "cLitInput_struc")
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cLitInput_struc)")
+
+      status = nf_inq_varid(ncid, 'thetaLiq', varid_thetaLiq)
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(thetaLiq)")
+
+      status = nf_inq_varid(ncid, 'thetaFrzn', varid_thetaFrzn)
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(thetaFrzn)")
+
+!     status = nf_inq_varid(ncid, 'fT', varid_fT)
+!     if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(fT)")
+   
+      status = nf_inq_varid(ncid, 'fW', varid_fW)
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(fW)")
 
    endif      ! if (iday == 1)
 
@@ -1399,6 +1674,10 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
    allocate(var9(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
    allocate(var10(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
+   allocate(var11(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
+   allocate(var12(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
+   allocate(var13(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
+   allocate(var14(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
 
 !  Daily values for fluxes and pools
 !  mimicsflux%ClitInput(npt,metbc)	- metabolic litter inputs (mgC/cm3/day)
@@ -1411,6 +1690,10 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
 !  mimicspool%SOMa(npt)			- available SOM pool (mgC/cm3)
 !  mimicspool%SOMc(npt)			- chemically protected SOM pool (mgC/cm3)
 !  mimicspool%SOMp(npt)			- physically protected SOM pool (mgC/cm3)
+!  mimicspool%thetaLiq(npt)             - fraction of liquid soil water saturation (0.0-1.0)
+!  mimicspool%thetaFrzn(npt)            - fraction of frozen soil water saturation (0.0-1.0)
+!  mimicspool%fT(npt)                   - MIMICS soil temperature function
+!  mimicspool%fW(npt)                   - MIMICS soil moisture function
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -1422,6 +1705,12 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    var8(:,:,:) = MISSING_VALUE
    var9(:,:,:) = MISSING_VALUE
    var10(:,:,:) = MISSING_VALUE
+   var11(:,:,:) = MISSING_VALUE
+   var12(:,:,:) = MISSING_VALUE
+   var13(:,:,:) = MISSING_VALUE
+   var14(:,:,:) = MISSING_VALUE
+
+
 
    itime = 1
    do npt = 1, mp
@@ -1438,6 +1727,10 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       var6(ilon,ilat,itime)  = mimicspool%SOMa(npt)   * unitConv
       var7(ilon,ilat,itime)  = mimicspool%SOMc(npt)   * unitConv
       var8(ilon,ilat,itime)  = mimicspool%SOMp(npt)   * unitConv
+      var11(ilon,ilat,itime) = mimicspool%thetaLiq(npt)   
+      var12(ilon,ilat,itime) = mimicspool%thetaFrzn(npt) 
+!     var13(ilon,ilat,itime) = mimicspool%fT(npt)   
+      var14(ilon,ilat,itime) = mimicspool%fW(npt) 
    end do
 
 
@@ -1489,8 +1782,23 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    status =  nf_put_vara_real(ncid, varid_cSOMp, start3, count3, var8)
    if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cSOMp)")
 
+!! status =  nf_put_var(ncid, varid_thetaLiq, var11, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_thetaLiq, start3, count3, var11)
+   if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(thetaLiq)")
 
-   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10)
+!! status =  nf_put_var(ncid, varid_thetaFrzn, var12, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_thetaFrzn, start3, count3, var12)
+   if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(thetaFrzn)")
+
+!! status =  nf_put_var(ncid, varid_fT, var13, start3, count3)
+!  status =  nf_put_vara_real(ncid, varid_fT, start3, count3, var13)
+!  if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(fT)")
+
+!! status =  nf_put_var(ncid, varid_fW, var14, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_fW, start3, count3, var14)
+   if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(fW)")
+
+   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,var11,var12,var13,var14)
 
    status = nf_close(ncid)
 
