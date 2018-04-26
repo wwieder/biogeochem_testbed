@@ -1,0 +1,33 @@
+&soil_carbon_nml
+        vmaxref=1000e0,25e0,400e0    !Vmax at reference temperature (yr-1), WW reduced ref#1&3 
+        Ea=5e3,30e3,3e3              !Activation energy (kJ/mol)
+        kC=3*.01                     !Michaelis-Menton C parameter (dimensionless microbe fraction of total C)
+        minMicrobeC=1e-3             !Minimum microbial biomass (fraction of total C)
+        Tmic=0.25                    !Microbial turnover rate (yr-1)
+        eup=.6,.05,.6                !Microbial uptake efficiency (dimensionless fraction)
+        protection_rate=1.5          !Rate that carbon becomes protected (yr-1 or yr-1 kg-microbial-biomass-1 depending on microbe_driven_protection)
+        microbe_driven_protection=.FALSE.   !Whether to use microbial biomass in protection rate
+        protection_species=0.11,0.002,1.0     !Relative protection rate of each carbon species (between 0 and 1)
+        tProtected=75.0             !Turnover time for protected carbon transition back to unprotected pool (years)
+        protected_carbon_decomp_factor=0.0 !vmaxref for protected carbon is multiplied by this (0.0 if protected C is inaccessible to microbial decomposition)
+        soilMaxCohorts=2            !Maximum number of cohorts in each soil carbon pool
+        gas_diffusion_exp=2.5       !Exponent for gas diffusion power law dependence on theta
+                                                           !See Meslin et al 2010, SSAJ
+        et=0.6                     !Fraction of microbial turnover not converted to CO2
+        leaching_solubility=0.0     !Rate carbon dissolves in soil water at saturated moisture (yr-1)
+        DOC_deposition_rate=1.0e10  !Rate carbon is deposited from DOC (yr-1) -- currently set very high so there is no persistent DOC
+        flavor_relative_solubility=1.0,0.1,1.0  !Relative solubility of each C species, between 0 and 1
+        protected_relative_solubility=0.0       !Relative solubility of protected carbon, between 0 and 1
+        litterDensity=22.0             !C density of litter layer (kg/m3)
+                                        !22.0 roughly from Gaudinsky et al 2000
+        fWmin=0.001                    ! Minimum f(W) value for soil moisture effect on respiration (default=0.0)
+
+    /
+
+&CORPSE_casa_nml
+    initial_C=0.0,2.0,0.0
+    exudate_npp_frac=0.02,0.0,0.0
+    rhizosphere_frac=0.3
+    litter_option=1         ! 1=use soil layer only, 2=use litter & soil layers
+
+    /
