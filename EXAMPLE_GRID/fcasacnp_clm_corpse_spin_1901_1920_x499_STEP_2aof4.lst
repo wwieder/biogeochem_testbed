@@ -12,17 +12,17 @@
 ./gridinfo_soil_clm2.csv                                     !! 12) Input file with soil properties for each grid cell
 ../INPUT_MET_GRID_CRU_NCEP_SOILLIQ/met_1901_1901.nc          !! 13) Input File for met data, for transient one file per year
 ./cnppool_end_prespin_1901_x100.csv                          !! 14) CASA initial conditions (initcasa > 0 only)
-./cnppool_end_1901_1920_spin_x499a_corpse.csv                 !! 15) CASA end-of-simulation output file (pools)
-./cnpflux_end_1901_1920_spin_x499a_corpse.csv                 !! 16) CASA end-of-simulation output file (fluxes)
-../OUTPUT_GRID_CRU_NCEP/CORPSE_SPIN_test3a/casaclm_pool_flux_yyyy.nc   !! 17) CASA annual/daily netcdf output file
-./pftlookup_LIDET-MIM-REV_lowerKM_v11.09.2016_e.csv             !! 18) MIMICS input parameter file 
+./cnppool_end_1901_1920_spin_x499a_minFW_corpse.csv                !! 15) CASA end-of-simulation output file (pools)
+./cnpflux_end_1901_1920_spin_x499a_minFW_corpse.csv                !! 16) CASA end-of-simulation output file (fluxes)
+../OUTPUT_GRID_CRU_NCEP/CORPSE_SPIN_minFW_a/casaclm_pool_flux_yyyy.nc !! 17) CASA annual/daily netcdf output file
+./pftlookup_LIDET-MIM-REV_lowerKM_v11.28.2017.csv               !! 18) MIMICS input parameter file 
 ./mimicspool_init.csv                                           !! 19) MIMICS initial conditions (initcasa > 0 only)
-./mimicspool_end_1901_1920_spin_x499.csv                        !! 20) MIMICS end-of-simulation output file (pools)
-../OUTPUT_GRID_CRU_NCEP/MIMICS_SPIN_test3/mimics_pool_flux_yyyy.nc    !! 21) MIMICS annual/daily netcdf output file
-./corpsepool_init.csv                                           !! 22) CORPSE initial conditions (initcasa > 0 only)
-./corpsepool_end_1901_1920_spin_x499a.csv                       !! 23) CORPSE end-of-simulation output file (pools)
-./corpse_params_new_march20n.nml                                         !! 24) CORPSE input parameter file 
-../OUTPUT_GRID_CRU_NCEP/CORPSE_SPIN_test3a/corpse_pool_flux_yyyy.nc    !! 25) CORPSE annual/daily netcdf output file
+./mimicspool_end_1901_1920_spin_x499a.csv                       !! 20) MIMICS end-of-simulation output file (pools)
+../OUTPUT_GRID_CRU_NCEP/MIMICS_SPIN_a/mimics_pool_flux_yyyy.nc  !! 21) MIMICS annual/daily netcdf output file
+./corpsepool_init_litopt_1.csv                                  !! 22) CORPSE initial conditions (initcasa > 0 only)
+./corpsepool_end_1901_1920_spin_x499a_minFW.csv                       !! 23) CORPSE end-of-simulation output file (pools)
+./corpse_params_12.18d.2017.nml                                 !! 24) CORPSE input parameter file 
+../OUTPUT_GRID_CRU_NCEP/CORPSE_SPIN_minFW_a/corpse_pool_flux_yyyy.nc  !! 25) CORPSE annual/daily netcdf output file
 ./co2delta_control.txt                                          !! 26) Input file for perturbations (Tair, Tsoil, NPP)
 -1       !! Save daily output for this point. Set to -1 if no daily point file is to be generated.
 /project/bgc01/melannie/PointSimulations/                       !! 27) Location to write point files (if applicable)
