@@ -140,7 +140,7 @@ SUBROUTINE mimics_xratesoil(veg,soil,casamet,casabiome)
   casaflux%klitter(:,:) = 0.0        ! initialize klitter for all 3 casa litter pool.  Only cwd will be reset.
   casaflux%fromLtoCO2(:,:) = 0.0     ! flow from L to CO2
 
-  fwps(:)     =  casamet%moistavg(:)/soil%ssat(:)
+  fwps(:)     =  min(1.0, casamet%moistavg(:)/soil%ssat(:))
   tsavg(:)    =  casamet%tsoilavg(:) 
 
   DO npt=1,mp
@@ -152,7 +152,7 @@ SUBROUTINE mimics_xratesoil(veg,soil,casamet,casabiome)
                  xkwater(npt)=1.0
       xklitter(npt) = casabiome%xkoptlitter(veg%iveg(npt)) * xktemp(npt) * xkwater(npt)
       casaflux%klitter(npt,cwd) = xklitter(npt) * casabiome%litterrate(veg%iveg(npt),cwd)   
- 
+
       !! from casa_coeffsoil for reference
       !! casaflux%fromLtoS(:,mic,cwd)   = 0.40*(1.0 - casabiome%fracLigninplant(veg%iveg(:),wood)) ! CWD -> fmic
       !! casaflux%fromLtoS(:,slow,cwd)  = 0.7 * casabiome%fracLigninplant(veg%iveg(:),wood)        ! CWD -> slow
@@ -287,8 +287,8 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
       mimicsbiome%fmet(npt) = mimicsbiome%fmet_p(1) &
                               * (mimicsbiome%fmet_p(2) - mimicsbiome%fmet_p(3)*mimicsbiome%ligninNratioAvg(npt))
       if(mimicsbiome%fmet(npt) < 0.0) then
-          write(*,*) 'WARNING: mimicsbiome%fmet(', npt, ')=', mimicsbiome%fmet(npt)
-          write(*,*) 'Resetting to zero...'
+          write(*,'(a28,i5,a2,f10.6)') '  WARNING: mimicsbiome%fmet(', npt, ')=', mimicsbiome%fmet(npt)
+          write(*,*) '  Resetting fmet to zero...'
           mimicsbiome%fmet(npt) = 0.0
       endif
 
@@ -344,6 +344,16 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
   real(r_2) :: dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk
   real(r_2) :: NHOURSf
   real(r_2) :: Tsoil	!! average soil temperature for the day (degrees C)
+  real(r_2) :: theta_liq       ! WW average liquid soil water
+  real(r_2) :: theta_frzn      ! WW average frozen soil water
+  real(r_2) :: air_filled_porosity !Fraction of 1.0.  Different from 1.0-theta_liq since it includes ice
+  real(r_2) :: fW              ! CORPSE moisture function theta_liq^3*(1-air_filled_porosity)^2.5,
+                               ! WW adjusted to give max values of 1, min = 0.01
+  REAL(r_2), parameter :: wfpscoefa=0.55   ! Kelly et al. (2000) JGR, Figure 2b), optimal wfps 
+  REAL(r_2), parameter :: wfpscoefb=1.70   ! Kelly et al. (2000) JGR, Figure 2b)
+  REAL(r_2), parameter :: wfpscoefc=-0.007 ! Kelly et al. (2000) JGR, Figure 2b)
+  REAL(r_2), parameter :: wfpscoefd=3.22   ! Kelly et al. (2000) JGR, Figure 2b)
+  REAL(r_2), parameter :: wfpscoefe=6.6481 ! =wfpscoefd*(wfpscoefb-wfpscoefa)/(wfpscoefa-wfpscoefc)
 
   if (iptToSave_mimics > 0) then
       open(214,file=sPtFileNameMIMICS, access='APPEND')
@@ -381,19 +391,49 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
 
       ! Vmax - temperature sensitive maximum reaction velocities (mg C (mg MIC)-1 h-1) 
       Tsoil = casamet%tsoilavg(npt) - tkzeroc
+
+     ! Read in soil moisture data as in CORPSE
+      theta_liq  = min(1.0, casamet%moistavg(npt)/soil%ssat(npt))     ! fraction of liquid water-filled pore space (0.0 - 1.0)
+      theta_frzn = min(1.0, casamet%frznmoistavg(npt)/soil%ssat(npt)) ! fraction of frozen water-filled pore space (0.0 - 1.0)
+      air_filled_porosity = max(0.0, 1.0-theta_liq-theta_frzn)
+
+      if (mimicsbiome%fWFunction .eq. CORPSE) then
+        ! CORPSE water scalar, adjusted to give maximum values of 1
+        fW = (theta_liq**3 * air_filled_porosity**2.5)/0.022600567942709
+        fW = max(0.05, fW) 
+      elseif (mimicsbiome%fWFunction .eq. CASACNP) then
+        ! CASA water scalar, does not use frozen water in the calculation!
+        ! local variables
+        fW = ((theta_liq-wfpscoefb)/(wfpscoefa-wfpscoefb))**wfpscoefe &
+           * ((theta_liq-wfpscoefc)/(wfpscoefa-wfpscoefc))**wfpscoefd      
+        fW = min(fW, 1.0)
+        fW = max(0.01, fW)
+      else
+        fW = 1.0
+      endif
+
+      mimicspool%fW(npt) =  fW
+      mimicspool%thetaLiq(npt)  =  theta_liq
+      mimicspool%thetaFrzn(npt) =  theta_frzn
+
       mimicsbiome%Vmax(npt,R1) = exp(mimicsbiome%Vslope(R1) * Tsoil + mimicsbiome%Vint(R1)) &
-                                 * mimicsbiome%av(R1) * mimicsbiome%Vmod(R1)
+                                 * mimicsbiome%av(R1) * mimicsbiome%Vmod(R1) *fW
       mimicsbiome%Vmax(npt,R2) = exp(mimicsbiome%Vslope(R2) * Tsoil + mimicsbiome%Vint(R2)) &
-                                 * mimicsbiome%av(R2) * mimicsbiome%Vmod(R2)
+                                 * mimicsbiome%av(R2) * mimicsbiome%Vmod(R2) *fW
       mimicsbiome%Vmax(npt,R3) = exp(mimicsbiome%Vslope(R3) * Tsoil + mimicsbiome%Vint(R3)) &
-                                 * mimicsbiome%av(R3) * mimicsbiome%Vmod(R3)
+                                 * mimicsbiome%av(R3) * mimicsbiome%Vmod(R3) *fW
       mimicsbiome%Vmax(npt,K1) = exp(mimicsbiome%Vslope(K1) * Tsoil + mimicsbiome%Vint(K1)) &
-                                 * mimicsbiome%av(K1) * mimicsbiome%Vmod(K1)
+                                 * mimicsbiome%av(K1) * mimicsbiome%Vmod(K1) *fW
       mimicsbiome%Vmax(npt,K2) = exp(mimicsbiome%Vslope(K2) * Tsoil + mimicsbiome%Vint(K2)) &
-                                 * mimicsbiome%av(K2) * mimicsbiome%Vmod(K2)
+                                 * mimicsbiome%av(K2) * mimicsbiome%Vmod(K2) *fW
       mimicsbiome%Vmax(npt,K3) = exp(mimicsbiome%Vslope(K3) * Tsoil + mimicsbiome%Vint(K3)) &
-                                 * mimicsbiome%av(K3) * mimicsbiome%Vmod(K3)
-    
+                                 * mimicsbiome%av(K3) * mimicsbiome%Vmod(K3) *fW
+   
+      ! WW also modify TAU as a function of soil moisture, so things don't
+      ! colapse in frozen soils...
+      mimicsbiome%tauR(npt) = mimicsbiome%tauR(npt) * fW
+      mimicsbiome%tauK(npt) = mimicsbiome%tauK(npt) * fW
+ 
       ! Km - half saturation constants (temperature sensitive) (mg C cm-3)
       mimicsbiome%Km(npt,R1) = exp(mimicsbiome%Kslope(R1) * Tsoil + mimicsbiome%Kint(R1)) &
                                * mimicsbiome%ak(R1) / mimicsbiome%Kmod(npt,R1)
@@ -559,6 +599,17 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
   real(r_2) :: dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk
   real(r_2) :: NHOURSf
   real(r_2) :: Tsoil	!! average soil temperature for the day (degrees C)
+  real(r_2) :: theta_liq       ! WW average liquid soil water
+  real(r_2) :: theta_frzn      ! WW average frozen soil water
+  real(r_2) :: air_filled_porosity !Fraction of 1.0.  Different from 1.0-theta_liq since it includes ice
+  real(r_2) :: fW              ! CORPSE moisture function theta_liq^3*(1-air_filled_porosity)^2.5,
+                               ! WW adjusted to give max values of 1, min =
+                               ! 0.01
+  REAL(r_2), parameter :: wfpscoefa=0.55   ! Kelly et al. (2000) JGR, Figure 2b), optimal wfps 
+  REAL(r_2), parameter :: wfpscoefb=1.70   ! Kelly et al. (2000) JGR, Figure 2b)
+  REAL(r_2), parameter :: wfpscoefc=-0.007 ! Kelly et al. (2000) JGR, Figure 2b)
+  REAL(r_2), parameter :: wfpscoefd=3.22   ! Kelly et al. (2000) JGR, Figure 2b)
+  REAL(r_2), parameter :: wfpscoefe=6.6481 ! =wfpscoefd*(wfpscoefb-wfpscoefa)/(wfpscoefa-wfpscoefc)
 
   if (iptToSave_mimics > 0) then
       open(214,file=sPtFileNameMIMICS, access='APPEND')
@@ -596,19 +647,48 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
 
       ! Vmax - temperature sensitive maximum reaction velocities (mg C (mg MIC)-1 h-1) 
       Tsoil = casamet%tsoilavg(npt) - tkzeroc
+      ! Read in soil moisture data as in CORPSE
+      theta_liq  = min(1.0, casamet%moistavg(npt)/soil%ssat(npt))     ! fraction of liquid water-filled pore space (0.0 - 1.0)
+      theta_frzn = min(1.0, casamet%frznmoistavg(npt)/soil%ssat(npt)) ! fraction of frozen water-filled pore space (0.0 - 1.0)
+      air_filled_porosity = max(0.0, 1.0-theta_liq-theta_frzn)
+
+      if (mimicsbiome%fWFunction .eq. CORPSE) then
+        ! CORPSE water scalar, adjusted to give maximum values of 1
+        fW = (theta_liq**3 * air_filled_porosity**2.5)/0.022600567942709
+        fW = max(0.05, fW) 
+      elseif (mimicsbiome%fWFunction .eq. CASACNP) then
+        ! CASA water scalar, does not use frozen water in the calculation!
+        ! local variables
+        fW = ((theta_liq-wfpscoefb)/(wfpscoefa-wfpscoefb))**wfpscoefe &
+           * ((theta_liq-wfpscoefc)/(wfpscoefa-wfpscoefc))**wfpscoefd      
+        fW = min(fW, 1.0)
+        fW = max(0.01, fW)
+      else
+        fW = 1.0
+      endif
+
+      mimicspool%fW(npt) =  fW
+      mimicspool%thetaLiq(npt)  =  theta_liq
+      mimicspool%thetaFrzn(npt) =  theta_frzn
+
       mimicsbiome%Vmax(npt,R1) = exp(mimicsbiome%Vslope(R1) * Tsoil + mimicsbiome%Vint(R1)) &
-                                 * mimicsbiome%av(R1) * mimicsbiome%Vmod(R1)
+                                 * mimicsbiome%av(R1) * mimicsbiome%Vmod(R1) * fW
       mimicsbiome%Vmax(npt,R2) = exp(mimicsbiome%Vslope(R2) * Tsoil + mimicsbiome%Vint(R2)) &
-                                 * mimicsbiome%av(R2) * mimicsbiome%Vmod(R2)
+                                 * mimicsbiome%av(R2) * mimicsbiome%Vmod(R2) * fW
       mimicsbiome%Vmax(npt,R3) = exp(mimicsbiome%Vslope(R3) * Tsoil + mimicsbiome%Vint(R3)) &
-                                 * mimicsbiome%av(R3) * mimicsbiome%Vmod(R3)
+                                 * mimicsbiome%av(R3) * mimicsbiome%Vmod(R3) * fW
       mimicsbiome%Vmax(npt,K1) = exp(mimicsbiome%Vslope(K1) * Tsoil + mimicsbiome%Vint(K1)) &
-                                 * mimicsbiome%av(K1) * mimicsbiome%Vmod(K1)
+                                 * mimicsbiome%av(K1) * mimicsbiome%Vmod(K1) * fW
       mimicsbiome%Vmax(npt,K2) = exp(mimicsbiome%Vslope(K2) * Tsoil + mimicsbiome%Vint(K2)) &
-                                 * mimicsbiome%av(K2) * mimicsbiome%Vmod(K2)
+                                 * mimicsbiome%av(K2) * mimicsbiome%Vmod(K2) * fW
       mimicsbiome%Vmax(npt,K3) = exp(mimicsbiome%Vslope(K3) * Tsoil + mimicsbiome%Vint(K3)) &
-                                 * mimicsbiome%av(K3) * mimicsbiome%Vmod(K3)
+                                 * mimicsbiome%av(K3) * mimicsbiome%Vmod(K3) * fW
     
+      ! WW also modify TAU as a function of soil moisture, so things don't
+      ! colapse in frozen soils...
+      mimicsbiome%tauR(npt) = mimicsbiome%tauR(npt) * fW
+      mimicsbiome%tauK(npt) = mimicsbiome%tauK(npt) * fW
+ 
       ! Km - half saturation constants (temperature sensitive) (mg C cm-3)
       mimicsbiome%Km(npt,R1) = exp(mimicsbiome%Kslope(R1) * Tsoil + mimicsbiome%Kint(R1)) &
                                * mimicsbiome%ak(R1) / mimicsbiome%Kmod(npt,R1)
@@ -853,6 +933,12 @@ SUBROUTINE mimics_caccum(mp,cwd2co2)
       ! mimicsflux%Chresp is in units of mg/c3 whereas mimicsfluxAn%ChrespAn is gC/m2
       mimicsflux%Chresp(npt) = mimicsflux%Chresp(npt) + cwd2co2(npt)/unitConv 
       mimicsfluxAn%ChrespAn(npt) = mimicsfluxAn%ChrespAn(npt) + mimicsflux%Chresp(npt) * unitConv 
+
+      ! Added f(T), f(W), thetaLiq, thetaFrzn to MIMICS output. -mdh 11/27/2017
+      mimicspoolAn%fTAn(npt) = mimicspoolAn%fTAn(npt) + mimicspool%fT(npt) 
+      mimicspoolAn%fWAn(npt) = mimicspoolAn%fWAn(npt) + mimicspool%fW(npt) 
+      mimicspoolAn%thetaLiqAn(npt) = mimicspoolAn%thetaLiqAn(npt) + mimicspool%thetaLiq(npt) 
+      mimicspoolAn%thetaFrznAn(npt) = mimicspoolAn%thetaFrznAn(npt) + mimicspool%thetaFrzn(npt) 
 
       if (cwd2co2(npt) .lt. 0.0 .or. mimicsflux%Chresp(npt) .lt. 0.0) then
           write(57,*) 'WARNING NEGATIVE RESPIRATION: ', &

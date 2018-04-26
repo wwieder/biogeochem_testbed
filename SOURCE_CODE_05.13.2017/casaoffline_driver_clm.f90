@@ -167,7 +167,9 @@ PROGRAM offline_casacnp
   open(1,file=filename_co2delta)
   read(1,*)
   read(1,*) co2air,deltsoil,deltair,deltYr,nppMult
-  print *, 'co2air deltsoil deltair deltYr nppMult icycle =',co2air,deltsoil,deltair,deltYr,nppMult,icycle
+  write(*,*) 'Climate Perturbations: '
+  write(*,'(2x,a40,2x,f6.2,2x,f8.4,2x,f8.4,2x,i6,2x,f8.4)') 'co2air deltsoil deltair deltYr nppMult =', &
+            co2air,deltsoil,deltair,deltYr,nppMult
 
   read(10,*) casafile%iptToSave         !! If > 0, save daily output for this point in .csv file
   if (casafile%iptToSave > 0) then
@@ -198,11 +200,15 @@ PROGRAM offline_casacnp
 
   else if (isomModel == CORPSE) then
 
+      litter_option = 2 ! default: distribute litter inputs into CORPSE litter and soil pools
+
       !Read parameters from namelist
       print *, 'Reading CORPSE parameters from namelist...', filename_corpsenamelist
       OPEN(unit=namelistunit,file=filename_corpsenamelist)
       READ(unit=namelistunit,NML=CORPSE_casa_nml)
       CLOSE(unit=namelistunit)
+      write(*,nml=CORPSE_casa_nml) 
+
       ! This subroutine was never actually called before, so namelist parameters had default values -mdh 3/20/2017
       call read_soil_carbon_namelist(filename_corpsenamelist)
       if (mdaily == 1) then
@@ -211,6 +217,12 @@ PROGRAM offline_casacnp
       else
          !!recordtime = 8760	! output interval is at the end of every year
          recordtime = 365	! output interval is at the end of every year (daily timestep - mdh 3/21/2016)
+      endif
+
+      if (litter_option == 2) then
+        write(*,*) 'Distributing litter inputs into CORPSE litter and soil pools...'
+      else
+        write(*,*) 'Distributing litter inputs into CORPSE soil pools only...'
       endif
 
   endif

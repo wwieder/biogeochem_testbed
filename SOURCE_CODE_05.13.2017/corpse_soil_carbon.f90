@@ -111,7 +111,7 @@ real                     :: leaching_solubility=0.0       !Rate carbon dissolves
 real,dimension(nspecies) :: flavor_relative_solubility=(/1.0,1.0,1.0/) !For each C flavor, relative to 1.0
 real                     :: protected_relative_solubility=0.0 !Relative to 1.0
 real                     :: DOC_deposition_rate=1e10       !Rate carbon is deposited from DOC ((kgC/kgH2O)-1 yr-1)
-real                     :: gas_diffusion_exp=2.5          !Exponent for gas diffusion power law dependence on theta
+real                     :: gas_diffusion_exp=2.5          !Exponent for gas diffusion power law dependence on theta_liq
                                                            !See Meslin et al 2010, SSAJ
 real                     :: litterDensity=22.0             !C density of litter layer (kg/m3)
                                                            !22.0 roughly from Gaudinsky et al 2000
@@ -199,13 +199,14 @@ integer :: namelistunit
 namelistunit=12300
 !Read parameters from namelist
 if(present(file)) then
-    print *,'Reading CORPSE soil params from namelist: ',file
+    print *,'Reading CORPSE soil parameters from namelist: ',file
     OPEN(unit=namelistunit,file=file)
 else
     OPEN(unit=namelistunit,file='corpse_params.nml')
 endif
 READ(unit=namelistunit,NML=soil_carbon_nml)
 CLOSE(unit=namelistunit)
+write(*,nml=soil_carbon_nml) 
 
 IF(CLASSIC_DECOMP) THEN
     minMicrobeC=0.0
@@ -221,13 +222,13 @@ end subroutine
 ! within the pool and calls update_cohort for each to do respiration, microbial growth and turnover,
 ! and protected C formation and turnover.  
 
-subroutine update_pool(pool,T,theta,air_filled_porosity,liquid_water,frozen_water,dt,layerThickness,&
+subroutine update_pool(pool,T,theta_liq,air_filled_porosity,liquid_water,frozen_water,dt,layerThickness,&
             fast_C_loss_rate,slow_C_loss_rate,deadmic_C_loss_rate,CO2prod,deadmic_produced,&
             protected_produced,protected_turnover_rate,&
             C_dissolved,deposited_C,badCohort,npt,doy,hr)
     implicit none
     type(soil_carbon_pool),intent(inout)::pool
-    real,intent(in)::T,theta,dt,air_filled_porosity,liquid_water,frozen_water,layerThickness
+    real,intent(in)::T,theta_liq,dt,air_filled_porosity,liquid_water,frozen_water,layerThickness
     real,intent(out)::fast_C_loss_rate,slow_C_loss_rate,deadmic_C_loss_rate,CO2prod,&
             protected_produced(nspecies),protected_turnover_rate(nspecies),deadmic_produced
     real,intent(out)::C_dissolved(nspecies),deposited_C(nspecies)
@@ -265,7 +266,7 @@ subroutine update_pool(pool,T,theta,air_filled_porosity,liquid_water,frozen_wate
 !   if(liquid_water > 0.0) then
 !       liquid_frac=liquid_water/(liquid_water+frozen_water)
 !       deposited_C=DOC_deposition_rate*pool%dissolved_carbon*liquid_frac*dt
-!       dissolution_rate=leaching_solubility*theta
+!       dissolution_rate=leaching_solubility*theta_liq
 !       where(deposited_C > pool%dissolved_carbon)
 !           deposited_C=pool%dissolved_carbon
 !           pool%dissolved_carbon=0.0
@@ -274,7 +275,7 @@ subroutine update_pool(pool,T,theta,air_filled_porosity,liquid_water,frozen_wate
 !       end where
 !
 !       !Protected carbon can dissolve, but much faster under high moisture conditions
-!       protected_solubility=theta**gas_diffusion_exp*protected_relative_solubility
+!       protected_solubility=theta_liq**gas_diffusion_exp*protected_relative_solubility
 !       if (protected_solubility<0.0) protected_solubility=0.0
 !       if (protected_solubility>1.0) protected_solubility=1.0
 !
@@ -330,7 +331,7 @@ subroutine update_pool(pool,T,theta,air_filled_porosity,liquid_water,frozen_wate
 
     DO n=1,size(pool%litterCohorts)
         prevC=pool%litterCohorts(n)%litterC
-        call update_cohort(pool%litterCohorts(n),cohortVolume(n),T,max(theta,0.0),max(air_filled_porosity,0.0),&
+        call update_cohort(pool%litterCohorts(n),cohortVolume(n),T,max(theta_liq,0.0),max(air_filled_porosity,0.0),&
                         Prate_limited,dt,tempresp,temp_deadmic,temp_protected,temp_protected_turnover_rate,tempCO2)
         IF (.NOT. check_cohort(pool%litterCohorts(n))) THEN
             if(present(badCohort)) badCohort=n
@@ -358,14 +359,14 @@ end subroutine update_pool
 
 !-------------------------------------------------------------------------------------------------------------------------------------
 !Do litter respiration and microbial turnover for one litter cohort
-subroutine update_cohort(cohort,cohortVolume,T,theta,air_filled_porosity,protection_rate,dt,totalResp,&
+subroutine update_cohort(cohort,cohortVolume,T,theta_liq,air_filled_porosity,protection_rate,dt,totalResp,&
     deadmic_produced,protected_produced,protected_turnover_rate,CO2prod)
 
     implicit none
     type(litterCohort),intent(inout)::cohort
     real,intent(out)::totalResp(nspecies),CO2prod,protected_produced(nspecies), &
                       protected_turnover_rate(nspecies),deadmic_produced
-    real,intent(in)::cohortVolume,T,theta,dt,protection_rate(nspecies) !Temperature, volumetric water content, delta time
+    real,intent(in)::cohortVolume,T,theta_liq,dt,protection_rate(nspecies) !Temperature, volumetric water content, delta time
     real,intent(in)::air_filled_porosity
 
     real::microbeTurnover,temp_microbes
@@ -381,7 +382,7 @@ subroutine update_cohort(cohort,cohortVolume,T,theta,air_filled_porosity,protect
     !Decompose carbon pools
     !Litter
 
-    tempResp=Resp(cohort%litterC,cohort%livingMicrobeC,T,theta,air_filled_porosity)
+    tempResp=Resp(cohort%litterC,cohort%livingMicrobeC,T,theta_liq,air_filled_porosity)
 
     where(dt*tempResp > cohort%litterC)
         tempResp=cohort%litterC/dt
@@ -394,7 +395,8 @@ subroutine update_cohort(cohort,cohortVolume,T,theta,air_filled_porosity,protect
     totalResp=totalResp+tempResp
 
     !Protected carbon
-    tempResp=Resp(cohort%protectedC,cohort%livingMicrobeC,T,theta,air_filled_porosity,vmax_factor=protected_carbon_decomp_factor)
+    tempResp=Resp(cohort%protectedC,cohort%livingMicrobeC,T,theta_liq,air_filled_porosity, &
+                  vmax_factor=protected_carbon_decomp_factor)
 
     where(dt*tempResp > cohort%protectedC)
         tempResp=cohort%protectedC/dt
@@ -499,10 +501,10 @@ end subroutine initializeCohort
 
 !-------------------------------------------------------------------------------------------------------------------------------------
 ! Calculate respriation rate (kgC/m2/yr) using microbial biomass, Vmax, and moisture function
-function Resp(Ctotal,Chet,T,theta,air_filled_porosity,vmax_factor)
+function Resp(Ctotal,Chet,T,theta_liq,air_filled_porosity,vmax_factor)
     real,intent(in)::Chet                       !heterotrophic (microbial) C
-    real,intent(in)::T,theta                    !temperature (k), theta (fraction of 1.0)
-    real,intent(in)::air_filled_porosity        !Fraction of 1.0.  Different from theta since it includes ice
+    real,intent(in)::T,theta_liq                !temperature (k), theta (liquid fraction of 1.0)
+    real,intent(in)::air_filled_porosity        !Fraction of 1.0.  Different from 1.0-theta_liq since it includes ice
     real,intent(in),dimension(nspecies)::Ctotal !Substrate C
     real,intent(in),optional :: vmax_factor     !Multiply vmax by this factor
 
@@ -517,30 +519,30 @@ function Resp(Ctotal,Chet,T,theta,air_filled_porosity,vmax_factor)
     enz=Chet*enzfrac
 
     !Available carbon is the amount that diffuses to enzyme site
-    !Cavail=Ctotal*sol*D*theta**3
+    !Cavail=Ctotal*sol*D*theta_liq**3
     !Available carbon is the amount that is not in saturated soil fraction
-    !Cavail=Ctotal*(1.0-theta)
+    !Cavail=Ctotal*(1.0-theta_liq)
     !Power law dependence on soil moisture, see below
 
     Cavail=Ctotal
-    IF(sum(Cavail).eq.0.0 .OR. theta.eq.0.0 .OR. enz.eq.0.0) THEN
+    IF(sum(Cavail) .eq. 0.0 .OR. theta_liq .eq. 0.0 .OR. enz .eq. 0.0) THEN
         Resp=0.0
         return
     ENDIF
 
-    ! Put a lower limit of 0.001 on theta^3 (w.wieder, 11/7/2016).
-!   Resp=Vmax(T)*vmax_multiplier*theta**3*(Cavail)*enz/(sum(Cavail)*kC+enz) &
+    ! Put a lower limit of 0.001 on theta_liq^3 (w.wieder, 11/7/2016).
+!   Resp=Vmax(T)*vmax_multiplier*theta_liq**3*(Cavail)*enz/(sum(Cavail)*kC+enz) &
 !        *max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor)
-    Resp=Vmax(T)*vmax_multiplier*(theta**3+0.001)*(Cavail)*enz/(sum(Cavail)*kC+enz) &
+    Resp=Vmax(T)*vmax_multiplier*(theta_liq**3+0.001)*(Cavail)*enz/(sum(Cavail)*kC+enz) &
          *max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor)
 
-    !ox_avail=oxygen_concentration(Ox,sum(tempresp)/sum(Cavail)*theta*oxPerC)
+    !ox_avail=oxygen_concentration(Ox,sum(tempresp)/sum(Cavail)*theta_liq*oxPerC)
     !print *,sum(tempresp)/sum(Cavail)
     !print *,ox_avail/(kO+ox_avail)
-    !print *,tempresp*(1.0-theta)+theta*tempresp*ox_avail/(kO+ox_avail)
+    !print *,tempresp*(1.0-theta_liq)+theta_liq*tempresp*ox_avail/(kO+ox_avail)
 
-    !Assumes pores are either saturated or not oxygen limited, divided according to theta
-    !Resp=tempresp*(1.0-theta)+theta*tempresp*ox_avail/(kO+ox_avail)
+    !Assumes pores are either saturated or not oxygen limited, divided according to theta_liq
+    !Resp=tempresp*(1.0-theta_liq)+theta_liq*tempresp*ox_avail/(kO+ox_avail)
 end function Resp
 
 

@@ -99,6 +99,7 @@ MODULE mimicsvariable
                                            fPHYS,  &
                                            fCHEM,  &
                                            fAVAL  
+    INTEGER:: fWFunction
  
   END TYPE mimics_biome
 
@@ -116,7 +117,11 @@ MODULE mimicsvariable
                                        MICk, &
                                        SOMa, &
                                        SOMc, &
-                                       SOMp
+                                       SOMp, &
+                                       thetaLiq, &
+                                       thetaFrzn, &
+                                       fT,   &
+                                       fW
   END TYPE mimics_pool
 
 !-------------------------
@@ -125,6 +130,12 @@ MODULE mimicsvariable
     REAL(r_2), DIMENSION(:,:), POINTER :: ClitterAn,    &
                                           CsoilAn,      &
                                           CmicrobeAn
+
+    REAL(r_2), DIMENSION(:), POINTER :: thetaLiqAn,  &
+                                        thetaFrznAn, &
+                                        fTAn,        &
+                                        fWAn
+
   END TYPE mimics_annual_pool
 
 !-------------------------
@@ -206,11 +217,19 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
            mimicspool%MICk(arraysize),        &
            mimicspool%SOMa(arraysize),        &
            mimicspool%SOMc(arraysize),        &
-           mimicspool%SOMp(arraysize))
+           mimicspool%SOMp(arraysize),        &
+           mimicspool%thetaLiq(arraysize),    &
+           mimicspool%thetaFrzn(arraysize),   &
+           mimicspool%fT(arraysize),          &
+           mimicspool%fW(arraysize))
 
   ALLOCATE(mimicspoolAn%ClitterAn(arraysize,nmimicslit),   &
            mimicspoolAn%CsoilAn(arraysize,nmimicssom),     &
-           mimicspoolAn%CmicrobeAn(arraysize,nmimicsmcrb)) 
+           mimicspoolAn%CmicrobeAn(arraysize,nmimicsmcrb), &
+           mimicspoolAn%thetaLiqAn(arraysize),             &
+           mimicspoolAn%thetaFrznAn(arraysize),            &
+           mimicspoolAn%fTAn(arraysize),                   &
+           mimicspoolAn%fWAn(arraysize))
 
   ALLOCATE(mimicsfluxAn%ChrespAn(arraysize))
   ALLOCATE(mimicsfluxAn%ClitInputAn(arraysize,nmimicslit))

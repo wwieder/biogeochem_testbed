@@ -24,9 +24,11 @@
 !
 ! History:
 !   12/28/2015 - Created
-! TO DO: make this a module!
 !   03/21/2016 - switch from 24 timesteps a day to one per day
 !   03/28/2016 - update corpse_caccum to calculate mean annual values of pools and fluxes
+!   11/27/2017 - add thetaFrzn and f(W) to netcdf output
+! TO DO: make this a module!
+
 !--------------------------------------------------------------------------------------------------------------
 
 !--------------------------------------------------------------------------------------------------------------
@@ -57,7 +59,7 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
   real    :: soil_livingMicrobeC, soil_CO2
   real    :: clay, porosity 
   real    :: Qmax_clay  ! New Qmax calculation -mdh 3/23/2017 
-  real    :: Qmaxtmp
+  real    :: Qmaxtmp, protection_rate_tmp
   
   integer,parameter::RHIZ=1,BULK=2
 
@@ -99,6 +101,7 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
               call init_soil_carbon(pt(ii)%soil(lyr),Qmax=Qmax_clay,max_cohorts=2)
       
               !Add the initial carbon to each layer.  initial_C is specified in the namelist
+              ! Add initial C to soil pools
               call add_litter(pt(ii)%soil(lyr),initial_C)    ! Segmentation Fault was once occuring within call to this subroutine
       
               !Set up the output data container (outputvars is defined above)
@@ -107,12 +110,15 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
       
           !Initialize the litter layer. Qmax=0.0 sets protected carbon to zero
           call init_soil_carbon(pt(ii)%litterlayer, Qmax=0.0, max_cohorts=2)
-          call add_litter(pt(ii)%litterlayer, initial_C)
+          if (litter_option == 2) then
+            ! Add initial C to litter pools
+            call add_litter(pt(ii)%litterlayer, initial_C)
+          endif
           call initialize_outputs(maxSteps, pt(ii)%litterlayer_outputs)
       enddo
   else
  
-      write(*,*) 'Reading corpse initial values from ', trim(filename_corpseipool), '...'
+      write(*,*) 'Reading CORPSE initial values from ', trim(filename_corpseipool), '...'
       ! Read initial values from startup file filename_corpseipool
       open(107,file=filename_corpseipool)
   
@@ -124,6 +130,8 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
  
           ! Set Qmax before restart file is read in.  Don't allow Qmax values in the restart
           ! file to overwrite Qmax_clay. -mdh 3/24/2017
+          ! Also read protection_rate into local temporariy variable so that the parameter file
+          ! value is not overridden. -mdh 12/6/2017
 
           ! Qmax now depends on clay content. -mdh 3/23/2017
           ! Qmax_clay in mgC/kg soil from Mayes et al 2012, converted to g/m3 using solid density of 2650 kg/m3
@@ -164,7 +172,7 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
                       pt(ii)%litterlayer%litterCohorts(BULK)%livingMicrobeC, &
                       pt(ii)%litterlayer%litterCohorts(RHIZ)%CO2, &
                       pt(ii)%litterlayer%litterCohorts(BULK)%CO2, &
-                      pt(ii)%litterlayer%protection_rate, &
+                      protection_rate_tmp, &
                       Qmaxtmp, &
                       pt(ii)%litterlayer%dissolved_carbon(LABILE), &
                       pt(ii)%litterlayer%dissolved_carbon(RECALCTRNT), &
@@ -186,11 +194,65 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
                       pt(ii)%soil(lyr)%litterCohorts(BULK)%livingMicrobeC, &
                       pt(ii)%soil(lyr)%litterCohorts(RHIZ)%CO2, &
                       pt(ii)%soil(lyr)%litterCohorts(BULK)%CO2, &
-                      pt(ii)%soil(lyr)%protection_rate, &
+                      protection_rate_tmp, &
                       Qmaxtmp, &
                       pt(ii)%soil(lyr)%dissolved_carbon(LABILE), &
                       pt(ii)%soil(lyr)%dissolved_carbon(RECALCTRNT), &
                       pt(ii)%soil(lyr)%dissolved_carbon(RECALCTRNT)
+
+!         ! Echo contents of the line just read - mdh 11/6/2017
+!         write(*,123)  ipt, & 
+!                     ijgcm, &
+!                     tcnt, &
+!                     ftime, &
+!                     latz, &
+!                     lonz, &
+!                     ivtz, &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%litterC(LABILE), &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%litterC(RECALCTRNT), &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%litterC(DEADMICRB), &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%litterC(LABILE), &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%litterC(RECALCTRNT), &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%litterC(DEADMICRB), &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%protectedC(LABILE), &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%protectedC(RECALCTRNT), &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%protectedC(DEADMICRB), &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%protectedC(LABILE), &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%protectedC(RECALCTRNT), &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%protectedC(DEADMICRB), &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%livingMicrobeC, &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%livingMicrobeC, &
+!                     pt(ii)%litterlayer%litterCohorts(RHIZ)%CO2, &
+!                     pt(ii)%litterlayer%litterCohorts(BULK)%CO2, &
+!                     pt(ii)%litterlayer%protection_rate, &
+!                     Qmaxtmp, &
+!                     pt(ii)%litterlayer%dissolved_carbon(LABILE), &
+!                     pt(ii)%litterlayer%dissolved_carbon(RECALCTRNT), &
+!                     pt(ii)%litterlayer%dissolved_carbon(RECALCTRNT), &
+!
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%litterC(LABILE), &
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%litterC(RECALCTRNT), &
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%litterC(DEADMICRB), &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%litterC(LABILE), &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%litterC(RECALCTRNT), &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%litterC(DEADMICRB), &
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%protectedC(LABILE), &
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%protectedC(RECALCTRNT), &
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%protectedC(DEADMICRB), &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%protectedC(LABILE), &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%protectedC(RECALCTRNT), &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%protectedC(DEADMICRB), &
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%livingMicrobeC, &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%livingMicrobeC, &
+!                     pt(ii)%soil(lyr)%litterCohorts(RHIZ)%CO2, &
+!                     pt(ii)%soil(lyr)%litterCohorts(BULK)%CO2, &
+!                     pt(ii)%soil(lyr)%protection_rate, &
+!                     Qmaxtmp, &
+!                     pt(ii)%soil(lyr)%dissolved_carbon(LABILE), &
+!                     pt(ii)%soil(lyr)%dissolved_carbon(RECALCTRNT), &
+!                     pt(ii)%soil(lyr)%dissolved_carbon(RECALCTRNT)
+!
+!         123 format(3(i6,','),3(f8.2,','),i6,',',42(f8.2,','))
 
                       ! Reset Rh accumulators. -mdh 12/12/2016
                       pt(ii)%litterlayer%litterCohorts(RHIZ)%CO2 = 0.0
@@ -210,7 +272,7 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
   
       enddo
       close (107)
-      write(*,*) 'Done reading corpse initial values from ', trim(filename_corpseipool), '...'
+      write(*,*) 'Done reading CORPSE initial values from ', trim(filename_corpseipool), '...'
   endif
 
 
@@ -250,7 +312,10 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
              outputs%time(ntimes), &
              outputs%protectedprod(nspecies,ntimes), &
              outputs%Ts(ntimes), &
-             outputs%theta(ntimes), &
+             outputs%thetaLiq(ntimes), &
+             outputs%thetaFrzn(ntimes), &
+             outputs%fT(ntimes), &
+             outputs%fW(ntimes), &
              outputs%ncohorts(ntimes))
 
     allocate(outputs%litterCan(nspecies,ntimes), &
@@ -260,7 +325,10 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
              outputs%CO2an(ntimes), &
              outputs%timeAn(ntimes), &
              outputs%TsAn(ntimes), &
-             outputs%thetaAn(ntimes))
+             outputs%thetaLiqAn(ntimes), &
+             outputs%thetaFrznAn(ntimes), &
+             outputs%fTAn(ntimes), &
+             outputs%fWAn(ntimes))
 
     outputs%litterC=0.0
     outputs%protectedC=0.0
@@ -273,8 +341,11 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
     outputs%time=0.0
     outputs%linesWritten=0
     outputs%ncohorts=0
-    outputs%Ts=-9999
-    outputs%theta=-9999
+    outputs%Ts=0.0
+    outputs%thetaLiq=0.0
+    outputs%thetaFrzn=0.0
+    outputs%fT=0.0
+    outputs%fW=0.0
 
     outputs%nYear=0                     ! counter for current year
     outputs%litterCan = 0.0         
@@ -284,7 +355,10 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
     outputs%totalCan = 0.0 
     outputs%timeAn = 0.0    
     outputs%TsAn = 0.0
-    outputs%thetaAn = 0.0    
+    outputs%thetaLiqAn = 0.0    
+    outputs%thetaFrznAn = 0.0    
+    outputs%fTAn = 0.0    
+    outputs%fWAn = 0.0    
 
 END SUBROUTINE initialize_outputs
 
@@ -302,7 +376,15 @@ SUBROUTINE free_outputs(outputs)
         outputs%protectedC,&
         outputs%livingMicrobC,&
         outputs%CO2,outputs%Rtot,outputs%time,outputs%protectedprod,&
-        outputs%Ts,outputs%theta,outputs%ncohorts,outputs%totalC)
+        outputs%Ts,outputs%thetaLiq,outputs%thetaFrzn,outputs%fT,outputs%fW, &
+        outputs%ncohorts,outputs%totalC)
+
+    deallocate(outputs%litterCan,&
+        outputs%protectedCan,&
+        outputs%livingMicrobCan,&
+        outputs%CO2an,outputs%timeAn,&
+        outputs%TsAn,outputs%thetaLiqAn,outputs%thetaFrznAn,outputs%fTAn,outputs%fWAn, &
+        outputs%totalCan)
 
 END SUBROUTINE free_outputs
 
@@ -311,7 +393,7 @@ END SUBROUTINE free_outputs
 ! Records carbon sums from one pool into the output data container for that pool
 ! No values are written to a file here.
 !
-SUBROUTINE save_output_line(pool,outputs,theta_soil, Tsoil)
+SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil)
     USE corpsevariable
     USE corpse_soil_carbon
     implicit none
@@ -319,7 +401,7 @@ SUBROUTINE save_output_line(pool,outputs,theta_soil, Tsoil)
     !Subroutine arguments
     type(soil_carbon_pool) :: pool
     type(outputvars)       :: outputs
-    real, intent(in)       :: theta_soil, Tsoil
+    real, intent(in)       :: thetaLiq_soil, thetaFrzn_soil, fT_soil, fW_soil, Tsoil
 
     !Local Variables
     integer :: line,ncohorts
@@ -361,7 +443,10 @@ SUBROUTINE save_output_line(pool,outputs,theta_soil, Tsoil)
 
     outputs%time(line)=timestep*dt
     outputs%Ts(line)=Tsoil
-    outputs%theta(line)=theta_soil
+    outputs%thetaLiq(line)=thetaLiq_soil
+    outputs%thetaFrzn(line)=thetaFrzn_soil
+    outputs%fT(line)=fT_soil
+    outputs%fW(line)=fW_soil
     outputs%ncohorts(line)=ncohorts
     outputs%linesWritten=outputs%linesWritten+1
 
@@ -372,7 +457,7 @@ END SUBROUTINE save_output_line
 ! to compute annual mean values each simulation year.
 ! No values are written to a file here.
 !
-SUBROUTINE corpse_caccum(pool,outputs,theta_soil,Tsoil,doy,ipt)
+SUBROUTINE corpse_caccum(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil,doy,ipt)
     USE corpsevariable
     USE corpse_soil_carbon
     implicit none
@@ -380,7 +465,7 @@ SUBROUTINE corpse_caccum(pool,outputs,theta_soil,Tsoil,doy,ipt)
     !Subroutine arguments
     type(soil_carbon_pool) :: pool
     type(outputvars)       :: outputs
-    real, intent(in)       :: theta_soil, Tsoil
+    real, intent(in)       :: thetaLiq_soil, thetaFrzn_soil, fT_soil, fW_soil, Tsoil
     integer, intent(in)    :: doy  ! Day of Year
     integer, intent(in)    :: ipt
 
@@ -426,7 +511,10 @@ SUBROUTINE corpse_caccum(pool,outputs,theta_soil,Tsoil,doy,ipt)
     outputs%livingMicrobCan(nYear) = outputs%livingMicrobCan(nYear) + liveMicrobeC
 
     outputs%TsAn(nYear)    = outputs%TsAn(nYear) + Tsoil
-    outputs%thetaAn(nYear) = outputs%thetaAn(nYear) + theta_soil
+    outputs%thetaLiqAn(nYear) = outputs%thetaLiqAn(nYear) + thetaLiq_soil
+    outputs%thetaFrznAn(nYear) = outputs%thetaFrznAn(nYear) + thetaFrzn_soil
+    outputs%fTAn(nYear) = outputs%fTAn(nYear) + fT_soil
+    outputs%fWAn(nYear) = outputs%fWAn(nYear) + fW_soil
     outputs%timeAn(nYear)  = nYear
 
     if (doy == 365) then
@@ -434,7 +522,10 @@ SUBROUTINE corpse_caccum(pool,outputs,theta_soil,Tsoil,doy,ipt)
         outputs%litterCan(:,nYear)     = outputs%litterCan(:,nYear) / 365
         outputs%livingMicrobCan(nYear) = outputs%livingMicrobCan(nYear) / 365
         outputs%TsAn(nYear) = outputs%TsAn(nYear) / 365
-        outputs%thetaAn(nYear) = outputs%thetaAn(nYear) / 365
+        outputs%thetaLiqAn(nYear) = outputs%thetaLiqAn(nYear) / 365
+        outputs%thetaFrznAn(nYear) = outputs%thetaFrznAn(nYear) / 365
+        outputs%fTAn(nYear) = outputs%fTAn(nYear) / 365
+        outputs%fWAn(nYear) = outputs%fWAn(nYear) / 365
         outputs%totalCan(nYear) = sum(outputs%protectedCan(:,nYear)) + sum(outputs%litterCan(:,nYear)) &
                                   + outputs%livingMicrobCan(nYear)
         if (nYear > 1) then
@@ -1027,12 +1118,33 @@ SUBROUTINE InitPoolFluxNcFile_corpse(filename_ncOut,ntimes,mdaily)
     attr_units = 'K'
     call PutVariableAttributeDouble(ncid_corpse, varids%Tsid, attr_name, attr_units, MISSING_VALUE)
 
-    ! Soil moisture
-    status=nf_def_var(ncid_corpse,'Theta',NF_DOUBLE,3,dims,varids%thetaid)
-    if (status /= nf_noerr) call handle_err(status, "nf_def_var(Theta)")
-    attr_name = 'Fraction of Saturation'
-    attr_units = '0.0-1.0'
-    call PutVariableAttributeDouble(ncid_corpse, varids%thetaid, attr_name, attr_units, MISSING_VALUE)
+    ! Soil liquid moisture
+    status=nf_def_var(ncid_corpse,'thetaLiq',NF_DOUBLE,3,dims,varids%thetaLiqid)
+    if (status /= nf_noerr) call handle_err(status, "nf_def_var(thetaLiq)")
+    attr_name = 'Fraction of liquid soil water saturation (0.0-1.0)'
+    attr_units = 'fraction'
+    call PutVariableAttributeDouble(ncid_corpse, varids%thetaLiqid, attr_name, attr_units, MISSING_VALUE)
+
+    ! Soil frozen moisture
+    status=nf_def_var(ncid_corpse,'thetaFrzn',NF_DOUBLE,3,dims,varids%thetaFrznid)
+    if (status /= nf_noerr) call handle_err(status, "nf_def_var(thetaFrzn)")
+    attr_name = 'Fraction of frozen soil water saturation (0.0-1.0)'
+    attr_units = 'fraction'
+    call PutVariableAttributeDouble(ncid_corpse, varids%thetaFrznid, attr_name, attr_units, MISSING_VALUE)
+
+!   ! Soil temperature function
+!   status=nf_def_var(ncid_corpse,'fT',NF_DOUBLE,3,dims,varids%fTid)
+!   if (status /= nf_noerr) call handle_err(status, "nf_def_var(fT)")
+!   attr_name = 'Soil temperature multiplier on decomposition rate (0.0-1.0)'
+!   attr_units = 'multiplier'
+!   call PutVariableAttributeDouble(ncid_corpse, varids%fTid, attr_name, attr_units, MISSING_VALUE)
+
+    ! Soil moisture function
+    status=nf_def_var(ncid_corpse,'fW',NF_DOUBLE,3,dims,varids%fWid)
+    if (status /= nf_noerr) call handle_err(status, "nf_def_var(fW)")
+    attr_name = 'Soil moisture multiplier on decomposition rate (0.0-1.0)'
+    attr_units = 'multiplier'
+    call PutVariableAttributeDouble(ncid_corpse, varids%fWid, attr_name, attr_units, MISSING_VALUE)
 
     ! Number of cohorts in the pool
     status=nf_def_var(ncid_corpse,'ncohorts',NF_INT,3,dims,varids%ncohortsid)
@@ -1349,6 +1461,7 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
     real(8), allocatable :: var8(:,:,:)	        ! gridded output variable
     real(8), allocatable :: var9(:,:,:)	        ! gridded output variable
     real(8), allocatable :: var10(:,:,:)	! gridded output variable
+    real(8), allocatable :: var11(:,:,:)	! gridded output variable
 
     if (verbose .ge. 0) print *, "Writing output to file ", trim(filename_ncOut), "..."
 
@@ -1428,7 +1541,8 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    allocate(var7(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var9(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
-   allocate(var10(1:clmgrid%nlon,1:clmgrid%nlat,1:num_lyr))
+   allocate(var10(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
+   allocate(var11(1:clmgrid%nlon,1:clmgrid%nlat,1:num_lyr))
 
 
    IGBP_PFT(:,:) = MISSING_INT
@@ -1443,6 +1557,7 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    var8(:,:,:) = MISSING_VALUE
    var9(:,:,:) = MISSING_VALUE
    var10(:,:,:) = MISSING_VALUE
+   var11(:,:,:) = MISSING_VALUE
 
 
    do npt = 1, mp
@@ -1535,6 +1650,17 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    if (status /= nf_noerr) call handle_err(status, "put_var(litterCAn(DEADMICRB))")
 
 
+   var1(:,:,:) = MISSING_VALUE
+   var2(:,:,:) = MISSING_VALUE
+   var3(:,:,:) = MISSING_VALUE
+   var4(:,:,:) = MISSING_VALUE
+   var5(:,:,:) = MISSING_VALUE
+   var6(:,:,:) = MISSING_VALUE
+   var7(:,:,:) = MISSING_VALUE
+   var8(:,:,:) = MISSING_VALUE
+   var9(:,:,:) = MISSING_VALUE
+   var10(:,:,:) = MISSING_VALUE
+   var11(:,:,:) = MISSING_VALUE
 
    do npt = 1, mp
       ilon = casamet%ilon(npt)
@@ -1560,7 +1686,9 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
               var5(ilon,ilat,itime)  = 1000.0*pt(npt)%soil_outputs(ilyr)%totalC(itime+ntime1-1)
               var6(ilon,ilat,itime)  = 1000.0*pt(npt)%litterlayer_outputs%totalC(itime+ntime1-1)
               var7(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%Ts(itime+ntime1-1)
-              var8(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%theta(itime+ntime1-1)
+              var8(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaLiq(itime+ntime1-1)
+              var9(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaFrzn(itime+ntime1-1)
+              var10(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%fW(itime+ntime1-1)
           else
               var1(ilon,ilat,itime)  = 1000.0*pt(npt)%soil_outputs(ilyr)%livingMicrobCan(itime+ntime1-1)
               var2(ilon,ilat,itime)  = 1000.0*pt(npt)%litterlayer_outputs%livingMicrobCan(itime+ntime1-1)
@@ -1570,10 +1698,12 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
               var5(ilon,ilat,itime)  = 1000.0*pt(npt)%soil_outputs(ilyr)%totalCan(itime+ntime1-1)
               var6(ilon,ilat,itime)  = 1000.0*pt(npt)%litterlayer_outputs%totalCan(itime+ntime1-1)
               var7(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%TsAn(itime+ntime1-1)
-              var8(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaAn(itime+ntime1-1)
+              var8(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaLiqAn(itime+ntime1-1)
+              var9(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaFrznAn(itime+ntime1-1)
+              var10(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%fWAn(itime+ntime1-1)
           endif
       enddo
-      var10(ilon,ilat,ilyr)      = pt(npt)%z(ilyr) + pt(npt)%dz(ilyr)
+      var11(ilon,ilat,ilyr)      = pt(npt)%z(ilyr) + pt(npt)%dz(ilyr)
    enddo
 
 
@@ -1601,17 +1731,23 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    status =  nf_put_var(ncid_corpse, varids%Tsid, var7, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(Tsid)")
 
-   status =  nf_put_var(ncid_corpse, varids%thetaid, var8, start3, count3)
-   if (status /= nf_noerr) call handle_err(status, "put_var(thetaid)")
+   status =  nf_put_var(ncid_corpse, varids%thetaLiqid, var8, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(thetaLiqid)")
 
-   status =  nf_put_var(ncid_corpse, varids%depthid, var10, start3, count3)
+   status =  nf_put_var(ncid_corpse, varids%thetaFrznid, var9, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(thetaFrznid)")
+
+   status =  nf_put_var(ncid_corpse, varids%fWid, var10, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(fWid)")
+
+   status =  nf_put_var(ncid_corpse, varids%depthid, var11, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(depthid)")
 
 
     status=nf_close(ncid_corpse)
     if(status .ne. NF_NOERR) STOP 'NetCDF file close failed'
 
-    deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,landarea)
+    deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,var11,landarea)
 
     if (verbose .ge. 0) print *, "Done writing output to file ", trim(filename_ncOut), "..."
 
