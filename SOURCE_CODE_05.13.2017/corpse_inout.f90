@@ -12,7 +12,7 @@
 !     SUBROUTINE save_output_line - records carbon sums from one pool into the output data container 
 !                for that pool
 !     SUBROUTINE corpse_caccum - accumulate daily C fluxes and pool values and annual mean each year
-!     SUBROUTINE WritePointCorpse - write all saved output variables for a sigle point to .csv file
+!     SUBROUTINE WritePointCORPSE - write all saved output variables for a sigle point to .csv file
 !                Recordtime in corpse_params.nml file determines the number of timesteps that are saved.
 !     SUBROUTINE corpse_poolfluxout - write all saved output variables for the entire grid to restart 
 !                .csv output file for the final time saved.
@@ -552,7 +552,7 @@ END SUBROUTINE corpse_caccum
 ! Write ALL SAVED output variables and ALL SAVED timesteps for A SINGLE POINT .csv file filenamePtCORPSE.
 ! Recordtime in corpse_params.nml file determines the number of timesteps that are saved.
 !
-SUBROUTINE WritePointCorpse(filenamePtCORPSE,iptToSaveIndx,mp)
+SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
     USE casavariable
     USE define_types
     USE corpsevariable
@@ -617,7 +617,7 @@ SUBROUTINE WritePointCorpse(filenamePtCORPSE,iptToSaveIndx,mp)
 
     if (verbose .ge. 0) print *, "Done writing output to file ", trim(filenamePtCORPSE), "..."
 
-end subroutine WritePointCorpse
+end subroutine WritePointCORPSE
 
 !--------------------------------------------------------------------------------------------------------------
 ! Write END-OF-SIMULATION values for all saved output variables for the entire grid to filename_corpseepool

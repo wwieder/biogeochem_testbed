@@ -33,7 +33,7 @@ PROGRAM offline_casacnp
   USE corpsevariable
 
   IMPLICIT NONE
-  integer mst, mvt, mloop, nloop, mdaily
+  integer mst, mvt, mloop, nloop, mdaily, myear
   integer tyear1, tyear2, ityear, idx, idx2
   integer mreps, irep, iYrCnt, nctime
   character(len=100) :: filename_cnppoint,filename_phen, &
@@ -245,10 +245,12 @@ PROGRAM offline_casacnp
 
   else if (isomModel == CORPSE) then
 
-      print *, 'calling corpse_init'
+      call GetMetNcFileDim(filename_cnpmet, ms, myear)
+
       !! ATTENTION: The allocation of output variables may need to be moved after met.nc file is read to get the exact # simulation years.
       if (initcasa < 2) then
-          maxSteps = mloop * 365 * 7                          ! 7 is the maximum number of years in a spinup file (daily time step - mdh 3/21/2016)
+          !maxSteps = mloop * 365 * 7                         ! 7 is the maximum number of years in a spinup file (daily time step - mdh 3/21/2016)
+          maxSteps = mloop * 365 * myear                      ! myear is the number of years in a spinup file (daily time step - mdh 1/30/2018)
       else
           maxSteps = mloop * 365 * abs(tyear2 - tyear1 + 1)   ! Assumes each transient year met.nc file has 365 days  (daily time step - mdh 3/21/2016)
       endif

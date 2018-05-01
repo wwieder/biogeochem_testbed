@@ -9,6 +9,7 @@
 !     SUBROUTINE mimics_poolfluxout - write mimics pools to restart .csv output file
 !     SUBROUTINE WritePoolFluxNcFile_mimics_annual - write annual mimics pools and fluxes to netCDF file
 !     SUBROUTINE WritePoolFluxNcFile_mimics_daily - write daily mimics pools and fluxes to netCDF file
+!     SUBROUTINE WritePointMIMICS - write daily mimics pools and other quantities to a .csv file daily
 !
 ! Contact: Melannie Hartman
 !          melannie@ucar.edu
@@ -1807,6 +1808,71 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
 END SUBROUTINE WritePoolFluxNcFile_mimics_daily
 
 !-------------------------------------------------------------------------------------
+! Write MIMICS pools and other quantities to .csv output daily
+
+SUBROUTINE WritePointMIMICS(unit1, sPtFileName, npt, mp, iYrCnt, idoy, &
+    cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
+    LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+    dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil)
+
+    USE define_types
+    USE casadimension
+    USE casaparm
+    USE casavariable
+    USE clmgridvariable
+    USE mimicsdimension
+    USE mimicsparam
+    USE mimicsvariable
+    implicit none
+
+!   ARGUMENTS
+    integer, intent(in)            :: unit1         ! FORTRAN file unit
+    character(len=*), intent(in)   :: sPtFileName   ! .csv output file name 
+    integer, intent(IN)            :: mp, npt       ! # points, point index
+    integer, intent(IN)            :: iYrCnt, idoy  ! simulation year count, day of year
+    real, dimension(mp),intent(IN) :: cleaf2met,cleaf2str,croot2met,croot2str
+    real, dimension(mp),intent(IN) :: cwd2str,cwd2co2,cwood2cwd
+    real(r_2), intent(IN)          :: LITmin(4), MICtrn(6), SOMmin(2), DEsorb, OXIDAT
+    real(r_2), intent(IN)          :: dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil
 
 
+    open(unit1,file=sPtFileNameMIMICS, access='APPEND')
 
+    write(unit1,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),mimicsflux%Chresp(npt), &
+                   mimicsflux%ClitInput(npt,metbc),mimicsflux%ClitInput(npt,struc), &
+                   mimicspool%LITm(npt),mimicspool%LITs(npt),mimicspool%MICr(npt), &
+                   mimicspool%MICk(npt),mimicspool%SOMa(npt),mimicspool%SOMc(npt),mimicspool%SOMp(npt), &
+                   dLITm, dLITs, dMICr, dMICk, dSOMa, dSOMc, dSOMp,&
+
+                   LITmin(1), LITmin(2), LITmin(3), LITmin(4), &
+                   MICtrn(1), MICtrn(2), MICtrn(3), MICtrn(4), MICtrn(5), MICtrn(6), &
+                   SOMmin(1), SOMmin(2), DEsorb, OXIDAT, mimicsbiome%fmet(npt), &
+
+                   mimicsbiome%tauMod(npt), mimicsbiome%tauR(npt), mimicsbiome%tauK(npt), &
+                   mimicsbiome%Vmax(npt,R1),mimicsbiome%Vmax(npt,R2),mimicsbiome%Vmax(npt,R3), &
+                   mimicsbiome%Vmax(npt,K1),mimicsbiome%Vmax(npt,K2),mimicsbiome%Vmax(npt,K3), &
+                   mimicsbiome%Km(npt,R1),mimicsbiome%Km(npt,R2),mimicsbiome%Km(npt,R3), &
+                   mimicsbiome%Km(npt,K1),mimicsbiome%Km(npt,K2),mimicsbiome%Km(npt,K3), &
+                   mimicsbiome%Vslope(R1),mimicsbiome%Vslope(R2),mimicsbiome%Vslope(R3), &
+                   mimicsbiome%Vslope(K1),mimicsbiome%Vslope(K2),mimicsbiome%Vslope(K3), &
+                   mimicsbiome%Kslope(R1),mimicsbiome%Kslope(R2),mimicsbiome%Kslope(R3), &
+                   mimicsbiome%Kslope(K1),mimicsbiome%Kslope(K2),mimicsbiome%Kslope(K3), &
+                   mimicsbiome%Vint(R1),mimicsbiome%Kint(R1),Tsoil,casamet%moistavg(npt), &
+
+                   casaflux%CnppAn(npt),casapool%clitter(npt,cwd),mimicsbiome%ligninNratioAvg(npt), &
+                   cleaf2met(npt),cleaf2str(npt),croot2met(npt),croot2str(npt), &
+                   cwd2str(npt),cwd2co2(npt),cwood2cwd(npt), &
+
+                   mimicsbiome%fAVAL(npt,1), mimicsbiome%fAVAL(npt,2), mimicsbiome%fCHEM(npt,1), &
+                   mimicsbiome%fCHEM(npt,2), mimicsbiome%fPHYS(npt,1), mimicsbiome%fPHYS(npt,2), &
+
+                   mimicsbiome%Kmod(npt,R1),mimicsbiome%Kmod(npt,R2),mimicsbiome%Kmod(npt,R3), &
+                   mimicsbiome%Kmod(npt,K1),mimicsbiome%Kmod(npt,K2),mimicsbiome%Kmod(npt,K3)
+
+    close(unit1)
+
+102  format(4(i6,','),18(f18.10,','),15(f18.10,','),31(f18.10,','),10(f10.4,','),6(f10.4,','),6(f10.4,','))
+
+END SUBROUTINE WritePointMIMICS
+
+!-------------------------------------------------------------------------------------

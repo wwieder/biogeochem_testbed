@@ -87,6 +87,7 @@ type soil_carbon_pool
     real::Qmax              !Pool DOC sorption capacity (See Mayes et al 2012)
     type(litterCohort),allocatable::litterCohorts(:)
     real::dissolved_carbon(nspecies)
+    real::fWmin, gas_diffusion_exp, min_anaerobic_resp_factor
 end type soil_carbon_pool
 
 !For new functionality: Separate cohorts just for rhizosphere and bulk soil
@@ -124,6 +125,7 @@ logical                  :: CLASSIC_DECOMP=.FALSE.             !Use CENTURY-styl
 logical                  :: microbe_driven_protection=.FALSE.  !Whether to use microbial biomass in protection rate
 real                     :: protected_carbon_decomp_factor=0.0 !vmaxref for protected carbon is multiplied by this (0.0 for total protection)
 real,dimension(nspecies) :: turnover_factor=(/1.0,1.0,1.0/)    !Factor by which each C species changes microbial turnover time (between 0 and 1)
+real                     :: fWmin=0.0                          !Minimum value of f(W) soil mositure effect on respiration (default=0.0)
 
 
 namelist /soil_carbon_nml/ &
@@ -131,7 +133,7 @@ namelist /soil_carbon_nml/ &
             tol,enzfrac,tProtected,protection_rate,protection_species,leaching_solubility,&
             flavor_relative_solubility,DOC_deposition_rate,&
             litterDensity,CLASSIC_DECOMP,protected_relative_solubility,min_anaerobic_resp_factor,&
-            microbe_driven_protection,protected_carbon_decomp_factor,turnover_factor
+            microbe_driven_protection,protected_carbon_decomp_factor,turnover_factor,fWmin
 
 contains ! -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -139,10 +141,9 @@ contains ! -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ! Allocate 2 (max(BULK,RHIZ)) litterCohorts and  
 ! set protection_rate, Qmax, and max_cohorts for the pool.
 
-subroutine init_soil_carbon(pool,protectionRate,Qmax,max_cohorts)
+subroutine init_soil_carbon(pool,Qmax,max_cohorts)
     implicit none
     type(soil_carbon_pool),intent(inout)::pool
-    real,optional,intent(in) :: protectionRate
     real,optional,intent(in) :: Qmax
     integer,optional,intent(in) :: max_cohorts
 
@@ -152,13 +153,20 @@ subroutine init_soil_carbon(pool,protectionRate,Qmax,max_cohorts)
 
     ! Default initializations for optional function arguments
     pool%protection_rate=protection_rate
+    pool%gas_diffusion_exp=gas_diffusion_exp
+    pool%min_anaerobic_resp_factor=min_anaerobic_resp_factor
+    pool%fWmin=fWmin
     pool%Qmax=0.0
     pool%max_cohorts=soilMaxCohorts
+
+!   write(*,'(1x,a36,f9.6)') 'init_soil_carbon: protection_rate = ', protection_rate
+!   write(*,'(1x,a38,f9.6)') 'init_soil_carbon: gas_diffusion_exp = ', gas_diffusion_exp
+!   write(*,'(1x,a46,f9.6)') 'init_soil_carbon: min_anaerobic_resp_factor = ', min_anaerobic_resp_factor
+!   write(*,'(1x,a26,f9.6)') 'init_soil_carbon: fWmin = ', fWmin
 
     pool%dissolved_carbon=0.0
 
     IF (present(max_cohorts)) pool%max_cohorts=min(max_cohorts,soilMaxCohorts)
-    IF (present(protectionRate)) pool%protection_rate=protectionRate
     IF (present(Qmax)) pool%Qmax=Qmax
 
     IF (allocated(pool%litterCohorts)) THEN
@@ -512,6 +520,7 @@ function Resp(Ctotal,Chet,T,theta_liq,air_filled_porosity,vmax_factor)
     real,dimension(nspecies)::Resp
     !real,dimension(nspecies)::tempresp
     real::enz,Cavail(nspecies),vmax_multiplier
+    real :: fW
 
     vmax_multiplier=1.0
     if (present(vmax_factor)) vmax_multiplier=vmax_factor
@@ -533,8 +542,12 @@ function Resp(Ctotal,Chet,T,theta_liq,air_filled_porosity,vmax_factor)
     ! Put a lower limit of 0.001 on theta_liq^3 (w.wieder, 11/7/2016).
 !   Resp=Vmax(T)*vmax_multiplier*theta_liq**3*(Cavail)*enz/(sum(Cavail)*kC+enz) &
 !        *max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor)
-    Resp=Vmax(T)*vmax_multiplier*(theta_liq**3+0.001)*(Cavail)*enz/(sum(Cavail)*kC+enz) &
-         *max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor)
+!   Resp=Vmax(T)*vmax_multiplier*(theta_liq**3+0.001)*(Cavail)*enz/(sum(Cavail)*kC+enz) &
+!        *max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor)
+    !Set minimum soil water effect to namelist parameter fWmin. -mdh 12/18/2017
+    fW = max(fWmin,(theta_liq**3+0.001)*max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor))
+    Resp=Vmax(T)*vmax_multiplier*fW*(Cavail)*enz/(sum(Cavail)*kC+enz)
+         
 
     !ox_avail=oxygen_concentration(Ox,sum(tempresp)/sum(Cavail)*theta_liq*oxPerC)
     !print *,sum(tempresp)/sum(Cavail)

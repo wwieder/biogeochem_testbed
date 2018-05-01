@@ -355,9 +355,9 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
   REAL(r_2), parameter :: wfpscoefd=3.22   ! Kelly et al. (2000) JGR, Figure 2b)
   REAL(r_2), parameter :: wfpscoefe=6.6481 ! =wfpscoefd*(wfpscoefb-wfpscoefa)/(wfpscoefa-wfpscoefc)
 
-  if (iptToSave_mimics > 0) then
-      open(214,file=sPtFileNameMIMICS, access='APPEND')
-  endif
+! if (iptToSave_mimics > 0) then
+!     open(214,file=sPtFileNameMIMICS, access='APPEND')
+! endif
 
   NHOURSf = real(NHOURS)
 
@@ -538,46 +538,51 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
 !     if (casamet%ijgcm(npt) .eq. 10919) then    ! Deciduous broadleaf (4)
 !     if (casamet%ijgcm(npt) .eq. 11018) then    ! Evergreen needleleaf (1)
 !     if (casamet%ijgcm(npt) .eq. 11569) then    ! Evergreen broadleaf (2)
+
       if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then 
-          write(214,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),mimicsflux%Chresp(npt), &
-                         mimicsflux%ClitInput(npt,metbc),mimicsflux%ClitInput(npt,struc), &
-                         mimicspool%LITm(npt),mimicspool%LITs(npt),mimicspool%MICr(npt), &
-                         mimicspool%MICk(npt),mimicspool%SOMa(npt),mimicspool%SOMc(npt),mimicspool%SOMp(npt), &
-                         dLITm, dLITs, dMICr, dMICk, dSOMa, dSOMc, dSOMp,&
 
-                         LITmin(1), LITmin(2), LITmin(3), LITmin(4), &
-                         MICtrn(1), MICtrn(2), MICtrn(3), MICtrn(4), MICtrn(5), MICtrn(6), &
-                         SOMmin(1), SOMmin(2), DEsorb, OXIDAT, mimicsbiome%fmet(npt), &
+          call WritePointMIMICS(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
+              cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
+              LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+              dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil)
 
-                         mimicsbiome%tauMod(npt), mimicsbiome%tauR(npt), mimicsbiome%tauK(npt), &
-                         mimicsbiome%Vmax(npt,R1),mimicsbiome%Vmax(npt,R2),mimicsbiome%Vmax(npt,R3), &
-                         mimicsbiome%Vmax(npt,K1),mimicsbiome%Vmax(npt,K2),mimicsbiome%Vmax(npt,K3), &
-                         mimicsbiome%Km(npt,R1),mimicsbiome%Km(npt,R2),mimicsbiome%Km(npt,R3), &
-                         mimicsbiome%Km(npt,K1),mimicsbiome%Km(npt,K2),mimicsbiome%Km(npt,K3), &
-                         mimicsbiome%Vslope(R1),mimicsbiome%Vslope(R2),mimicsbiome%Vslope(R3), &
-                         mimicsbiome%Vslope(K1),mimicsbiome%Vslope(K2),mimicsbiome%Vslope(K3), &
-                         mimicsbiome%Kslope(R1),mimicsbiome%Kslope(R2),mimicsbiome%Kslope(R3), &
-                         mimicsbiome%Kslope(K1),mimicsbiome%Kslope(K2),mimicsbiome%Kslope(K3), &
-                         mimicsbiome%Vint(R1),mimicsbiome%Kint(R1),Tsoil,casamet%moistavg(npt), &
-
-                         casaflux%CnppAn(npt),casapool%clitter(npt,cwd),mimicsbiome%ligninNratioAvg(npt), &
-                         cleaf2met(npt),cleaf2str(npt),croot2met(npt),croot2str(npt), &
-                         cwd2str(npt),cwd2co2(npt),cwood2cwd(npt), &
-
-                         mimicsbiome%fAVAL(npt,1), mimicsbiome%fAVAL(npt,2), mimicsbiome%fCHEM(npt,1), &
-                         mimicsbiome%fCHEM(npt,2), mimicsbiome%fPHYS(npt,1), mimicsbiome%fPHYS(npt,2), &
-
-                         mimicsbiome%Kmod(npt,R1),mimicsbiome%Kmod(npt,R2),mimicsbiome%Kmod(npt,R3), &
-                         mimicsbiome%Kmod(npt,K1),mimicsbiome%Kmod(npt,K2),mimicsbiome%Kmod(npt,K3)
-          close(214)
+!         write(214,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),mimicsflux%Chresp(npt), &
+!                        mimicsflux%ClitInput(npt,metbc),mimicsflux%ClitInput(npt,struc), &
+!                        mimicspool%LITm(npt),mimicspool%LITs(npt),mimicspool%MICr(npt), &
+!                        mimicspool%MICk(npt),mimicspool%SOMa(npt),mimicspool%SOMc(npt),mimicspool%SOMp(npt), &
+!                        dLITm, dLITs, dMICr, dMICk, dSOMa, dSOMc, dSOMp,&
+!
+!                        LITmin(1), LITmin(2), LITmin(3), LITmin(4), &
+!                        MICtrn(1), MICtrn(2), MICtrn(3), MICtrn(4), MICtrn(5), MICtrn(6), &
+!                        SOMmin(1), SOMmin(2), DEsorb, OXIDAT, mimicsbiome%fmet(npt), &
+!
+!                        mimicsbiome%tauMod(npt), mimicsbiome%tauR(npt), mimicsbiome%tauK(npt), &
+!                        mimicsbiome%Vmax(npt,R1),mimicsbiome%Vmax(npt,R2),mimicsbiome%Vmax(npt,R3), &
+!                        mimicsbiome%Vmax(npt,K1),mimicsbiome%Vmax(npt,K2),mimicsbiome%Vmax(npt,K3), &
+!                        mimicsbiome%Km(npt,R1),mimicsbiome%Km(npt,R2),mimicsbiome%Km(npt,R3), &
+!                        mimicsbiome%Km(npt,K1),mimicsbiome%Km(npt,K2),mimicsbiome%Km(npt,K3), &
+!                        mimicsbiome%Vslope(R1),mimicsbiome%Vslope(R2),mimicsbiome%Vslope(R3), &
+!                        mimicsbiome%Vslope(K1),mimicsbiome%Vslope(K2),mimicsbiome%Vslope(K3), &
+!                        mimicsbiome%Kslope(R1),mimicsbiome%Kslope(R2),mimicsbiome%Kslope(R3), &
+!                        mimicsbiome%Kslope(K1),mimicsbiome%Kslope(K2),mimicsbiome%Kslope(K3), &
+!                        mimicsbiome%Vint(R1),mimicsbiome%Kint(R1),Tsoil,casamet%moistavg(npt), &
+!
+!                        casaflux%CnppAn(npt),casapool%clitter(npt,cwd),mimicsbiome%ligninNratioAvg(npt), &
+!                        cleaf2met(npt),cleaf2str(npt),croot2met(npt),croot2str(npt), &
+!                        cwd2str(npt),cwd2co2(npt),cwood2cwd(npt), &
+!
+!                        mimicsbiome%fAVAL(npt,1), mimicsbiome%fAVAL(npt,2), mimicsbiome%fCHEM(npt,1), &
+!                        mimicsbiome%fCHEM(npt,2), mimicsbiome%fPHYS(npt,1), mimicsbiome%fPHYS(npt,2), &
+!
+!                        mimicsbiome%Kmod(npt,R1),mimicsbiome%Kmod(npt,R2),mimicsbiome%Kmod(npt,R3), &
+!                        mimicsbiome%Kmod(npt,K1),mimicsbiome%Kmod(npt,K2),mimicsbiome%Kmod(npt,K3)
+!         close(214)
 
       endif 
 
   ENDIF
 
   end do
-
-102  format(4(i6,','),18(f18.10,','),15(f18.10,','),31(f18.10,','),10(f10.4,','),6(f10.4,','),6(f10.4,','))
 
 END SUBROUTINE mimics_soil_forwardMM
 
@@ -611,9 +616,9 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
   REAL(r_2), parameter :: wfpscoefd=3.22   ! Kelly et al. (2000) JGR, Figure 2b)
   REAL(r_2), parameter :: wfpscoefe=6.6481 ! =wfpscoefd*(wfpscoefb-wfpscoefa)/(wfpscoefa-wfpscoefc)
 
-  if (iptToSave_mimics > 0) then
-      open(214,file=sPtFileNameMIMICS, access='APPEND')
-  endif
+! if (iptToSave_mimics > 0) then
+!     open(214,file=sPtFileNameMIMICS, access='APPEND')
+! endif
 
   NHOURSf = real(NHOURS)
 
@@ -793,46 +798,52 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,cr
 !     if (casamet%ijgcm(npt) .eq. 10919) then    ! Deciduous broadleaf (4)
 !     if (casamet%ijgcm(npt) .eq. 11018) then    ! Evergreen needleleaf (1)
 !     if (casamet%ijgcm(npt) .eq. 11569) then    ! Evergreen broadleaf (2)
+
       if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then
-          write(214,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),mimicsflux%Chresp(npt), &
-                         mimicsflux%ClitInput(npt,metbc),mimicsflux%ClitInput(npt,struc), &
-                         mimicspool%LITm(npt),mimicspool%LITs(npt),mimicspool%MICr(npt), &
-                         mimicspool%MICk(npt),mimicspool%SOMa(npt),mimicspool%SOMc(npt),mimicspool%SOMp(npt), &
-                         dLITm, dLITs, dMICr, dMICk, dSOMa, dSOMc, dSOMp,&
 
-                         LITmin(1), LITmin(2), LITmin(3), LITmin(4), &
-                         MICtrn(1), MICtrn(2), MICtrn(3), MICtrn(4), MICtrn(5), MICtrn(6), &
-                         SOMmin(1), SOMmin(2), DEsorb, OXIDAT, mimicsbiome%fmet(npt), &
+          call WritePointMIMICS(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
+              cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
+              LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+              dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil)
 
-                         mimicsbiome%tauMod(npt), mimicsbiome%tauR(npt), mimicsbiome%tauK(npt), &
-                         mimicsbiome%Vmax(npt,R1),mimicsbiome%Vmax(npt,R2),mimicsbiome%Vmax(npt,R3), &
-                         mimicsbiome%Vmax(npt,K1),mimicsbiome%Vmax(npt,K2),mimicsbiome%Vmax(npt,K3), &
-                         mimicsbiome%Km(npt,R1),mimicsbiome%Km(npt,R2),mimicsbiome%Km(npt,R3), &
-                         mimicsbiome%Km(npt,K1),mimicsbiome%Km(npt,K2),mimicsbiome%Km(npt,K3), &
-                         mimicsbiome%Vslope(R1),mimicsbiome%Vslope(R2),mimicsbiome%Vslope(R3), &
-                         mimicsbiome%Vslope(K1),mimicsbiome%Vslope(K2),mimicsbiome%Vslope(K3), &
-                         mimicsbiome%Kslope(R1),mimicsbiome%Kslope(R2),mimicsbiome%Kslope(R3), &
-                         mimicsbiome%Kslope(K1),mimicsbiome%Kslope(K2),mimicsbiome%Kslope(K3), &
-                         mimicsbiome%Vint(R1),mimicsbiome%Kint(R1),Tsoil,casamet%moistavg(npt), &
+!         write(214,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),mimicsflux%Chresp(npt), &
+!                        mimicsflux%ClitInput(npt,metbc),mimicsflux%ClitInput(npt,struc), &
+!                        mimicspool%LITm(npt),mimicspool%LITs(npt),mimicspool%MICr(npt), &
+!                        mimicspool%MICk(npt),mimicspool%SOMa(npt),mimicspool%SOMc(npt),mimicspool%SOMp(npt), &
+!                        dLITm, dLITs, dMICr, dMICk, dSOMa, dSOMc, dSOMp,&
+!
+!                        LITmin(1), LITmin(2), LITmin(3), LITmin(4), &
+!                        MICtrn(1), MICtrn(2), MICtrn(3), MICtrn(4), MICtrn(5), MICtrn(6), &
+!                        SOMmin(1), SOMmin(2), DEsorb, OXIDAT, mimicsbiome%fmet(npt), &
+!
+!                        mimicsbiome%tauMod(npt), mimicsbiome%tauR(npt), mimicsbiome%tauK(npt), &
+!                        mimicsbiome%Vmax(npt,R1),mimicsbiome%Vmax(npt,R2),mimicsbiome%Vmax(npt,R3), &
+!                        mimicsbiome%Vmax(npt,K1),mimicsbiome%Vmax(npt,K2),mimicsbiome%Vmax(npt,K3), &
+!                        mimicsbiome%Km(npt,R1),mimicsbiome%Km(npt,R2),mimicsbiome%Km(npt,R3), &
+!                        mimicsbiome%Km(npt,K1),mimicsbiome%Km(npt,K2),mimicsbiome%Km(npt,K3), &
+!                        mimicsbiome%Vslope(R1),mimicsbiome%Vslope(R2),mimicsbiome%Vslope(R3), &
+!                        mimicsbiome%Vslope(K1),mimicsbiome%Vslope(K2),mimicsbiome%Vslope(K3), &
+!                        mimicsbiome%Kslope(R1),mimicsbiome%Kslope(R2),mimicsbiome%Kslope(R3), &
+!                        mimicsbiome%Kslope(K1),mimicsbiome%Kslope(K2),mimicsbiome%Kslope(K3), &
+!                        mimicsbiome%Vint(R1),mimicsbiome%Kint(R1),Tsoil,casamet%moistavg(npt), &
+!
+!                        casaflux%CnppAn(npt),casapool%clitter(npt,cwd),mimicsbiome%ligninNratioAvg(npt), &
+!                        cleaf2met(npt),cleaf2str(npt),croot2met(npt),croot2str(npt), &
+!                        cwd2str(npt),cwd2co2(npt),cwood2cwd(npt), &
+!
+!                        mimicsbiome%fAVAL(npt,1), mimicsbiome%fAVAL(npt,2), mimicsbiome%fCHEM(npt,1), &
+!                        mimicsbiome%fCHEM(npt,2), mimicsbiome%fPHYS(npt,1), mimicsbiome%fPHYS(npt,2), &
+!
+!                        mimicsbiome%Kmod(npt,R1),mimicsbiome%Kmod(npt,R2),mimicsbiome%Kmod(npt,R3), &
+!                        mimicsbiome%Kmod(npt,K1),mimicsbiome%Kmod(npt,K2),mimicsbiome%Kmod(npt,K3)
+!
+!         close(214)
 
-                         casaflux%CnppAn(npt),casapool%clitter(npt,cwd),mimicsbiome%ligninNratioAvg(npt), &
-                         cleaf2met(npt),cleaf2str(npt),croot2met(npt),croot2str(npt), &
-                         cwd2str(npt),cwd2co2(npt),cwood2cwd(npt), &
-
-                         mimicsbiome%fAVAL(npt,1), mimicsbiome%fAVAL(npt,2), mimicsbiome%fCHEM(npt,1), &
-                         mimicsbiome%fCHEM(npt,2), mimicsbiome%fPHYS(npt,1), mimicsbiome%fPHYS(npt,2), &
-
-                         mimicsbiome%Kmod(npt,R1),mimicsbiome%Kmod(npt,R2),mimicsbiome%Kmod(npt,R3), &
-                         mimicsbiome%Kmod(npt,K1),mimicsbiome%Kmod(npt,K2),mimicsbiome%Kmod(npt,K3)
-
-          close(214)
       endif 
 
   ENDIF
 
   end do
-
-102  format(4(i6,','),18(f18.10,','),15(f18.10,','),31(f18.10,','),10(f10.4,','),6(f10.4,','),6(f10.4,','))
 
 END SUBROUTINE mimics_soil_reverseMM
 
