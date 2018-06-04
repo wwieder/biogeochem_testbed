@@ -1838,8 +1838,8 @@ SUBROUTINE WritePointMIMICS(unit1, sPtFileName, npt, mp, iYrCnt, idoy, &
 
     open(unit1,file=sPtFileNameMIMICS, access='APPEND')
 
-    write(unit1,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),mimicsflux%Chresp(npt), &
-                   mimicsflux%ClitInput(npt,metbc),mimicsflux%ClitInput(npt,struc), &
+    write(unit1,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),casamet%moistavg(npt),&
+                   mimicsflux%Chresp(npt),mimicsflux%ClitInput(npt,metbc),mimicsflux%ClitInput(npt,struc), &
                    mimicspool%LITm(npt),mimicspool%LITs(npt),mimicspool%MICr(npt), &
                    mimicspool%MICk(npt),mimicspool%SOMa(npt),mimicspool%SOMc(npt),mimicspool%SOMp(npt), &
                    dLITm, dLITs, dMICr, dMICk, dSOMa, dSOMc, dSOMp,&
@@ -1871,7 +1871,7 @@ SUBROUTINE WritePointMIMICS(unit1, sPtFileName, npt, mp, iYrCnt, idoy, &
 
     close(unit1)
 
-102  format(4(i6,','),18(f18.10,','),15(f18.10,','),31(f18.10,','),10(f10.4,','),6(f10.4,','),6(f10.4,','))
+102  format(4(i6,','),19(f18.10,','),15(f18.10,','),31(f18.10,','),10(f10.4,','),6(f10.4,','),6(f10.4,','))
 
 END SUBROUTINE WritePointMIMICS
 

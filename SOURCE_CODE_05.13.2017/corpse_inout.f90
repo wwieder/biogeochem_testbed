@@ -13,7 +13,6 @@
 !                for that pool
 !     SUBROUTINE corpse_caccum - accumulate daily C fluxes and pool values and annual mean each year
 !     SUBROUTINE WritePointCORPSE - write all saved output variables for a sigle point to .csv file
-!                Recordtime in corpse_params.nml file determines the number of timesteps that are saved.
 !     SUBROUTINE corpse_poolfluxout - write all saved output variables for the entire grid to restart 
 !                .csv output file for the final time saved.
 !     SUBROUTINE InitPoolFluxNcFile_corpse - define dimensions and variables for the NetCDF output file 
@@ -316,7 +315,8 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
              outputs%thetaFrzn(ntimes), &
              outputs%fT(ntimes), &
              outputs%fW(ntimes), &
-             outputs%ncohorts(ntimes))
+             outputs%ncohorts(ntimes), &
+             outputs%doy(ntimes))
 
     allocate(outputs%litterCan(nspecies,ntimes), &
              outputs%protectedCan(nspecies,ntimes), &
@@ -341,6 +341,7 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
     outputs%time=0.0
     outputs%linesWritten=0
     outputs%ncohorts=0
+    outputs%doy=0
     outputs%Ts=0.0
     outputs%thetaLiq=0.0
     outputs%thetaFrzn=0.0
@@ -377,7 +378,7 @@ SUBROUTINE free_outputs(outputs)
         outputs%livingMicrobC,&
         outputs%CO2,outputs%Rtot,outputs%time,outputs%protectedprod,&
         outputs%Ts,outputs%thetaLiq,outputs%thetaFrzn,outputs%fT,outputs%fW, &
-        outputs%ncohorts,outputs%totalC)
+        outputs%ncohorts,outputs%totalC,outputs%doy)
 
     deallocate(outputs%litterCan,&
         outputs%protectedCan,&
@@ -393,7 +394,7 @@ END SUBROUTINE free_outputs
 ! Records carbon sums from one pool into the output data container for that pool
 ! No values are written to a file here.
 !
-SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil)
+SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil,doy)
     USE corpsevariable
     USE corpse_soil_carbon
     implicit none
@@ -402,6 +403,7 @@ SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW
     type(soil_carbon_pool) :: pool
     type(outputvars)       :: outputs
     real, intent(in)       :: thetaLiq_soil, thetaFrzn_soil, fT_soil, fW_soil, Tsoil
+    integer, intent(in)    :: doy      ! Day of Year -mdh 5/14/2018
 
     !Local Variables
     integer :: line,ncohorts
@@ -440,6 +442,7 @@ SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW
 
     outputs%CO2(line)=sum(pool%litterCohorts(:)%CO2)
     outputs%totalC(line)=totalC
+    outputs%doy(line)=doy
 
     outputs%time(line)=timestep*dt
     outputs%Ts(line)=Tsoil
@@ -550,7 +553,7 @@ END SUBROUTINE corpse_caccum
 
 !--------------------------------------------------------------------------------------------------------------
 ! Write ALL SAVED output variables and ALL SAVED timesteps for A SINGLE POINT .csv file filenamePtCORPSE.
-! Recordtime in corpse_params.nml file determines the number of timesteps that are saved.
+! Number of timesteps saved is determined by recordtime set in program offline_casacnp
 !
 SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
     USE casavariable
@@ -573,7 +576,7 @@ SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
 
     !!!!                                      10        20        30        40        50        60        70        80
     !!!!                             123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_
-    write(215,'(a61)',advance='no') 'pt,ijgcm,tcount,time,lat,lon,veg,Ts,litter_unprotect(LABILE),'
+    write(215,'(a61)',advance='no') 'pt,ijgcm,DOY,time,lat,lon,veg,Ts,litter_unprotect(LABILE),'
     write(215,'(a80)',advance='no') 'litter_unprotect(RECALCTRNT),litter_unprotect(DEADMICRB),litter_protect(LABILE),'
     write(215,'(a53)',advance='no') 'litter_protect(RECALCTRNT),litter_protect(DEADMICRB),'
     write(215,'(a80)',advance='no') 'litter_livingMicrobe,litter_CO2,soil_unprotect(1.LABILE),soil_unprotect(1.slow),'
@@ -583,36 +586,36 @@ SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
     ipt = iptToSaveIndx
     do i= 1, pt(ipt)%litterlayer_outputs%linesWritten
         write(215,91,advance='no') ipt, &
-                               casamet%ijgcm(ipt), &
-                               i, &
-                               pt(ipt)%litterlayer_outputs%time(i), &
-                               casamet%lat(ipt), &
-                               casamet%lon(ipt), &
-                               veg%iveg(ipt), &
-                               pt(ipt)%litterlayer_outputs%Ts(i), &
-                               pt(ipt)%litterlayer_outputs%litterC(LABILE,i), &
-                               pt(ipt)%litterlayer_outputs%litterC(RECALCTRNT,i), &
-                               pt(ipt)%litterlayer_outputs%litterC(DEADMICRB,i), &
-                               pt(ipt)%litterlayer_outputs%protectedC(LABILE,i), &
-                               pt(ipt)%litterlayer_outputs%protectedC(RECALCTRNT,i), &
-                               pt(ipt)%litterlayer_outputs%protectedC(DEADMICRB,i), & 
-                               pt(ipt)%litterlayer_outputs%livingMicrobC(i), &
-                               pt(ipt)%litterlayer_outputs%CO2(i)
+                           casamet%ijgcm(ipt), &
+                           pt(ipt)%litterlayer_outputs%doy(i), &
+                           pt(ipt)%litterlayer_outputs%time(i), &
+                           casamet%lat(ipt), &
+                           casamet%lon(ipt), &
+                           veg%iveg(ipt), &
+                           pt(ipt)%litterlayer_outputs%Ts(i), &
+                           pt(ipt)%litterlayer_outputs%litterC(LABILE,i), &
+                           pt(ipt)%litterlayer_outputs%litterC(RECALCTRNT,i), &
+                           pt(ipt)%litterlayer_outputs%litterC(DEADMICRB,i), &
+                           pt(ipt)%litterlayer_outputs%protectedC(LABILE,i), &
+                           pt(ipt)%litterlayer_outputs%protectedC(RECALCTRNT,i), &
+                           pt(ipt)%litterlayer_outputs%protectedC(DEADMICRB,i), & 
+                           pt(ipt)%litterlayer_outputs%livingMicrobC(i), &
+                           pt(ipt)%litterlayer_outputs%CO2(i)
 
        ilyr=1
        write(215,92,advance='yes') pt(ipt)%soil_outputs(ilyr)%litterC(LABILE,i), &
-                               pt(ipt)%soil_outputs(ilyr)%litterC(RECALCTRNT,i), &
-                               pt(ipt)%soil_outputs(ilyr)%litterC(DEADMICRB,i), &
-                               pt(ipt)%soil_outputs(ilyr)%protectedC(LABILE,i), &
-                               pt(ipt)%soil_outputs(ilyr)%protectedC(RECALCTRNT,i), &
-                               pt(ipt)%soil_outputs(ilyr)%protectedC(DEADMICRB,i), & 
-                               pt(ipt)%soil_outputs(ilyr)%livingMicrobC(i), &
-                               pt(ipt)%soil_outputs(ilyr)%CO2(i)
+                           pt(ipt)%soil_outputs(ilyr)%litterC(RECALCTRNT,i), &
+                           pt(ipt)%soil_outputs(ilyr)%litterC(DEADMICRB,i), &
+                           pt(ipt)%soil_outputs(ilyr)%protectedC(LABILE,i), &
+                           pt(ipt)%soil_outputs(ilyr)%protectedC(RECALCTRNT,i), &
+                           pt(ipt)%soil_outputs(ilyr)%protectedC(DEADMICRB,i), & 
+                           pt(ipt)%soil_outputs(ilyr)%livingMicrobC(i), &
+                           pt(ipt)%soil_outputs(ilyr)%CO2(i)
 
     enddo
     close(215)
 
-91  format(3(i6,','),3(f8.2,','),i6,',',9(f18.6,','))
+91  format(3(i6,','),3(f8.4,','),i6,',',9(f18.6,','))
 92  format(8(f18.6,','))
 
     if (verbose .ge. 0) print *, "Done writing output to file ", trim(filenamePtCORPSE), "..."
@@ -621,7 +624,7 @@ end subroutine WritePointCORPSE
 
 !--------------------------------------------------------------------------------------------------------------
 ! Write END-OF-SIMULATION values for all saved output variables for the entire grid to filename_corpseepool
-! Recordtime in corpse_params.nml file determines the number of timesteps that are saved.
+! Number of timesteps saved is determined by recordtime set in program offline_casacnp
 !
 !SUBROUTINE corpse_poolfluxout1(filename_corpseepool,mp)
 !   USE casavariable
@@ -690,7 +693,7 @@ end subroutine WritePointCORPSE
 
 !--------------------------------------------------------------------------------------------------------------
 ! Write END-OF-SIMULATION values for all saved output variables for the entire grid to filename_corpseepool
-! Recordtime in corpse_params.nml file determines the number of timesteps that are saved.
+! Number of timesteps saved is determined by recordtime set in program offline_casacnp
 !
 SUBROUTINE corpse_poolfluxout(filename_corpseepool,mp,writeToRestartCSVfile)
     USE casavariable

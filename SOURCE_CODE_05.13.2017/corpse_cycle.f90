@@ -59,13 +59,15 @@ SUBROUTINE corpse_delplant(mp,veg,casabiome,casapool,casaflux,casamet,          
   casaflux%FluxCtolitter = 0.0
   casaflux%FluxNtolitter = 0.0
   casaflux%FluxPtolitter = 0.0
-  casapool%dClitterdt(:,:) = 0.0;
+  casapool%dClitterdt(:,:) = 0.0
 
   cleaf2met = 0.0
   cleaf2str = 0.0
   croot2met = 0.0
   croot2str = 0.0
   cwood2cwd = 0.0
+  cwd2co2 = 0.0
+  cwd2str = 0.0
 
   nleaf2met = 0.0
   nleaf2str = 0.0
@@ -340,11 +342,11 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
           do jj=1,num_lyr
               !call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), casamet%moistavg(npt), casamet%tsoilavg(npt))
               call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), &
-                                    theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt))
+                                    theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), doy)
           enddo
           !call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, casamet%moistavg(npt), casamet%tsoilavg(npt))
           call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), &
-                                theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt))
+                                theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), doy)
 
           if (casamet%ijgcm(npt) .eq. iptToSave_corpse) then
               !ATTENTION: TO DO
