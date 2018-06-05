@@ -830,12 +830,13 @@ use phenvariable
   integer  np,npt,npz,nl,ns,nland,nlandz,mp,ms,mst
   real(r_2) nyearz,ivtz,istz,latz,lonz,areacellz,glaiz,slaz,isoz
 
-  print *, 'initcasa ', initcasa
+  print *, 'initcasa = ', initcasa
   !phen%phase = 2
 IF (initcasa>=1) then
       write(*,*) 
       write(*,*) "Reading initial CASACNP pool file: ", filename_cnpipool, "..."
       open(99,file=filename_cnpipool)
+      read(99,*)   ! Skip past file header. -mdh 1/30/2018
       do npt =1, mp
 !! Commented out this section (-MDH 6/14/2014)
 !!       Select Case(icycle)
@@ -972,9 +973,98 @@ endif
         casabal%psoilocclast  = casapool%psoilocc
         casabal%sumpbal       = 0.0
 
-    Endif
+    endif
 
 end SUBROUTINE casa_init
+
+!--------------------------------------------------------------------------------
+! Write a header to the casacnp end-of-simulation pool (restart) file.
+! This subroutine assumes that the calling routine has already opened the output
+! file with unit number nout. The filename is for reference only.
+!
+
+SUBROUTINE write_cnpepool_header(icycle, nout, filename_cnpepool)
+    implicit none
+    integer, intent(in) :: icycle, nout
+    character(len=100), intent(in) :: filename_cnpepool
+
+    !                              10        20        30        40        50        60        70        80
+    !                     123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+    WRITE(nout,'(a72$)') 'iYrCnt,npt,veg%iveg,soil%isoilm,casamet%isorder,casamet%lat,casamet%lon,'
+    WRITE(nout,'(a82$)') 'casamet%areacell,casamet%glai,casabiome%sla(veg%iveg),phen%phase,casapool%clabile,'
+    WRITE(nout,'(a67$)') 'casapool%cplant(LEAF),casapool%cplant(WOOD),casapool%cplant(FROOT),'
+    WRITE(nout,'(a67$)') 'casapool%clitter(METB),casapool%clitter(STR),casapool%clitter(CWD),'
+    WRITE(nout,'(a62$)') 'casapool%csoil(MIC),casapool%csoil(SLOW),casapool%csoil(PASS),'
+    WRITE(nout,'(a67$)') 'casapool%nplant(LEAF),casapool%nplant(WOOD),casapool%nplant(FROOT),'
+    WRITE(nout,'(a67$)') 'casapool%nlitter(METB),casapool%nlitter(STR),casapool%nlitter(CWD),'
+    WRITE(nout,'(a80$)') 'casapool%nsoil(MIC),casapool%nsoil(SLOW),casapool%nsoil(PASS),casapool%nsoilmin,'
+    WRITE(nout,'(a67$)') 'casapool%pplant(LEAF),casapool%pplant(WOOD),casapool%pplant(FROOT),'
+    WRITE(nout,'(a67$)') 'casapool%plitter(METB),casapool%plitter(STR),casapool%plitter(CWD),'
+    WRITE(nout,'(a62$)') 'casapool%psoil(MIC),casapool%psoil(SLOW),casapool%psoil(PASS),'  
+    WRITE(nout,'(a55$)') 'casapool%psoillab,casapool%psoilsorb,casapool%psoilocc,'
+    WRITE(nout,'(a47)')  'casabal%sumcbal,casabal%sumnbal,casabal%sumpbal'
+
+end SUBROUTINE write_cnpepool_header
+
+!--------------------------------------------------------------------------------
+! This subroutine assumes that the calling routine has already opened the output 
+! file with unit number nout. The filename is for reference only.
+!
+
+SUBROUTINE write_cnpflux_header(icycle, nout, filename_cnpflux)
+    implicit none
+    integer, intent(in) :: icycle, nout
+    character(len=100), intent(in) :: filename_cnpflux
+
+
+! LEAF    = 1
+! WOOD    = 2
+! FROOT   = 3
+! 
+! METB    = 1
+! STR     = 2
+! CWD     = 3
+! 
+! MIC     = 1
+! SLOW    = 2
+! PASS    = 3
+! 
+! PLAB    = 1
+! PSORB   = 2
+! POCC    = 3
+
+    Select Case(icycle)
+    Case(1)
+    !                                  10        20        30        40        50        60        70        80
+    !                         123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+        WRITE(nout,'(a47$)') 'myear,npt,veg%iveg,soil%isoilm,casamet%isorder,'
+        WRITE(nout,'(a41$)') 'casamet%lat,casamet%lon,casamet%areacell,'
+        WRITE(nout,'(a70$)') 'casabal%Fcnppyear,casabal%FCrsyear,casabal%FCneeyear,casabal%FCrpyear,'
+        WRITE(nout,'(a58$)') 'clitterinput(LEAF),clitterinput(WOOD),clitterinput(FROOT),'
+        WRITE(nout,'(a50)')  'csoilinput(METB),csoilinput(METB),csoilinput(METB)'
+ 
+!ATTENTION: Update for N and P
+    ! Case(2)
+        ! write(nout,??) myear,npt,veg%iveg(npt),soil%isoilm(npt),casamet%isorder(npt), &
+        ! casamet%lat(npt),casamet%lon(npt),casamet%areacell(npt)*(1.0e-9), &
+        ! casabal%FCnppyear(npt),casabal%FCrsyear(npt),casabal%FCneeyear(npt),casabal%FCrpyear(npt),&
+        ! clitterinput(npt,:),csoilinput(npt,:), &
+        ! casabal%FNdepyear(npt),casabal%FNfixyear(npt),  casabal%FNsnetyear(npt), &
+        ! casabal%FNupyear(npt), casabal%FNleachyear(npt),casabal%FNlossyear(npt)
+ 
+    ! Case(3)
+        ! write(nout,??) myear,npt,veg%iveg(npt),soil%isoilm(npt),casamet%isorder(npt), &
+        ! casamet%lat(npt),casamet%lon(npt),casamet%areacell(npt)*(1.0e-9), &
+        ! casabal%FCnppyear(npt),casabal%FCrsyear(npt),casabal%FCneeyear(npt),casabal%FCrpyear(npt),&
+        ! clitterinput(npt,:),csoilinput(npt,:), &
+        ! casabal%FNdepyear(npt),casabal%FNfixyear(npt),  casabal%FNsnetyear(npt), &
+        ! casabal%FNupyear(npt), casabal%FNleachyear(npt),casabal%FNlossyear(npt), &
+        ! casabal%FPweayear(npt),casabal%FPdustyear(npt), casabal%FPsnetyear(npt), &
+        ! casabal%FPupyear(npt), casabal%FPleachyear(npt),casabal%FPlossyear(npt)
+ 
+    END Select 
+
+end SUBROUTINE write_cnpflux_header
 
 
 !--------------------------------------------------------------------------------
@@ -1055,6 +1145,8 @@ implicit none
      nout=103
      open(nout,file=filename_cnpepool)
 
+    ! Write a header to the casacnp end-of-simulation pool (restart) file. -mdh 1/30/2018
+    call write_cnpepool_header(icycle, nout, filename_cnpepool)
 
 !      write(*,91) nyear,cplantsum,clittersum,csoilsum 
       casabal%sumcbal=min(9999.0,max(-9999.0,casabal%sumcbal))
@@ -1209,6 +1301,9 @@ implicit none
   if (writeToRestartCSVfile) then
       nout=104
       open(nout,file=filename_cnpflux)
+      ! Write a header to the casacnp end-of-simulation flux file. -mdh 1/30/2018
+      call write_cnpflux_header(icycle, nout, filename_cnpflux)
+
       do npt =1,mp
          Select Case(icycle)
          Case(1)
@@ -1335,8 +1430,12 @@ END SUBROUTINE casa_cnppool
 
 !-------------------------------------------------------------------------------- 
 ! Run all vegetation, litter, and soil subroutines for each point in the
-! grid of one day
-SUBROUTINE biogeochem(iYrCnt,idoy,nppScalar)
+! grid of one day. 
+! Added arguments cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
+!   so the call to WritePointCASA call could be moved out of this subroutine and into 
+!   casacnddriver. -mdh 5/14/2018.
+
+SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
 
   USE define_dimensions
   USE define_types
@@ -1346,14 +1445,13 @@ SUBROUTINE biogeochem(iYrCnt,idoy,nppScalar)
   USE corpse_cycle_module
   IMPLICIT NONE
 
-  INTEGER, INTENT(IN)    :: iYrCnt,idoy
+  INTEGER, INTENT(IN)    :: iYrCnt, idoy, mdaily
   REAL(r_2), INTENT(IN)  :: nppScalar
 
-  real, dimension(mp)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwood2cwd,         &
-                           nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,         &
-                           pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd
-  !Added for mimics model (-mdh 4/26/2015)
-  real, dimension(mp)   :: cwd2co2,cwd2str
+  real, dimension(mp),INTENT(OUT)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
+
+  real, dimension(mp)               :: nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,         &
+                                       pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd
 
   ! local variables
   REAL(r_2),    DIMENSION(mp) :: xnplimit,xNPuptake
@@ -1429,7 +1527,8 @@ SUBROUTINE biogeochem(iYrCnt,idoy,nppScalar)
                            cwd2co2,cwd2str)
 
 !     call mimics_soil_forwardMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
-      call mimics_soil_reverseMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+!     call mimics_soil_reverseMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+      call mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
 
       call mimics_ccycle(veg,casabiome,casapool,casaflux,casamet)
 
@@ -1477,10 +1576,6 @@ SUBROUTINE biogeochem(iYrCnt,idoy,nppScalar)
   ! Compute average annual soil, plant, and litter pools (-MDH 9/29/2014)
   call casa_cnppool()
 
-  if (casafile%iptToSaveIndx > 0) then
-      ! Write point-specific output
-      call WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
-  endif
 
 END SUBROUTINE biogeochem
     
@@ -3966,6 +4061,8 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
    integer,   dimension(mp)     :: nyavgtair
    real(r_2)    xratio,co2cp
    real(r_2)    nppScalar
+   real, dimension(mp)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
+
    data mdoy/31,59,90,120,151,181,212,243,273,304,334,365/
    data middoy/15,46,74,105,135,166,196,227,258,288,319,349/
 !   data mdays/31,28,31,30,31,30,31,31,30,31,30,31/
@@ -4169,7 +4266,17 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
              else
                  nppScalar = 1.0
              endif
-             call biogeochem(iYrCnt,iday,nppScalar)
+
+             !call biogeochem(iYrCnt,iday,nppScalar)
+             !When calling biogeochem, pass back plant litter fluxes for daily output. -mdh 5/14/2018
+             call biogeochem(iYrCnt,iday,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+
+             if (casafile%iptToSaveIndx > 0) then
+                 ! Write point-specific output. Write end-of-year values only when mdaily==0. -mdh 5/14/2018
+                 if ((mdaily == 1) .or. (iday == 365)) then
+                     call WritePointCASA(iYrCnt,iday,mp,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+                 endif
+             endif
 
              !! casa_cnpflux is called in biogeochem now (-MDH 6/30/2014)
              !!call casa_cnpflux(clitterinput,csoilinput)
@@ -4300,7 +4407,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
              call corpse_poolfluxout(filename_corpseepool,mp,writeToRestartCSVfile)
              if (casafile%iptToSaveIndx > 0) then
                  !Write point-specific output to sPtFileNameCORPSE
-                 call WritePointCorpse(sPtFileNameCORPSE,casafile%iptToSaveIndx,mp)
+                 call WritePointCORPSE(sPtFileNameCORPSE,casafile%iptToSaveIndx,mp)
              endif
              ! Output current year's CORPSE results for transient run (-mdh 5/16/2016)
              if (mdaily == 1) then
@@ -4345,23 +4452,24 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
 
   write(ptstr, '(i10)') casafile%iptToSave
   ptstr = adjustl(ptstr)
-  casafile%sPtFileNameCASA = trim(dirPtFile) // 'TEST_daily_casa_' // trim(ptstr) // '.csv' 
+  casafile%sPtFileNameCASA = trim(dirPtFile) // 'POINT_casa_' // trim(ptstr) // '.csv' 
   open(213,file=casafile%sPtFileNameCASA)
   !Create the header for the point file.  Append to the file later.
 !!                         10        20        30        40        50        60        70        80        90        100
-!!                12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
-  write(213,703) 'npt,ijgcm,iYrCnt,idoy,iveg,tsoilavg,casapool%Cplant(LEAF),casapool%Cplant(WOOD),casapool%Cplant(FROOT),', &
-                 'casapool%Nplant(LEAF),casapool%Nplant(WOOD),casapool%Nplant(FROOT),', &
+!!                1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345
+  write(213,703) 'npt,ijgcm,iYrCnt,idoy,iveg,tsoilavg,moistavg,casapool%Cplant(LEAF),casapool%Cplant(WOOD),', &
+                 'casapool%Cplant(FROOT),casapool%Nplant(LEAF),casapool%Nplant(WOOD),casapool%Nplant(FROOT),', &
                  'casapool%Clitter(MET),casapool%Clitter(STR),casapool%Clitter(CWD),', &
                  'casapool%Nlitter(MET),casapool%Nlitter(STR),casapool%Nlitter(CWD),', &
                  'casapool%Csoil(MIC),casapool%Csoil(SLOW),casapool%Csoil(PASS),', & 
                  'casapool%Nsoil(MIC),casapool%Nsoil(SLOW),casapool%Nsoil(PASS),', & 
                  'casaflux%Crsoil,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd,', & 
                  'casaflux%cgpp,casaflux%cnpp,casaflux%crmplant(LEAF),casaflux%crmplant(WOOD),casaflux%crmplant(FROOT),', &
-                 'casaflux%crgplant,phen%phase,casaflux%fracCalloc(LEAF),casaflux%fracCalloc(WOOD),casaflux%fracCalloc(FROOT),'
+                 'casaflux%crgplant,phen%phase,casaflux%fracCalloc(LEAF),casaflux%fracCalloc(WOOD),casaflux%fracCalloc(FROOT),', &
+                 'casapool%fT,casapool%fW'
   
   close(213)
-  703 format(a103,a67,a66,a66,a62,a62,a82,a101,a108)
+  703 format(a89,a90,a66,a66,a62,a62,a82,a101,a108,a23)
 
   ! The contents of this file are written each day in subroutine WritePointCASA which is called
   ! at the end of each day from subroutine biogeochem.
@@ -4370,12 +4478,12 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
       iptToSave_mimics = casafile%iptToSave
       write(ptstr, '(i10)') iptToSave_mimics
       ptstr = adjustl(ptstr)
-      sPtFileNameMIMICS = trim(dirPtFile) // 'TEST_daily_mimics_' // trim(ptstr) // '.csv' 
+      sPtFileNameMIMICS = trim(dirPtFile) // 'POINT_mimics_' // trim(ptstr) // '.csv' 
       !Create the header for the point file.  Append to the file later.
       open(214,file=sPtFileNameMIMICS)
 !!                             10        20        30        40        50        60        70        80        90        100
 !!                    12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
-      write(214,121) 'npt,ijgcm,iYrCnt,doy,tsoilavg,hresp,inptMetC,inputStrC,LITm,LITs,MICr,MICk,SOMa,SOMc,SOMp,',   &
+      write(214,121) 'npt,ijgcm,iYrCnt,doy,tsoilavg,moistavg,hresp,inptMetC,inputStrC,LITm,LITs,MICr,MICk,SOMa,SOMc,SOMp,',   &
                      'dLITm,dLITs,dMICr,dMICk,dSOMa,dSOMc,dSOMp,', &
                      'LITmin(1),LITmin(2),LITmin(3),LITmin(4),',  &
                      'MICtrn(1),MICtrn(2),MICtrn(3),MICtrn(4),MICtrn(5),MICtrn(6),', &
@@ -4392,7 +4500,7 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
                      'fAVAL(1),fAVAL(2),fCHEM(1),fCHEM(2),fPHYS(1),fPHYS(2),', &
                      'Kmod(R1),Kmod(R2),Kmod(R3),Kmod(K1),Kmod(K2),Kmod(K3),'
       close(214)
-      121 format(a90,a42,a40,a60,a34,a22,a54,a42,a33,a33,a33,a33,a41,a66,a54,a54)
+      121 format(a99,a42,a40,a60,a34,a22,a54,a42,a33,a33,a33,a33,a41,a66,a54,a54)
 
       ! The contents of this file are written each day in subroutine mimics_soil_forwardMM
       ! or mimics_soil_reverseMM.
@@ -4401,8 +4509,8 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
       iptToSave_corpse = casafile%iptToSave
       write(ptstr, '(i10)') iptToSave_corpse
       ptstr = adjustl(ptstr)
-      sPtFileNameCORPSE = trim(dirPtFile) // 'TEST_daily_corpse_' // trim(ptstr) // '.csv' 
-      ! Subroutine WritePointCorpse is called from subroutine casacnpdriver a the end of the
+      sPtFileNameCORPSE = trim(dirPtFile) // 'POINT_corpse_' // trim(ptstr) // '.csv' 
+      ! Subroutine WritePointCORPSE is called from subroutine casacnpdriver a the end of the
       ! simulation to write the header and contents to sPtFileNameCORPSE.
   endif
 
@@ -4434,7 +4542,7 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
 ! if (casamet%ijgcm(npt) .eq. casafile%iptToSave)  
   npt = casafile%iptToSaveIndx
   open(213,file=casafile%sPtFileNameCASA,access='APPEND')
-  write(213,701) npt,casamet%ijgcm(npt),iYrCnt,idoy,veg%iveg(npt),casamet%tsoilavg(npt), &
+  write(213,701) npt,casamet%ijgcm(npt),iYrCnt,idoy,veg%iveg(npt),casamet%tsoilavg(npt),casamet%moistavg(npt), &
                  casapool%cplant(npt,LEAF),casapool%cplant(npt,WOOD),casapool%cplant(npt,FROOT), &
                  casapool%nplant(npt,LEAF),casapool%nplant(npt,WOOD),casapool%nplant(npt,FROOT), &
                  casapool%Clitter(npt,LEAF),casapool%Clitter(npt,WOOD),casapool%Clitter(npt,FROOT), &
@@ -4446,10 +4554,11 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
                  casaflux%cgpp(npt),casaflux%cnpp(npt), &
                  casaflux%crmplant(npt,LEAF),casaflux%crmplant(npt,WOOD),casaflux%crmplant(npt,FROOT), &
                  casaflux%crgplant(npt),real(phen%phase(npt)), &
-                 casaflux%fracCalloc(npt,LEAF),casaflux%fracCalloc(npt,WOOD),casaflux%fracCalloc(npt,FROOT)
+                 casaflux%fracCalloc(npt,LEAF),casaflux%fracCalloc(npt,WOOD),casaflux%fracCalloc(npt,FROOT), &
+                 casapool%fT(npt),casapool%fW(npt)
   close(213)
 
-  701 format(5(i6,','),37(f12.5,','))
+  701 format(5(i6,','),40(f12.5,','))
 
 
 END SUBROUTINE WritePointCASA

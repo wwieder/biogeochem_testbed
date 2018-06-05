@@ -59,13 +59,15 @@ SUBROUTINE corpse_delplant(mp,veg,casabiome,casapool,casaflux,casamet,          
   casaflux%FluxCtolitter = 0.0
   casaflux%FluxNtolitter = 0.0
   casaflux%FluxPtolitter = 0.0
-  casapool%dClitterdt(:,:) = 0.0;
+  casapool%dClitterdt(:,:) = 0.0
 
   cleaf2met = 0.0
   cleaf2str = 0.0
   croot2met = 0.0
   croot2str = 0.0
   cwood2cwd = 0.0
+  cwd2co2 = 0.0
+  cwd2str = 0.0
 
   nleaf2met = 0.0
   nleaf2str = 0.0
@@ -256,11 +258,12 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
                   theta_frzn(npt) = min(1.0, casamet%frznmoistavg(npt)/soil%ssat(npt)) ! fraction of frozen water-filled pore space (0.0 - 1.0)
                   air_filled_porosity = max(0.0, 1.0-theta_liq(npt)-theta_frzn(npt))
 
+                  ! fW and fT are output variables only.  To update actual function, go to function Resp in corpse_soil_carbon.f90. -mdh 12/18/2017
                   ! fW(npt)=(theta_liq(npt)**3+0.001)*max((air_filled_porosity)**gas_diffusion_exp,min_anaerobic_resp_factor)
-                  fW(npt) = (theta_liq(npt)**3+0.001)*max((air_filled_porosity)**2.5,0.003)
-!                 fW(npt) = max(0.05*0.022600567942709, fW(npt))  !WW added 12.14.2017 to put lower limit on CORPSE, similar to MIMICS
-                  fW(npt) = max(0.0001                , fW(npt))  !WW added 12.16.2017 to put lower limit on CORPSE, similar to MIMICS
-                  fT(npt) = 0.0 ! placeholder for future output, if needed
+                  fW(npt) = max(pt(npt)%soil(jj)%fWmin, &
+                           (theta_liq(npt)**3+0.001)*max((air_filled_porosity)**pt(npt)%soil(jj)%gas_diffusion_exp, &
+                                                          pt(npt)%soil(jj)%min_anaerobic_resp_factor))
+                  fT(npt) = 0.0 ! placeholder for future output variable, if needed
 
                   call update_pool(pool=pt(npt)%soil(jj), &
                                T=T, &
@@ -339,11 +342,11 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
           do jj=1,num_lyr
               !call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), casamet%moistavg(npt), casamet%tsoilavg(npt))
               call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), &
-                                    theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt))
+                                    theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), doy)
           enddo
           !call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, casamet%moistavg(npt), casamet%tsoilavg(npt))
           call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), &
-                                theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt))
+                                theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), doy)
 
           if (casamet%ijgcm(npt) .eq. iptToSave_corpse) then
               !ATTENTION: TO DO

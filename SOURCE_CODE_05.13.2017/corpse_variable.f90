@@ -62,6 +62,7 @@ MODULE corpsevariable
         real             :: cwd2co2(366)          ! dimension 1..days in a year (added 2/6/2017)
         integer :: linesWritten=0
         integer,allocatable::ncohorts(:)
+        integer,allocatable::doy(:)               ! Added to allow annual output (doy=365) to daily point files. -mdh 5/14/2018
         ! Annual means for the simulation (added 3/28/2016)
         ! These are updated in subroutine corpse_caccum.  
         integer :: nYear=0                        ! counter for current year being simulated

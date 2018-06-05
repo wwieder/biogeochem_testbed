@@ -492,11 +492,25 @@ over, and the size of this file was limited to 5-7 years.
 Started with code in /project/tss/wwieder/CASACLM/SOURCE_CODE_11.02.2017_mimTHETA2
 
 1) Streamline netCDF tools so only necessary fields are written to met files (omit NPP, LAI)
-Done. Needs testing!
 
 2) Echo CASA, MIMICS, and CORPSE parameter files as they are read
-Done. Needs testing!
    
 3) Echo CASA, MIMICS, and CORPSE restart files being read upon initialization.  
-Done. Needs testing!
+
+----------------------------------------------------------------------------------------------------
+06/02/2018
+
+Since April 26, 2018 I've updated the point-level input/output for all three models.
+If point-level output is turned on in the .lst file, then the output interval will depend
+on mdaily. If mdaily=1, output is each day.  If mdaily=0, output is the state of the 
+model on day 365 only.
+
+Also updated an equation in casa_cnp.f90, SUBROUTINE casa_xrateplant. 
+On 5/14/2018 Gordon discovered the a set of missing parentheses.
+
+        !xcoldleaf(npt) = (casamet%tairk(npt)-phen%TKshed(veg%iveg(npt))-5.0)/5.0
+        xcoldleaf(npt) = (casamet%tairk(npt)-(phen%TKshed(veg%iveg(npt))-5.0))/5.0
+
+----------------------------------------------------------------------------------------------------
+
 

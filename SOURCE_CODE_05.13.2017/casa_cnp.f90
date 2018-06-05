@@ -512,7 +512,9 @@ SUBROUTINE casa_xrateplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome, &
       IF(casamet%tairk(npt)<=(phen%TKshed(veg%iveg(npt))-5.0)) THEN
         xcoldleaf(npt)=0.0
       ELSE
-        xcoldleaf(npt) = (casamet%tairk(npt)-phen%TKshed(veg%iveg(npt))-5.0)/5.0
+        ! Gordon Bonan discovered missing parentheses in the following equation. -mdh 5/14/2018
+        !xcoldleaf(npt) = (casamet%tairk(npt)-phen%TKshed(veg%iveg(npt))-5.0)/5.0
+        xcoldleaf(npt) = (casamet%tairk(npt)-(phen%TKshed(veg%iveg(npt))-5.0))/5.0
       ENDIF
     ENDIF
     xcoldleaf(npt) = min(1.0,max(0.0,xcoldleaf(npt)))
