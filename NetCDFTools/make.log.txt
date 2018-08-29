@@ -1,0 +1,22 @@
+gfortran -g -fbacktrace -fbounds-check -fcheck=all -Wall -c -I/usr/local/include casacnp_model.F90
+casacnp_model.F90:1418.44:
+
+                                            Pdust,doyP1,doyP2,doyP3,doyP4,Phase
+                                            1
+Warning: Missing '&' in continued character constant at (1)
+casacnp_model.F90:1453.35:
+
+                                   Pdust,doyP1,doyP2,doyP3,doyP4,Phase(1),ivcas
+                                   1
+Warning: Missing '&' in continued character constant at (1)
+casacnp_model.F90:408.46:
+
+   status =  nf_put_var(ncid, xfrznmoist_varid, xfrznmoist)
+                                              1
+Error: Symbol 'xfrznmoist_varid' at (1) has no IMPLICIT type
+casacnp_model.F90:1375.44:
+
+               if (h2osoiday(i,j,k,day) .or. h2ofrznday(i,j,k,day) .ge. MISSING
+                                            1
+Error: Operands of logical operator '.or.' at (1) are REAL(4)/LOGICAL(4)
+make: *** [casacnp_model.mod] Error 1

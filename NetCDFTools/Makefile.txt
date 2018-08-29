@@ -1,0 +1,75 @@
+# Makefile.txt
+#
+# gfortran -v
+# gcc version 4.4.7 20120313 (Red Hat 4.4.7-4) (GCC)
+
+F90FLAGS=-g -fbacktrace -fbounds-check -fcheck=all -Wall
+
+F90=	gfortran
+LD=	gfortran
+INCS=	/usr/local/include
+LIB_NETCDF=	/usr/local/netcdf/lib 
+MOD_NETCDF=	/usr/local/netcdf/lib
+COMMAND=	netcdfTools
+
+O = Obj
+
+OBJS=	main.o 
+	
+MODS=	shr_kind_mod.mod \
+	clm_common.mod \
+	canopy_model.mod \
+	casacnp_model.mod \
+    	clm_netcdf_tools.mod
+
+OMODS=	shr_kind_mod.o \
+	clm_common.o \
+	canopy_model.o \
+        casacnp_model.o \
+	clm_netcdf_tools.o 
+
+clean:
+	/bin/rm -f $(OBJS) $(MODS) $(OMODS) core netcdfTools
+
+
+$(COMMAND):     $(OBJS) $(OMODS) 
+	$(LD) -o $(COMMAND) $(OBJS) $(OMODS) -L$(LIB_NETCDF) -lnetcdff
+
+
+clm_netcdf_tools.o : canopy_model.mod clm_netcdf_tools.mod 
+	$(F90) $(F90FLAGS) -c -I$(MOD_NETCDF) $<
+
+canopy_model.o : clm_common.mod canopy_model.mod 
+	$(F90) $(F90FLAGS) -c -I$(MOD_NETCDF) $<
+
+casacnp_model.o : clm_common.mod casacnp_model.mod 
+	$(F90) $(F90FLAGS) -c -I$(MOD_NETCDF) $<
+
+clm_common.o : clm_common.mod 
+	$(F90) $(F90FLAGS) -c -I$(MOD_NETCDF) $<
+
+shr_kind_mod.o : shr_kind_mod.mod 
+	$(F90) $(F90FLAGS) -c $<
+
+
+
+clm_netcdf_tools.mod : clm_netcdf_tools.F90 
+	$(F90) $(F90FLAGS) -c -I$(INCS) $<
+
+canopy_model.mod : canopy_model.F90 
+	$(F90) $(F90FLAGS) -c -I$(INCS) $<
+
+casacnp_model.mod : casacnp_model.F90 
+	$(F90) $(F90FLAGS) -c -I$(INCS) $<
+
+clm_common.mod : clm_common.F90 
+	$(F90) $(F90FLAGS) -c -I$(INCS) $<
+
+shr_kind_mod.mod : shr_kind_mod.F90 
+	$(F90) $(F90FLAGS) -c -I$(INCS) $<
+
+
+main.o : main.F90 $(MODS)
+	$(F90) $(F90FLAGS) -c $<
+
+
