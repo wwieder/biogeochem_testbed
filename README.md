@@ -1,14 +1,16 @@
-# biogeochem_testbed_1.0
+# biogeochem_testbed_1.1
 Soil biogeochemical testbed 
 
 Code Repository
 
 Created by Will Wieder, Melannie Hartman, & Ben Sulman: 
 
-Updated Nov. 1, 2017
+Updated Aug. 29, 2018
 
 User’s manual and technical documentation for the biogeochemical testbed accepted in Global Change Biology, Oct 2017.
-The biogeochemical testbed code base used in these simulations in included.  
+The biogeochemical testbed code base used in these simulations is included (commit 26b4630).
+
+Updates to the code base address issues documented here and include modifications to CORPSE parameterization and the addition of a soil moisture scalar to MIMICS. Updates to the Example_Grid also simulate RCP4.5 and 8.5 through 2100 for each model.
 
 For questions, comments, or inquiries, please contact Will Wieder wwieder@ucar.edu
 
