@@ -1,2 +1,3 @@
 module load tool/netcdf/4.3.2/gcc
 
+module load tools/necdf/point to the right one here
