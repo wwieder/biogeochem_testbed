@@ -1,3 +1,12 @@
+!--------------------------------------------------------------------------------
+! FILE: casa_vegsoil.f90
+!
+! This file contains:
+!   MODULE define_dimensions
+!   MODULE define_types
+!     with subroutine alloc_casavegsoil
+!--------------------------------------------------------------------------------
+
 MODULE define_dimensions
   INTEGER            :: mp      ! # points in this simulation
   INTEGER, PARAMETER :: mf = 2  ! # leaves (sunlit, shaded)

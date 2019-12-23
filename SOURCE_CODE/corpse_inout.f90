@@ -12,7 +12,7 @@
 !     SUBROUTINE save_output_line - records carbon sums from one pool into the output data container 
 !                for that pool
 !     SUBROUTINE corpse_caccum - accumulate daily C fluxes and pool values and annual mean each year
-!     SUBROUTINE WritePointCORPSE - write all saved output variables for a sigle point to .csv file
+!     SUBROUTINE WritePointCORPSE - write all saved output variables for a single point to .csv file
 !     SUBROUTINE corpse_poolfluxout - write all saved output variables for the entire grid to restart 
 !                .csv output file for the final time saved.
 !     SUBROUTINE InitPoolFluxNcFile_corpse - define dimensions and variables for the NetCDF output file 
@@ -50,7 +50,7 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
   integer,            INTENT(IN) :: maxSteps, mp, initcasaVal
   
   !Local Variables
-  integer :: lyr, ipt, ii, jj, tcnt, ijgcm, ivtz
+  integer :: lyr, ipt, ii, tcnt, ijgcm, ivtz
   real    :: ftime, latz, lonz
   real    :: litter_litterC(nspecies), litter_protectedC(nspecies)
   real    :: soil_litterC(nspecies), soil_protectedC(nspecies)
@@ -86,6 +86,7 @@ SUBROUTINE corpse_init(maxSteps, filename_corpseipool, mp, initcasaVal)
 
           ! Qmax now depends on clay content. -mdh 3/23/2017
           ! Qmax_clay in mgC/kg soil from Mayes et al 2012, converted to g/m3 using solid density of 2650 kg/m3
+          ! Checking units: mgC/kg * 2650 kg/m3 * 0.000001 kgC/mgC = kgC/m3 (not gC/m3) -mdh 7/23/2018 (correct?).
           clay =  soil%clay(ii)*100.0   ! clay (%)
           porosity =  soil%ssat(ii)     ! porosity (0.0-1.0)
           if(clay .le. 0.0) then
@@ -309,7 +310,7 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
              outputs%CO2(ntimes), &
              outputs%Rtot(nspecies,ntimes), &
              outputs%time(ntimes), &
-             outputs%protectedprod(nspecies,ntimes), &
+             outputs%protectedProd(nspecies,ntimes), &
              outputs%Ts(ntimes), &
              outputs%thetaLiq(ntimes), &
              outputs%thetaFrzn(ntimes), &
@@ -328,7 +329,8 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
              outputs%thetaLiqAn(ntimes), &
              outputs%thetaFrznAn(ntimes), &
              outputs%fTAn(ntimes), &
-             outputs%fWAn(ntimes))
+             outputs%fWAn(ntimes), &
+             outputs%protectedProdAn(nspecies,ntimes))
 
     outputs%litterC=0.0
     outputs%protectedC=0.0
@@ -337,7 +339,7 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
     outputs%CO2=0.0
     outputs%totalC=0.0
     outputs%Rtot=0.0
-    outputs%protectedprod=0.0
+    outputs%protectedProd=0.0
     outputs%time=0.0
     outputs%linesWritten=0
     outputs%ncohorts=0
@@ -360,6 +362,7 @@ SUBROUTINE initialize_outputs(maxSteps, outputs)
     outputs%thetaFrznAn = 0.0    
     outputs%fTAn = 0.0    
     outputs%fWAn = 0.0    
+    outputs%protectedProdAn=0.0
 
 END SUBROUTINE initialize_outputs
 
@@ -376,7 +379,7 @@ SUBROUTINE free_outputs(outputs)
     deallocate(outputs%litterC,&
         outputs%protectedC,&
         outputs%livingMicrobC,&
-        outputs%CO2,outputs%Rtot,outputs%time,outputs%protectedprod,&
+        outputs%CO2,outputs%Rtot,outputs%time,outputs%protectedProd,&
         outputs%Ts,outputs%thetaLiq,outputs%thetaFrzn,outputs%fT,outputs%fW, &
         outputs%ncohorts,outputs%totalC,outputs%doy)
 
@@ -385,7 +388,7 @@ SUBROUTINE free_outputs(outputs)
         outputs%livingMicrobCan,&
         outputs%CO2an,outputs%timeAn,&
         outputs%TsAn,outputs%thetaLiqAn,outputs%thetaFrznAn,outputs%fTAn,outputs%fWAn, &
-        outputs%totalCan)
+        outputs%totalCan,outputs%protectedProdAn)
 
 END SUBROUTINE free_outputs
 
@@ -394,16 +397,17 @@ END SUBROUTINE free_outputs
 ! Records carbon sums from one pool into the output data container for that pool
 ! No values are written to a file here.
 !
-SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil,doy)
+SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil,protected_produced,doy)
     USE corpsevariable
     USE corpse_soil_carbon
     implicit none
 
     !Subroutine arguments
-    type(soil_carbon_pool) :: pool
-    type(outputvars)       :: outputs
-    real, intent(in)       :: thetaLiq_soil, thetaFrzn_soil, fT_soil, fW_soil, Tsoil
-    integer, intent(in)    :: doy      ! Day of Year -mdh 5/14/2018
+    type(soil_carbon_pool)  :: pool
+    type(outputvars)        :: outputs
+    real, intent(in)        :: thetaLiq_soil, thetaFrzn_soil, fT_soil, fW_soil, Tsoil
+    integer, intent(in)     :: doy      ! Day of Year -mdh 5/14/2018
+    real,intent(in)         :: protected_produced(nspecies) ! protected C produced -mdh 12/3/2018
 
     !Local Variables
     integer :: line,ncohorts
@@ -450,6 +454,10 @@ SUBROUTINE save_output_line(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW
     outputs%thetaFrzn(line)=thetaFrzn_soil
     outputs%fT(line)=fT_soil
     outputs%fW(line)=fW_soil
+    outputs%protectedProd(LABILE,line)=protected_produced(LABILE)
+    outputs%protectedProd(RECALCTRNT,line)=protected_produced(RECALCTRNT)
+    outputs%protectedProd(DEADMICRB,line)=protected_produced(DEADMICRB)
+    !write(*,*) 'save_output_line: protected_produced=' , line, protected_produced
     outputs%ncohorts(line)=ncohorts
     outputs%linesWritten=outputs%linesWritten+1
 
@@ -460,7 +468,7 @@ END SUBROUTINE save_output_line
 ! to compute annual mean values each simulation year.
 ! No values are written to a file here.
 !
-SUBROUTINE corpse_caccum(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil,doy,ipt)
+SUBROUTINE corpse_caccum(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_soil,Tsoil,protected_produced,doy,ipt)
     USE corpsevariable
     USE corpse_soil_carbon
     implicit none
@@ -469,6 +477,7 @@ SUBROUTINE corpse_caccum(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_so
     type(soil_carbon_pool) :: pool
     type(outputvars)       :: outputs
     real, intent(in)       :: thetaLiq_soil, thetaFrzn_soil, fT_soil, fW_soil, Tsoil
+    real, intent(in)       :: protected_produced(nspecies)
     integer, intent(in)    :: doy  ! Day of Year
     integer, intent(in)    :: ipt
 
@@ -510,6 +519,9 @@ SUBROUTINE corpse_caccum(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_so
     outputs%litterCan(LABILE,nYear)     = outputs%litterCan(LABILE,nYear)     + fastC
     outputs%litterCan(RECALCTRNT,nYear) = outputs%litterCan(RECALCTRNT,nYear) + slowC
     outputs%litterCan(DEADMICRB,nYear)  = outputs%litterCan(DEADMICRB,nYear)  + deadmicC
+    outputs%protectedProdAn(LABILE,nYear)     = outputs%protectedProdAn(LABILE,nYear) + protected_produced(LABILE)
+    outputs%protectedProdAn(RECALCTRNT,nYear) = outputs%protectedProdAn(RECALCTRNT,nYear) + protected_produced(RECALCTRNT)
+    outputs%protectedProdAn(DEADMICRB,nYear)  = outputs%protectedProdAn(DEADMICRB,nYear) + protected_produced(DEADMICRB)
 
     outputs%livingMicrobCan(nYear) = outputs%livingMicrobCan(nYear) + liveMicrobeC
 
@@ -521,6 +533,7 @@ SUBROUTINE corpse_caccum(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_so
     outputs%timeAn(nYear)  = nYear
 
     if (doy == 365) then
+        ! Compute annual average POOL values.
         outputs%protectedCan(:,nYear) = outputs%protectedCan(:,nYear) / 365
         outputs%litterCan(:,nYear)     = outputs%litterCan(:,nYear) / 365
         outputs%livingMicrobCan(nYear) = outputs%livingMicrobCan(nYear) / 365
@@ -532,7 +545,7 @@ SUBROUTINE corpse_caccum(pool,outputs,thetaLiq_soil,thetaFrzn_soil,fT_soil,fW_so
         outputs%totalCan(nYear) = sum(outputs%protectedCan(:,nYear)) + sum(outputs%litterCan(:,nYear)) &
                                   + outputs%livingMicrobCan(nYear)
         if (nYear > 1) then
-            outputs%CO2an(nYear) = outputs%CO2(nYear) - outputs%CO2(nYear-1) ! outputs%CO2 is an accumulators
+            outputs%CO2an(nYear) = outputs%CO2(nYear) - outputs%CO2(nYear-1) ! outputs%CO2 is an accumulator
         else
             outputs%CO2an(nYear) = outputs%CO2(nYear) 
         endif
@@ -555,7 +568,7 @@ END SUBROUTINE corpse_caccum
 ! Write ALL SAVED output variables and ALL SAVED timesteps for A SINGLE POINT .csv file filenamePtCORPSE.
 ! Number of timesteps saved is determined by recordtime set in program offline_casacnp
 !
-SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
+SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx)
     USE casavariable
     USE define_types
     USE corpsevariable
@@ -564,7 +577,7 @@ SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
 
     !Subroutine arguments
     character(len=100), INTENT(IN) :: filenamePtCORPSE
-    integer,intent(in):: iptToSaveIndx, mp
+    integer,intent(in):: iptToSaveIndx
 
     !Local Variables
     integer::ilyr, i, ipt 
@@ -581,7 +594,7 @@ SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
     write(215,'(a53)',advance='no') 'litter_protect(RECALCTRNT),litter_protect(DEADMICRB),'
     write(215,'(a80)',advance='no') 'litter_livingMicrobe,litter_CO2,soil_unprotect(1.LABILE),soil_unprotect(1.slow),'
     write(215,'(a78)',advance='no') 'soil_unprotect(1.DEADMICRB),soil_protect(1.LABILE),soil_protect(1.RECALCTRNT),'
-    write(215,'(a53)',advance='yes')'soil_protect(1.DEADMICRB),soil_livingMicrobe,soil_CO2,'
+    write(215,'(a68)',advance='yes')'soil_protect(1.DEADMICRB),soil_livingMicrobe,soil_CO2,protectedProd,'
 
     ipt = iptToSaveIndx
     do i= 1, pt(ipt)%litterlayer_outputs%linesWritten
@@ -610,13 +623,14 @@ SUBROUTINE WritePointCORPSE(filenamePtCORPSE,iptToSaveIndx,mp)
                            pt(ipt)%soil_outputs(ilyr)%protectedC(RECALCTRNT,i), &
                            pt(ipt)%soil_outputs(ilyr)%protectedC(DEADMICRB,i), & 
                            pt(ipt)%soil_outputs(ilyr)%livingMicrobC(i), &
-                           pt(ipt)%soil_outputs(ilyr)%CO2(i)
+                           pt(ipt)%soil_outputs(ilyr)%CO2(i), &
+                           sum(pt(ipt)%soil_outputs(ilyr)%protectedProd(:,i))
 
     enddo
     close(215)
 
 91  format(3(i6,','),3(f8.4,','),i6,',',9(f18.6,','))
-92  format(8(f18.6,','))
+92  format(9(f18.6,','))
 
     if (verbose .ge. 0) print *, "Done writing output to file ", trim(filenamePtCORPSE), "..."
 
@@ -822,10 +836,10 @@ SUBROUTINE InitPoolFluxNcFile_corpse(filename_ncOut,ntimes,mdaily)
 
     !Local Variables
     character*100 :: attr_name     ! String for assigning global and variable attributes
-    character*100 :: attr_units	   ! String for assigning global and variable attributes
+    character*100 :: attr_units    ! String for assigning global and variable attributes
     character*10  :: date_string   ! String for assigning date to global attributes
     character*8   :: time_string   ! String for assigning time to global attributes
-    integer       :: dims(3)	   ! Array of NetCDF dimension IDs for defining variables
+    integer       :: dims(3)       ! Array of NetCDF dimension IDs for defining variables
     character*10  :: cunits = 'g C m-2' ! C pool units
     integer :: status 
 
@@ -1078,10 +1092,11 @@ SUBROUTINE InitPoolFluxNcFile_corpse(filename_ncOut,ntimes,mdaily)
     if (status /= nf_noerr) call handle_err(status, "nf_def_var(Soil_CO2)")
     if (mdaily == 1) then
         attr_name = 'Soil CO2-C produced/day'
+        attr_units = 'g C m-2 day-1'
     else
         attr_name = 'Mean annual soil CO2-C produced'
+        attr_units = 'g C m-2 yr-1'
     endif
-    attr_units = cunits
     call PutVariableAttributeDouble(ncid_corpse, varids%soil_CO2id, attr_name, attr_units, MISSING_VALUE)
 
     ! Heterotrophic litter layer respiration
@@ -1089,11 +1104,24 @@ SUBROUTINE InitPoolFluxNcFile_corpse(filename_ncOut,ntimes,mdaily)
     if (status /= nf_noerr) call handle_err(status, "nf_def_var(LitterLayer_CO2)")
     if (mdaily == 1) then
         attr_name = 'Litter layer CO2-C produced/day'
+        attr_units = 'g C m-2 day-1'
     else
         attr_name = 'Mean annual litter layer CO2-C produced'
+        attr_units = 'g C m-2 yr-1'
     endif
-    attr_units = cunits
     call PutVariableAttributeDouble(ncid_corpse, varids%litter_CO2id, attr_name, attr_units, MISSING_VALUE)
+
+    ! Inputs to protected soil
+    status=nf_def_var(ncid_corpse,'protectedProd',NF_DOUBLE,3,dims,varids%protectedProdid)
+    if (status /= nf_noerr) call handle_err(status, "nf_def_var(protectedProd)")
+    if (mdaily == 1) then
+        attr_name = 'C inputs to protected soil pool/day'
+        attr_units = 'g C m-2 day-1'
+    else
+        attr_name = 'C inputs to protected soil pool/year'
+        attr_units = 'g C m-2 yr-1'
+    endif
+    call PutVariableAttributeDouble(ncid_corpse, varids%protectedProdid, attr_name, attr_units, MISSING_VALUE)
 
     ! Living litter layer microbe carbon
     status=nf_def_var(ncid_corpse,'LitterLayer_LiveMicrobeC',NF_DOUBLE,3,dims,varids%litter_livingmicrobeid)
@@ -1211,22 +1239,22 @@ END SUBROUTINE InitPoolFluxNcFile_corpse
 !!!   real(8), allocatable :: landarea(:,:)       ! landarea(nlon,nlat) km^2
 !!!   real(8), allocatable :: var1(:,:,:)         ! gridded output variable
 !!!   real(8), allocatable :: var2(:,:,:)         ! gridded output variable
-!!!   real(8), allocatable :: var3(:,:,:)	        ! gridded output variable
-!!!   real(8), allocatable :: var4(:,:,:)	        ! gridded output variable
-!!!   real(8), allocatable :: var5(:,:,:)	        ! gridded output variable
-!!!   real(8), allocatable :: var6(:,:,:)	        ! gridded output variable
-!!!   real(8), allocatable :: var7(:,:,:)	        ! gridded output variable
-!!!   real(8), allocatable :: var8(:,:,:)	        ! gridded output variable
-!!!   real(8), allocatable :: var9(:,:,:)	        ! gridded output variable
-!!!   real(8), allocatable :: var10(:,:,:)	        ! gridded output variable
+!!!   real(8), allocatable :: var3(:,:,:)         ! gridded output variable
+!!!   real(8), allocatable :: var4(:,:,:)         ! gridded output variable
+!!!   real(8), allocatable :: var5(:,:,:)         ! gridded output variable
+!!!   real(8), allocatable :: var6(:,:,:)         ! gridded output variable
+!!!   real(8), allocatable :: var7(:,:,:)         ! gridded output variable
+!!!   real(8), allocatable :: var8(:,:,:)         ! gridded output variable
+!!!   real(8), allocatable :: var9(:,:,:)         ! gridded output variable
+!!!   real(8), allocatable :: var10(:,:,:)        ! gridded output variable
 !!!
 !!!   if (verbose .ge. 0) print *, "Writing output to file ", trim(filename_ncOut), "..."
 !!!
 !!! Output these variables in NetCDF file:
-!!!     veg%iveg(npt)				- IGBP PFTs
-!!!     casamet%lat(npt)				- latitudes	
-!!!     casamet%lon(npt)				- longitudes
-!!!     casamet%areacell(npt)*(1.0e-6) 		- landarea (km^2)
+!!!     veg%iveg(npt) - IGBP PFTs
+!!!     casamet%lat(npt) - latitudes
+!!!     casamet%lon(npt) - longitudes
+!!!     casamet%areacell(npt)*(1.0e-6) - landarea (km^2)
 !!!  Carbon Fluxes and Pools   
 !!!     Convert units from kg C m-2 to g C m-2 
 !!!
@@ -1439,7 +1467,7 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
     character*(*),intent(in)   :: filename_ncOut
     type(outputvars),intent(in):: litter_outputs, soil_outputs(:)
     integer,intent(in) :: mp, ntime1, ntime2
-    integer,intent(in) :: mdaily	        ! 1 if output is daily, 0 if output is annual
+    integer,intent(in) :: mdaily                ! 1 if output is daily, 0 if output is annual
     integer,intent(in) :: year                  ! calendar year simulation time
 
     !Local Variables
@@ -1456,23 +1484,24 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
     real(8), allocatable :: landarea(:,:)       ! landarea(nlon,nlat) km^2
     real(8), allocatable :: var1(:,:,:)         ! gridded output variable
     real(8), allocatable :: var2(:,:,:)         ! gridded output variable
-    real(8), allocatable :: var3(:,:,:)	        ! gridded output variable
-    real(8), allocatable :: var4(:,:,:)	        ! gridded output variable
-    real(8), allocatable :: var5(:,:,:)	        ! gridded output variable
-    real(8), allocatable :: var6(:,:,:)	        ! gridded output variable
-    real(8), allocatable :: var7(:,:,:)	        ! gridded output variable
-    real(8), allocatable :: var8(:,:,:)	        ! gridded output variable
-    real(8), allocatable :: var9(:,:,:)	        ! gridded output variable
-    real(8), allocatable :: var10(:,:,:)	! gridded output variable
-    real(8), allocatable :: var11(:,:,:)	! gridded output variable
+    real(8), allocatable :: var3(:,:,:)         ! gridded output variable
+    real(8), allocatable :: var4(:,:,:)         ! gridded output variable
+    real(8), allocatable :: var5(:,:,:)         ! gridded output variable
+    real(8), allocatable :: var6(:,:,:)         ! gridded output variable
+    real(8), allocatable :: var7(:,:,:)         ! gridded output variable
+    real(8), allocatable :: var8(:,:,:)         ! gridded output variable
+    real(8), allocatable :: var9(:,:,:)         ! gridded output variable
+    real(8), allocatable :: var10(:,:,:)        ! gridded output variable
+    real(8), allocatable :: var11(:,:,:)        ! gridded output variable
+    real(8), allocatable :: var12(:,:,:)        ! gridded output variable
 
     if (verbose .ge. 0) print *, "Writing output to file ", trim(filename_ncOut), "..."
 
 ! Output these variables in NetCDF file:
-!     veg%iveg(npt)				- IGBP PFTs
-!     casamet%lat(npt)				- latitudes	
-!     casamet%lon(npt)				- longitudes
-!     casamet%areacell(npt)*(1.0e-6) 		- landarea (km^2)
+!     veg%iveg(npt)                   - IGBP PFTs
+!     casamet%lat(npt)                - latitudes                
+!     casamet%lon(npt)                - longitudes
+!     casamet%areacell(npt)*(1.0e-6)  - landarea (km^2)
 !  Carbon Fluxes and Pools   
 !     Convert units from kg C m-2 to g C m-2 
 
@@ -1527,7 +1556,7 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    if (status /= nf_noerr) call handle_err(status, "put_var(clmgrid%cellid)")
 
 !  Define start3 and count3 for record variables (those with unlimited time dimension)
-!  Write up to 10 output variables at a time
+!  Write up to 12 output variables at a time
 
 
    start3 = (/ 1, 1, 1 /)
@@ -1545,7 +1574,8 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var9(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var10(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
-   allocate(var11(1:clmgrid%nlon,1:clmgrid%nlat,1:num_lyr))
+   allocate(var11(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
+   allocate(var12(1:clmgrid%nlon,1:clmgrid%nlat,1:num_lyr))
 
 
    IGBP_PFT(:,:) = MISSING_INT
@@ -1561,6 +1591,7 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    var9(:,:,:) = MISSING_VALUE
    var10(:,:,:) = MISSING_VALUE
    var11(:,:,:) = MISSING_VALUE
+   var12(:,:,:) = MISSING_VALUE
 
 
    do npt = 1, mp
@@ -1664,6 +1695,7 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    var9(:,:,:) = MISSING_VALUE
    var10(:,:,:) = MISSING_VALUE
    var11(:,:,:) = MISSING_VALUE
+   var12(:,:,:) = MISSING_VALUE
 
    do npt = 1, mp
       ilon = casamet%ilon(npt)
@@ -1692,6 +1724,9 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
               var8(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaLiq(itime+ntime1-1)
               var9(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaFrzn(itime+ntime1-1)
               var10(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%fW(itime+ntime1-1)
+              var11(ilon,ilat,itime)  = 1000.0*(pt(npt)%soil_outputs(ilyr)%protectedProd(LABILE,itime+ntime1-1) &
+                                                + pt(npt)%soil_outputs(ilyr)%protectedProd(RECALCTRNT,itime+ntime1-1) &
+                                                + pt(npt)%soil_outputs(ilyr)%protectedProd(DEADMICRB,itime+ntime1-1))
           else
               var1(ilon,ilat,itime)  = 1000.0*pt(npt)%soil_outputs(ilyr)%livingMicrobCan(itime+ntime1-1)
               var2(ilon,ilat,itime)  = 1000.0*pt(npt)%litterlayer_outputs%livingMicrobCan(itime+ntime1-1)
@@ -1704,9 +1739,12 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
               var8(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaLiqAn(itime+ntime1-1)
               var9(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%thetaFrznAn(itime+ntime1-1)
               var10(ilon,ilat,itime)  = pt(npt)%soil_outputs(ilyr)%fWAn(itime+ntime1-1)
+              var11(ilon,ilat,itime)  = 1000.0*(pt(npt)%soil_outputs(ilyr)%protectedProdAn(LABILE,itime+ntime1-1) &
+                                                + pt(npt)%soil_outputs(ilyr)%protectedProdAn(RECALCTRNT,itime+ntime1-1) &
+                                                + pt(npt)%soil_outputs(ilyr)%protectedProdAn(DEADMICRB,itime+ntime1-1))
           endif
       enddo
-      var11(ilon,ilat,ilyr)      = pt(npt)%z(ilyr) + pt(npt)%dz(ilyr)
+      var12(ilon,ilat,ilyr)      = pt(npt)%z(ilyr) + pt(npt)%dz(ilyr)
    enddo
 
 
@@ -1743,14 +1781,17 @@ SUBROUTINE WritePoolFluxNcFile_corpse(filename_ncOut, litter_outputs, soil_outpu
    status =  nf_put_var(ncid_corpse, varids%fWid, var10, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(fWid)")
 
-   status =  nf_put_var(ncid_corpse, varids%depthid, var11, start3, count3)
+   status =  nf_put_var(ncid_corpse, varids%protectedProdid, var11, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(protectedProdid)")
+
+   status =  nf_put_var(ncid_corpse, varids%depthid, var12, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(depthid)")
 
 
     status=nf_close(ncid_corpse)
     if(status .ne. NF_NOERR) STOP 'NetCDF file close failed'
 
-    deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,var11,landarea)
+    deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,var11,var12,landarea)
 
     if (verbose .ge. 0) print *, "Done writing output to file ", trim(filename_ncOut), "..."
 

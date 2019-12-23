@@ -48,6 +48,7 @@
 ! Removed NPP and LAI from met.nc files. -mdh 11/6/2017
 ! Echo CASA parameter values as they are read in (subroutine casa_readbiome). -mdh 11/6/2017
 ! Echo restart file contents (subroutine casa_init). -mdh 11/6/2017
+! Add N fluxes to netCDF output. -mdh 11/25/2019
 !--------------------------------------------------------------------------------
 
 SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
@@ -143,8 +144,8 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
          print *, "An error occurred while reading file ", TRIM(filename_soilprop)
          STOP
       endif
-!     write(*,122) ipt,lat,lon,soil%sand(i),soil%clay(i),soil%silt(i),soil%swilt(i),soil%sfc(i),soil%ssat(i)
-!     122 format(i6,',',2(f10.4,','),6(f8.4,','))
+      write(*,122) ipt,lat,lon,soil%sand(i),soil%clay(i),soil%silt(i),soil%swilt(i),soil%sfc(i),soil%ssat(i)
+      122 format(i6,',',2(f10.4,','),6(f8.4,','))
    enddo
    write(*,*) "Done reading soil properties from file ", filename_soilprop, "..."
 
@@ -423,7 +424,7 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
 !!        casabiome%soilrate(nv,pass)      = deltcasa/passage(nv)
 !!        casabiome%xkleafcoldmax(nv)      = deltcasa * xxkleafcoldmax(nv)
 !!        casabiome%xkleafdrymax(nv)       = deltcasa * xxkleafdrymax(nv)
-!!         casabiome%kuplabp(nv)            = xkuplabp(nv)
+!!!        casabiome%kuplabp(nv)            = xkuplabp(nv)
 !!        casabiome%rmplant(nv,:)          = casabiome%rmplant(nv,:)*deltcasa 
 !!
 !!        totroot(nv) = (1.0-exp(-casabiome%kroot(nv)*casabiome%rootdepth(nv)))
@@ -1043,15 +1044,18 @@ SUBROUTINE write_cnpflux_header(icycle, nout, filename_cnpflux)
         WRITE(nout,'(a58$)') 'clitterinput(LEAF),clitterinput(WOOD),clitterinput(FROOT),'
         WRITE(nout,'(a50)')  'csoilinput(METB),csoilinput(METB),csoilinput(METB)'
  
-!ATTENTION: Update for N and P
-    ! Case(2)
-        ! write(nout,??) myear,npt,veg%iveg(npt),soil%isoilm(npt),casamet%isorder(npt), &
-        ! casamet%lat(npt),casamet%lon(npt),casamet%areacell(npt)*(1.0e-9), &
-        ! casabal%FCnppyear(npt),casabal%FCrsyear(npt),casabal%FCneeyear(npt),casabal%FCrpyear(npt),&
-        ! clitterinput(npt,:),csoilinput(npt,:), &
-        ! casabal%FNdepyear(npt),casabal%FNfixyear(npt),  casabal%FNsnetyear(npt), &
-        ! casabal%FNupyear(npt), casabal%FNleachyear(npt),casabal%FNlossyear(npt)
+   Case(2)
+    !                                  10        20        30        40        50        60        70        80
+    !                         123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+        WRITE(nout,'(a47$)') 'myear,npt,veg%iveg,soil%isoilm,casamet%isorder,'
+        WRITE(nout,'(a41$)') 'casamet%lat,casamet%lon,casamet%areacell,'
+        WRITE(nout,'(a70$)') 'casabal%Fcnppyear,casabal%FCrsyear,casabal%FCneeyear,casabal%FCrpyear,'
+        WRITE(nout,'(a58$)') 'clitterinput(LEAF),clitterinput(WOOD),clitterinput(FROOT),'
+        WRITE(nout,'(a51$)') 'csoilinput(METB),csoilinput(METB),csoilinput(METB),'
+        WRITE(nout,'(a55$)') 'casabal%FNdepyear,casabal%FNfixyear,casabal%FNsnetyear,'
+        WRITE(nout,'(a55)')  'casabal%FNupyear,casabal%FNleachyear,casabal%FNlossyear'
  
+    !ATTENTION: Update for P
     ! Case(3)
         ! write(nout,??) myear,npt,veg%iveg(npt),soil%isoilm(npt),casamet%isorder(npt), &
         ! casamet%lat(npt),casamet%lon(npt),casamet%areacell(npt)*(1.0e-9), &
@@ -1082,18 +1086,18 @@ implicit none
 
 
 !Soiltype     soilnumber soil P(g P/m2)
-!Alfisol	1	61.3
-!Andisol	2	103.9
-!Aridisol	3	92.8
-!Entisol	4	136.9
-!Gellisol	5	98.2
-!Histosol	6	107.6
-!Inceptisol	7	84.1
-!Mollisol	8	110.1
-!Oxisol		9	35.4	
-!Spodosol	10	41.0	
-!Ultisol	11	51.5	
-!Vertisol	12	190.6
+!Alfisol    1    61.3
+!Andisol    2    103.9
+!Aridisol    3    92.8
+!Entisol    4    136.9
+!Gellisol    5    98.2
+!Histosol    6    107.6
+!Inceptisol    7    84.1
+!Mollisol    8    110.1
+!Oxisol        9    35.4    
+!Spodosol    10    41.0    
+!Ultisol    11    51.5    
+!Vertisol    12    190.6
 !Soil order specific parameters...
    data psorder/61.3,103.9,92.8,136.9,98.2,107.6,84.1,110.1,35.4,41.0,51.5,190.6/
    data pweasoil/0.05,0.04,0.03,0.02,0.01,0.009,0.008,0.007,0.006,0.005,0.004,0.003/  !P weathering rate (gP/m2/yr)
@@ -1132,6 +1136,7 @@ implicit none
       casapoolAn%NsoilAn=casapoolAn%NsoilAn * xyear
       casapoolAn%NplantAn=casapoolAn%NplantAn * xyear
       casapoolAn%NlitterAn=casapoolAn%NlitterAn * xyear
+      casapoolAn%NsoilminAn=casapoolAn%NsoilminAn * xyear
    endif
 
    if (icycle > 2) then
@@ -1350,7 +1355,7 @@ use casaparm
 use casavariable
 implicit none
 !!real(r_2), dimension(mp,3)   :: clitterinput,csoilinput
-integer n
+!integer n
 
   casabal%FCgppyear(:)   = casabal%FCgppyear(:)   + casaflux%Cgpp(:)       * deltpool
   casabal%FCrpyear    = casabal%FCrpyear    + casaflux%Crp        * deltpool
@@ -1368,6 +1373,22 @@ integer n
 ! Added this section (-MDH 11/14/2016)
   casaflux%ClitInptMetAn = casaflux%ClitInptMetAn + casaflux%ClitInptMet
   casaflux%ClitInptStrucAn = casaflux%ClitInptStrucAn + casaflux%ClitInptStruc
+  casaflux%CpassInptAn = casaflux%CpassInptAn + casaflux%CpassInpt
+
+  ! Added this along with MIMICS-CN (-MDH 6/22/2019)
+  casaflux%NlitInptMetAn = casaflux%NlitInptMetAn + casaflux%NlitInptMet
+  casaflux%NlitInptStrucAn = casaflux%NlitInptStrucAn + casaflux%NlitInptStruc
+
+  ! Added annual N fluxes (-MDH 11/25/2019)
+  casaflux%NmindepAn = casaflux%NmindepAn + casaflux%Nmindep
+  casaflux%NminfixAn = casaflux%NminfixAn + casaflux%Nminfix
+  casaflux%NminleachAn = casaflux%NminleachAn + casaflux%Nminleach
+  casaflux%NminlossAn = casaflux%NminlossAn + casaflux%Nminloss
+  casaflux%NminuptakeAn = casaflux%NminuptakeAn + casaflux%Nminuptake
+  casaflux%NlitterminAn = casaflux%NlitterminAn + casaflux%Nlittermin
+  casaflux%NsminAn = casaflux%NsminAn + casaflux%Nsmin
+  casaflux%NsimmAn = casaflux%NsimmAn + casaflux%Nsimm
+  casaflux%NsnetAn = casaflux%NsnetAn + casaflux%Nsnet
 
   if(icycle >1) then
      casabal%FNdepyear   = casabal%FNdepyear   + casaflux%Nmindep    * deltpool
@@ -1406,6 +1427,7 @@ casapoolAn%tsoilAn(:) = casapoolAn%tsoilAn(:) + casamet%tsoilavg(:) - tkzeroc
 casapoolAn%fTAn(:) = casapoolAn%fTAn(:) + casapool%fT(:) 
 casapoolAn%fWAn(:) = casapoolAn%fWAn(:) + casapool%fW(:)
 casapoolAn%thetaLiqAn(:) = casapoolAn%thetaLiqAn(:) + casapool%thetaLiq(:)
+casapoolAn%NsoilminAn(:) = casapoolAn%NsoilminAn(:) + casapool%Nsoilmin(:)
 
 do n=1,3
   casapoolAn%CsoilAn(:,n) = casapoolAn%CsoilAn(:,n) + casapool%Csoil(:,n)
@@ -1441,6 +1463,7 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
   USE define_types
   USE casadimension
   USE casa_cnp_module
+  USE casa_nlim_module
   USE mimics_cycle_module
   USE corpse_cycle_module
   IMPLICIT NONE
@@ -1448,16 +1471,15 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
   INTEGER, INTENT(IN)    :: iYrCnt, idoy, mdaily
   REAL(r_2), INTENT(IN)  :: nppScalar
 
-  real, dimension(mp),INTENT(OUT)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
-
-  real, dimension(mp)               :: nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,         &
-                                       pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd
+  real(r_2), dimension(mp),INTENT(OUT)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
+  real(r_2), dimension(mp)               :: nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,         &
+                                            pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd,nwd2str
 
   ! local variables
   REAL(r_2),    DIMENSION(mp) :: xnplimit,xNPuptake
   REAL(r_2),    DIMENSION(mp) :: xklitter,xksoil,xkNlimiting
   REAL(r_2),    DIMENSION(mp) :: xkleafcold,xkleafdry,xkleaf
-  INTEGER  j, npt
+  INTEGER  j 
 
   xKNlimiting = 1.0
   call phenology(idoy,veg,phen)
@@ -1472,11 +1494,6 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
   casapool%fW(:) = 0.0 
   casapool%thetaLiq(:) = 0.0 
 
-  mimicspool%fT(:) = 0.0 
-  mimicspool%fW(:) = 0.0
-  mimicspool%thetaLiq(:) = 0.0
-  mimicspool%thetaFrzn(:) = 0.0
-
   if (isomModel == CASACNP) then
 
       ! Run CASACNP SOM model
@@ -1490,7 +1507,12 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
       call casa_coeffsoil(xklitter,xksoil,veg,soil,casabiome,casaflux,casamet)
 
       IF (icycle>1) THEN
-          call casa_xkN(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          !call casa_xkN(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          ! Subroutine casa_xkN2 is similar to subroutine casa_xkN, but it removes calculations 
+          ! that use CASA variables that are not set when MIMICS or CORPSE are the SOM models.
+          ! It also does a simple linear ramp of xkNlimiting between 0.0 and 1.0
+          ! when 0.5 < casapool%soilNmin < 2.0.
+          call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
           DO j=1,mlitter
               casaflux%klitter(:,j) = casaflux%klitter(:,j)* xkNlimiting(:)
           ENDDO
@@ -1500,40 +1522,93 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
       ENDIF 
     
       ! changed by ypwang following Chris Lu on 5/nov/2012
+      ! Calculate the deltas for plant CNP, but don't update pools
       call casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                          cleaf2met,cleaf2str,croot2met,croot2str,cwood2cwd,  &
                          nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,  &
                          pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd)
 
-
+      ! Calculate the deltas for soil CNP, but don't update pools
       call casa_delsoil(veg,casapool,casaflux,casamet,casabiome)
     
+      ! Update plant and soil CNP pools
       call casa_cnpcycle(veg,casabiome,casapool,casaflux,casamet)
 
   else if (isomModel == MIMICS) then
       ! Run MIMICS code
 
+      mimicspool%fT(:) = 0.0 
+      mimicspool%fW(:) = 0.0
+      mimicspool%thetaLiq(:) = 0.0
+      mimicspool%thetaFrzn(:) = 0.0
+
       call mimics_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool, &
                              casaflux,casamet)
 
+      if (icycle > 1) then
+          call casa_xnp(xnplimit,xNPuptake,veg,casabiome,casapool,casaflux,casamet)
+      endif 
 
       ! Compute klitter(mp,cwd) (-mdh 4/26/2015)
       call mimics_xratesoil(veg,soil,casamet,casabiome)
 
-      call mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
+!! mimics_xratesoil replaces casa_xratesoil and casa_coeffsoil when MIMICS or CORPSE are used.
+!! This call to casa_coeffsoil was not removed as it should have been, 
+!! and was resetting casaflux%klitter(npt,cwd). -mdh 9/30/2019
+!! Go over this code and determine what is needed for MIMICS-CN. -mdh 6/23/2019
+!!    call casa_coeffsoil(xklitter,xksoil,veg,soil,casabiome,casaflux,casamet)
+  
+      IF (icycle>1) THEN
+          !call casa_xkN(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          ! Subroutine casa_xkN2 is similar to subroutine casa_xkN, but it removes calculations 
+          ! that use CASA variables that are not set when MIMICS or CORPSE are the SOM models.
+          ! It also does a simple linear ramp of xkNlimiting between 0.0 and 1.0
+          ! when 0.5 < casapool%soilNmin < 2.0.
+          call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          DO j=1,mlitter
+              casaflux%klitter(:,j) = casaflux%klitter(:,j)* xkNlimiting(:)
+!             write(*,*) 'biogeochem:'
+!             write(*,'(a24,3(f6.4,2x))') 'xkNlimiting(1) = ', xkNlimiting(1)
+!             write(*,'(a17,3(f10.6,2x))') 'casaflux%klitter(1,:) = ', casaflux%klitter(1,:)
+          ENDDO
+          call casa_nuptake(veg,xkNlimiting,casabiome,casapool,casaflux,casamet)
+      ENDIF
+
+!     write(*,*) 'iYrCnt = ', iYrCnt, '  DOY = ', idoy
+      if (icycle == 1) then
+        call mimics_delplant(veg,casabiome,casapool,casaflux,casamet,          &
                            cleaf2met,cleaf2str,croot2met,croot2str,cwood2cwd,  &
                            nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,  &
                            pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd,  &
                            cwd2co2,cwd2str)
+      else
+        call mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,       &
+                           cleaf2met,cleaf2str,croot2met,croot2str,cwood2cwd,  &
+                           nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,  &
+                           pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd,  &
+                           cwd2co2,cwd2str,nwd2str)
+      endif
 
-!     call mimics_soil_forwardMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
-!     call mimics_soil_reverseMM(mp,iYrCnt,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
-      call mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+      if (icycle == 1) then
+          call mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,&
+                                     croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+      else
+          call mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str, &
+                                        croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
+                                        nleaf2met,nleaf2str,nroot2met,nroot2str,nwd2str,nwood2cwd)
+      endif
 
-      call mimics_ccycle(veg,casabiome,casapool,casaflux,casamet)
+      if (icycle == 1) then
+          call mimics_ccycle(veg,casabiome,casapool,casaflux,casamet)
+      else
+          call mimics_cncycle(veg,casabiome,casapool,casaflux,casamet)
+      endif
 
       ! Accumulate C output variables
       call mimics_caccum(mp,cwd2co2)
+      if (icycle > 1) then
+          call mimics_naccum(mp)
+      endif
 
   else if (isomModel == CORPSE) then
 
@@ -1590,20 +1665,20 @@ SUBROUTINE GetMetNcFileDim(filename_cnpmet, ms, myear)
       include 'netcdf.inc'
 
 !  !ARGUMENTS
-      character(len=100), intent(in) :: filename_cnpmet	! NetCDF file name meteorological file
-      integer, intent(in) :: ms				! number of soil layers
-      integer, intent(out) :: myear			! number of years in the met file
+      character(len=100), intent(in) :: filename_cnpmet    ! NetCDF file name meteorological file
+      integer, intent(in) :: ms                ! number of soil layers
+      integer, intent(out) :: myear            ! number of years in the met file
 
 
 ! !LOCAL VARIABLES:
-      integer :: ncid				! netcdf file ID
-      integer :: status				! function return status
-      integer :: myear_dimid			! netcdf dimension id
-      integer :: lat_dimid			! netcdf dimension id
-      integer :: lon_dimid			! netcdf dimension id
-      integer :: time_dimid			! netcdf dimension id
-      integer :: nsoil_dimid			! netcdf dimension id
-      integer :: nlon, nlat, ndays, nsoilyrs	! Dimension sizes read from NetCDf file
+      integer :: ncid                ! netcdf file ID
+      integer :: status                ! function return status
+      integer :: myear_dimid            ! netcdf dimension id
+      integer :: lat_dimid            ! netcdf dimension id
+      integer :: lon_dimid            ! netcdf dimension id
+      integer :: time_dimid            ! netcdf dimension id
+      integer :: nsoil_dimid            ! netcdf dimension id
+      integer :: nlon, nlat, ndays, nsoilyrs    ! Dimension sizes read from NetCDf file
       integer :: verbose=2
 
       if (verbose .ge. 0) print *, "Reading dimensions from met file ", trim(filename_cnpmet), "..."
@@ -1693,44 +1768,44 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, xtairk, &
       include 'netcdf.inc'
 
 !  !ARGUMENTS
-      character(len=100), intent(in) :: filename_cnpmet	! NetCDF file name meteorological file
-      integer, intent(in) :: mp			        ! number of points with valid data
-      integer, intent(in) :: ms				! number of soil layers
-      integer, intent(inout) :: myear			! number of years in the met file
-!     real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xlai	  ! xlai(mp,ndays) daily LAI (m2/m2)
-!     real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xcnpp    ! xcnpp(mp,ndays) daily NPP (gC/m2/day)
-      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xcgpp    ! xcgpp(mp,ndays) daily GPP (gC/m2/day)
-      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xndepDay ! xndepDay(mp,ndays) daily N deposition (gN/m2/day)
-      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xtairk   ! xtairk(mp,ndays) daily average air temperature (K)
-      real(r_2), intent(inout), dimension(mp,ms,mdyear*myear) :: xtsoil   ! xtsoil(mp,ms,ndays) daily soil temperature (K)
-      real(r_2), intent(inout), dimension(mp,ms,mdyear*myear) :: xmoist   ! xmoist(mp,ms,ndays) daily volumetric liquid soil moisture (m3/m3)
+      character(len=100), intent(in) :: filename_cnpmet    ! NetCDF file name meteorological file
+      integer, intent(in) :: mp                  ! number of points with valid data
+      integer, intent(in) :: ms                  ! number of soil layers
+      integer, intent(inout) :: myear            ! number of years in the met file
+!     real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xlai       ! xlai(mp,ndays) daily LAI (m2/m2)
+!     real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xcnpp      ! xcnpp(mp,ndays) daily NPP (gC/m2/day)
+      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xcgpp      ! xcgpp(mp,ndays) daily GPP (gC/m2/day)
+      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xndepDay   ! xndepDay(mp,ndays) daily N deposition (gN/m2/day)
+      real(r_2), intent(inout), dimension(mp,mdyear*myear)    :: xtairk     ! xtairk(mp,ndays) daily average air temperature (K)
+      real(r_2), intent(inout), dimension(mp,ms,mdyear*myear) :: xtsoil     ! xtsoil(mp,ms,ndays) daily soil temperature (K)
+      real(r_2), intent(inout), dimension(mp,ms,mdyear*myear) :: xmoist     ! xmoist(mp,ms,ndays) daily volumetric liquid soil moisture (m3/m3)
       real(r_2), intent(inout), dimension(mp,ms,mdyear*myear) :: xfrznmoist ! xfrznmoist(mp,ms,ndays) daily volumetric frozen soil moisture (m3/m3)
 
 
 ! !LOCAL VARIABLES:
-      integer :: i, j, cellCnt, npt, ims	! Loop indices
-      integer :: iday, ndoy1, ndoy2, nyear	! Loop indices
-      integer :: ncid				! netcdf file ID
-      integer :: status				! function return status
-      integer :: myear_dimid			! netcdf dimension id
-      integer :: lat_dimid			! netcdf dimension id
-      integer :: lon_dimid			! netcdf dimension id
-      integer :: time_dimid			! netcdf dimension id
-      integer :: nsoil_dimid			! netcdf dimension id
-      integer :: nlon, nlat, ndays, nsoilyrs	! Dimension sizes read from NetCDf file
-      integer :: varid	                	! netcdf variable id
-      integer :: start1(1), count1(1)           ! start and count arrays for reading 1-D data from netcdf files
-      integer :: start2(2), count2(2)           ! start and count arrays for reading 2-D data from netcdf files
-      integer :: start3(3), count3(3)           ! start and count arrays for reading 3-D data from netcdf files
-      integer :: start4(4), count4(4)           ! start and count arrays for reading 4-D data from netcdf files
+      integer :: i, j, cellCnt, npt, ims      ! Loop indices
+      integer :: iday, ndoy1, ndoy2, nyear    ! Loop indices
+      integer :: ncid                ! netcdf file ID
+      integer :: status              ! function return status
+      integer :: myear_dimid         ! netcdf dimension id
+      integer :: lat_dimid           ! netcdf dimension id
+      integer :: lon_dimid           ! netcdf dimension id
+      integer :: time_dimid          ! netcdf dimension id
+      integer :: nsoil_dimid         ! netcdf dimension id
+      integer :: nlon, nlat, ndays, nsoilyrs     ! Dimension sizes read from NetCDf file
+      integer :: varid                           ! netcdf variable id
+      integer :: start1(1), count1(1)            ! start and count arrays for reading 1-D data from netcdf files
+      integer :: start2(2), count2(2)            ! start and count arrays for reading 2-D data from netcdf files
+      integer :: start3(3), count3(3)            ! start and count arrays for reading 3-D data from netcdf files
+      integer :: start4(4), count4(4)            ! start and count arrays for reading 4-D data from netcdf files
       !Arrays read from NetCDF file (including cells with missing data)
-      real(4), allocatable :: lai(:,:,:)   	! lai(nlon,nlat,ndays) total projected LAI
-      real(4), allocatable :: cnpp(:,:,:)     	! cnpp(nlon,nlat,ndays) Net Primary Production (gC/m2/day)
-      real(4), allocatable :: cgpp(:,:,:)     	! cnpp(nlon,nlat,ndays) Gross Primary Production (gC/m2/day)
-      real(4), allocatable :: tairk(:,:,:)	! tairk(nlon,nlat,ndays) daily average air temperature (K) 
-      real(4), allocatable :: ndep(:,:,:)	! ndep(nlon,nlat,ndays) daily N deposition (gN/m2/day)
-      real(4), allocatable :: tsoil(:,:,:,:)	! tsoil(nlon,nlat,ms,ndays), CASACNP soil temperature by layer (K)
-      real(4), allocatable :: moist(:,:,:,:)	! moist(nlon,nlat,ms,ndays), CASACNP volumetric soil liquid water content by layer 
+      real(4), allocatable :: lai(:,:,:)         ! lai(nlon,nlat,ndays) total projected LAI
+      real(4), allocatable :: Cnpp(:,:,:)        ! Cnpp(nlon,nlat,ndays) Net Primary Production (gC/m2/day)
+      real(4), allocatable :: Cgpp(:,:,:)        ! Cgpp(nlon,nlat,ndays) Gross Primary Production (gC/m2/day)
+      real(4), allocatable :: tairk(:,:,:)       ! tairk(nlon,nlat,ndays) daily average air temperature (K) 
+      real(4), allocatable :: ndep(:,:,:)        ! ndep(nlon,nlat,ndays) daily N deposition (gN/m2/day)
+      real(4), allocatable :: tsoil(:,:,:,:)     ! tsoil(nlon,nlat,ms,ndays), CASACNP soil temperature by layer (K)
+      real(4), allocatable :: moist(:,:,:,:)     ! moist(nlon,nlat,ms,ndays), CASACNP volumetric soil liquid water content by layer 
       real(4), allocatable :: frznmoist(:,:,:,:) ! frznmoist(nlon,nlat,ms,ndays), CASACNP volumetric soil frozen water content by layer 
       integer :: verbose=2
 
@@ -1807,12 +1882,12 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, xtairk, &
       !  clmgrid%lat1d(nlat) coordinate latitude (degrees north)
       !  clmgrid%cellMissing(nlon,nlat) 0=no missing data, 1=missing data
       !  clmgrid%cellid(nlon,nlat) grid cell ids (1..nlat*nlon)
-      call Alloc_CLMgridVariable(nlon, nlat)
+      call alloc_CLMgridVariable(nlon, nlat)
 
       !Allocate local variables read from NetCDF file (full grid including cells with missing data)
       allocate(lai(1:nlon,1:nlat,1:ndays))
-      allocate(cnpp(1:nlon,1:nlat,1:ndays))
-      allocate(cgpp(1:nlon,1:nlat,1:ndays))
+      allocate(Cnpp(1:nlon,1:nlat,1:ndays))
+      allocate(Cgpp(1:nlon,1:nlat,1:ndays))
       allocate(tairk(1:nlon,1:nlat,1:ndays))
       allocate(ndep(1:nlon,1:nlat,1:ndays))
       allocate(tsoil(1:nlon,1:nlat,1:ms,1:ndays))
@@ -1883,13 +1958,13 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, xtairk, &
 !     if (status /= nf_noerr) call handle_err(status, "xlai")
 
 
-      ! cnpp(nlon, nlat, ndays) 
+      ! Cnpp(nlon, nlat, ndays) 
  
 !     if (verbose .ge. 1) print *, "  Reading xcnpp..."
 !     status = nf_inq_varid(ncid, "xcnpp", varid)
 !     if (status /= nf_noerr) call handle_err(status, "xcnpp")
 !
-!     status = nf_get_var(ncid, varid, cnpp, start3, count3)
+!     status = nf_get_var(ncid, varid, Cnpp, start3, count3)
 !     if (status /= nf_noerr) call handle_err(status, "xcnpp")
  
 
@@ -1968,13 +2043,15 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, xtairk, &
       cellCnt = 0
       npt = 0
       !Count the number of grid cells with valid data
-      do i = 1, nlon
-         do j = 1, nlat
-            if (clmgrid%cellMissing(i,j) .eq. 0) then
-               npt = npt + 1
-            endif
-         enddo
-      enddo 
+      !Optimize here. Use COUNT function. -mdh 7/22/2019
+!     do i = 1, nlon
+!        do j = 1, nlat
+!           if (clmgrid%cellMissing(i,j) .eq. 0) then
+!              npt = npt + 1
+!           endif
+!        enddo
+!     enddo 
+      npt = COUNT(clmgrid%cellMissing(1:nlon,1:nlat) == 0)
 
       !Make sure dimensions in netCDF file are consistent with casacnp
       if (mp .ne. npt) then
@@ -1985,6 +2062,7 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, xtairk, &
       cellCnt = 0
       npt = 0
       !Fill xcgpp, xtairk, xndepDay, xtsoil, xmoist, and xfrznmoist with non-missing data only
+      !Optimize here? Switch order of do i,j loops? Can't because of npt.
       do i = 1, nlon
          do j = 1, nlat
             cellCnt = cellCnt+1
@@ -1998,8 +2076,8 @@ SUBROUTINE ReadMetNcFile(filename_cnpmet, mp, ms, myear, xcgpp, xtairk, &
                   ! Segmentation fault was occurring on next assignment until
                   ! I passed in the dimensions to these variables. -MDH 2/17/2014
                   !xlai(npt,iday) = lai(i,j,iday)
-                  !xcnpp(npt,iday) = cnpp(i,j,iday)
-                  xcgpp(npt,iday) = cgpp(i,j,iday)
+                  !xcnpp(npt,iday) = Cnpp(i,j,iday)
+                  xcgpp(npt,iday) = Cgpp(i,j,iday)
                   xtairk(npt,iday) = tairk(i,j,iday)
                   xndepDay(npt,iday) = ndep(i,j,iday)
                   do ims = 1, nsoilyrs
@@ -2097,14 +2175,21 @@ END SUBROUTINE ReadMetNcFile
     include 'netcdf.inc'
 
 !   ARGUMENTS
-      integer, intent(in) :: ncid			! netcdf file id
-      integer, intent(in) :: varid			! netcdf variable id
-      character*100, intent(in) :: attr_name		! String for assigning variable "long_name" attribute
-      character*100, intent(in) :: attr_units		! String for assigning variable "units" attribute
+      integer, intent(in) :: ncid                     ! netcdf file id
+      integer, intent(in) :: varid                    ! netcdf variable id
+      character(len=100), intent(in) :: attr_name     ! String for assigning variable "long_name" attribute
+      character(len=100), intent(in) :: attr_units    ! String for assigning variable "units" attribute
       real(4), intent(in) :: missing_value
       
 !   LOCAL VARIABLES
-      integer status	! NetCDF error status
+      integer status    ! NetCDF error status
+
+!     write(*,*)
+!     write(*,*) 'PutVariableAttributeReal: ncid = ', ncid
+!     write(*,*) 'PutVariableAttributeReal: varid = ', varid
+!     write(*,*) 'PutVariableAttributeReal: attr_name = ', trim(attr_name)
+!     write(*,*) 'PutVariableAttributeReal: attr_units = ', trim(attr_units)
+!     write(*,*) 'PutVariableAttributeReal: missing_value = ', missing_value
 
       status = nf_put_att_text(ncid, varid, 'long_name', len(trim(attr_name)), trim(attr_name))
       if (status /= nf_noerr) call handle_err(status, "long_name")
@@ -2127,14 +2212,14 @@ END SUBROUTINE ReadMetNcFile
     include 'netcdf.inc'
 
 !   ARGUMENTS
-      integer, intent(in) :: ncid			! netcdf file id
-      integer, intent(in) :: varid			! netcdf variable id
-      character*100, intent(in) :: attr_name		! String for assigning variable "long_name" attribute
-      character*100, intent(in) :: attr_units		! String for assigning variable "units" attribute
+      integer, intent(in) :: ncid                      ! netcdf file id
+      integer, intent(in) :: varid                     ! netcdf variable id
+      character(len=100), intent(in) :: attr_name      ! String for assigning variable "long_name" attribute
+      character(len=100), intent(in) :: attr_units     ! String for assigning variable "units" attribute
       real(8), intent(in) :: missing_value
       
 !   LOCAL VARIABLES
-      integer status	! NetCDF error status
+      integer status    ! NetCDF error status
 
       status = nf_put_att_text(ncid, varid, 'long_name', len(trim(attr_name)), trim(attr_name))
       if (status /= nf_noerr) call handle_err(status, "long_name")
@@ -2165,108 +2250,123 @@ END SUBROUTINE ReadMetNcFile
     USE casavariable
     USE casaparm
     USE define_types
-    implicit none
+    implicit none 
     include 'netcdf.inc'
     real(4), parameter :: MISSING_VALUE = 1.e+36
     integer, parameter :: MISSING_INT = -9999
 
 !   ARGUMENTS
-      character(len=*), intent(in) :: filename_ncOut_casa	! NetCDF output file name 
-      integer, intent(in) :: mp			        ! number of points with valid data
-      integer, intent(in) :: year			! output year
+      character(len=*), intent(in) :: filename_ncOut_casa    ! NetCDF output file name 
+      integer, intent(in) :: mp                              ! number of points with valid data
+      integer, intent(in) :: year                            ! output year
 !   LOCAL VARIABLES
-      integer :: i
-      integer :: ncid				! netcdf file ID
-      integer :: status				! function return status
-!     integer :: dimid_mp			! netcdf dimension id
-      integer :: dimid_lat			! netcdf dimension id
-      integer :: dimid_lon			! netcdf dimension id
-      integer :: dimid_time			! netcdf dimension id
-      integer :: nlon, nlat, ntimes	 	! Dimension sizes for NetCDf file
-      integer :: dims(3)			! Array of NetCDF dimension IDs for defining variables
-      integer :: start1(1), count1(1)           ! start and count arrays for writing 1-D data from netcdf files
-      integer :: start2(2), count2(2)           ! start and count arrays for writing 2-D data from netcdf files
-      integer :: start3(3), count3(3)           ! start and count arrays for writing 3-D data from netcdf files
-      integer :: varid_lon, varid_lat		! NetCDF variable ID for latitude and longitude
-      integer :: varid_time			! NetCDF variable ID for time
-!     integer :: varid_year			! NetCDF variable ID for year
-      integer :: varid_mask			! NetCDF variable ID for cellMissing(nlon,nlat)
-      integer :: varid_cellid			! NetCDF variable ID for cellid(nlon,nlat)
-      integer :: varid_igbp			! NetCDF variable ID for IGBP_PFT(nlon,nlat)
-      integer :: varid_landarea			! NetCDF variable ID for land area
-      integer :: varid_cleaf			! NetCDF variable ID for leaf C
-      integer :: varid_cwood			! NetCDF variable ID for wood C
-      integer :: varid_cfroot			! NetCDF variable ID for fine root C
-      integer :: varid_nleaf			! NetCDF variable ID for leaf N
-      integer :: varid_nwood			! NetCDF variable ID for wood N
-      integer :: varid_nfroot			! NetCDF variable ID for fine root N
-      integer :: varid_clitmetb			! NetCDF variable ID for metablic litter C
-      integer :: varid_clitstr			! NetCDF variable ID for structural litter C
-      integer :: varid_clitcwd			! NetCDF variable ID for coarse weeody debris C
-      integer :: varid_nlitmetb			! NetCDF variable ID for metablic litter N
-      integer :: varid_nlitstr			! NetCDF variable ID for structural litter N
-      integer :: varid_nlitcwd			! NetCDF variable ID for coarse weeody debris N
-      integer :: varid_csoilmic			! NetCDF variable ID for microbial soil C
-      integer :: varid_csoilslow		! NetCDF variable ID for slow soil C
-      integer :: varid_csoilpass		! NetCDF variable ID for passive soil C
-      integer :: varid_nsoilmic			! NetCDF variable ID for microbial soil N
-      integer :: varid_nsoilslow		! NetCDF variable ID for slow soil N
-      integer :: varid_nsoilpass		! NetCDF variable ID for passive soil N
-      integer :: varid_cnpp			! NetCDF variable ID for NPP C
-      integer :: varid_cgpp			! NetCDF variable ID for GPP C
-      integer :: varid_cresp			! NetCDF variable ID for soil respiration C
-      integer :: varid_tairC			! NetCDF variable ID for air temperature (C)
-      integer :: varid_tsoilC			! NetCDF variable ID for soil temperature (C)
-      integer :: varid_litInptMet               ! NetCDF variable ID for metabolic litter inputs
-      integer :: varid_litInptStruc	        ! NetCDF variable ID for structural litter inputs
-      integer :: varid_fT, varid_fW	        ! NetCDF variable ID soil temperature and moisture decomposition rate multipliers
-      integer :: varid_thetaLiq                 ! NetCDF variable ID liquid soil moisture fraction
-      character(len=100) :: attr_name		! String for assigning global and variable attributes
-      character(len=100) :: attr_units		! String for assigning global and variable attributes
-      character(len=10)  :: date_string		! String for assigning date to global attributes
-      character(len=8)   :: time_string		! String for assigning time to global attributes
+      !integer :: i
+      integer :: ncid                  ! netcdf file ID
+      integer :: status                ! function return status
+!     integer :: dimid_mp              ! netcdf dimension id
+      integer :: dimid_lat             ! netcdf dimension id
+      integer :: dimid_lon             ! netcdf dimension id
+      integer :: dimid_time            ! netcdf dimension id
+      integer :: nlon, nlat, ntimes    ! Dimension sizes for NetCDf file
+      integer :: dims(3)               ! Array of NetCDF dimension IDs for defining variables
+      integer :: start1(1), count1(1)  ! start and count arrays for writing 1-D data from netcdf files
+      !integer :: start2(2), count2(2) ! start and count arrays for writing 2-D data from netcdf files
+      integer :: start3(3), count3(3)  ! start and count arrays for writing 3-D data from netcdf files
+      integer :: varid_lon, varid_lat  ! NetCDF variable ID for latitude and longitude
+      integer :: varid_time            ! NetCDF variable ID for time
+!     integer :: varid_year            ! NetCDF variable ID for year
+      integer :: varid_mask            ! NetCDF variable ID for cellMissing(nlon,nlat)
+      integer :: varid_cellid          ! NetCDF variable ID for cellid(nlon,nlat)
+      integer :: varid_igbp            ! NetCDF variable ID for IGBP_PFT(nlon,nlat)
+      integer :: varid_landarea        ! NetCDF variable ID for land area
+      integer :: varid_cleaf           ! NetCDF variable ID for leaf C
+      integer :: varid_cwood           ! NetCDF variable ID for wood C
+      integer :: varid_cfroot          ! NetCDF variable ID for fine root C
+      integer :: varid_nleaf           ! NetCDF variable ID for leaf N
+      integer :: varid_nwood           ! NetCDF variable ID for wood N
+      integer :: varid_nfroot          ! NetCDF variable ID for fine root N
+      integer :: varid_clitmetb        ! NetCDF variable ID for metablic litter C
+      integer :: varid_clitstr         ! NetCDF variable ID for structural litter C
+      integer :: varid_clitcwd         ! NetCDF variable ID for coarse weeody debris C
+      integer :: varid_nlitmetb        ! NetCDF variable ID for metablic litter N
+      integer :: varid_nlitstr         ! NetCDF variable ID for structural litter N
+      integer :: varid_nlitcwd         ! NetCDF variable ID for coarse weeody debris N
+      integer :: varid_csoilmic        ! NetCDF variable ID for microbial soil C
+      integer :: varid_csoilslow       ! NetCDF variable ID for slow soil C
+      integer :: varid_csoilpass       ! NetCDF variable ID for passive soil C
+      integer :: varid_nsoilmic        ! NetCDF variable ID for microbial soil N
+      integer :: varid_nsoilslow       ! NetCDF variable ID for slow soil N
+      integer :: varid_nsoilpass       ! NetCDF variable ID for passive soil N
+      integer :: varid_cnpp            ! NetCDF variable ID for NPP C
+      integer :: varid_cgpp            ! NetCDF variable ID for GPP C
+      integer :: varid_cresp           ! NetCDF variable ID for soil respiration C
+      integer :: varid_tairC           ! NetCDF variable ID for air temperature (C)
+      integer :: varid_tsoilC          ! NetCDF variable ID for soil temperature (C)
+      integer :: varid_clitInptMet     ! NetCDF variable ID for metabolic litter C inputs
+      integer :: varid_clitInptStruc   ! NetCDF variable ID for structural litter C inputs
+      integer :: varid_cpassInpt       ! NetCDF variable ID for passive pool C inputs
+      integer :: varid_fT, varid_fW    ! NetCDF variable ID soil temperature and moisture decomposition rate multipliers
+      integer :: varid_thetaLiq        ! NetCDF variable ID liquid soil moisture fraction
+      !! Added N fluxes and pools -mdh 11/25/2019
+      integer :: varid_nlitInptMet     ! NetCDF variable ID for metabolic litter N inputs
+      integer :: varid_nlitInptStruc   ! NetCDF variable ID for structural litter N inputs
+      integer :: varid_nmindep         ! NetCDF variable ID for N deposition
+      integer :: varid_nminfix         ! NetCDF variable ID for N fixation
+      integer :: varid_nminuptake      ! NetCDF variable ID for plant N uptake
+      integer :: varid_nminleach       ! NetCDF variable ID for mineral N leaching
+      integer :: varid_nminloss        ! NetCDF variable ID for mineral N loss (N2O)
+      integer :: varid_nlittermin      ! NetCDF variable ID for litter N mineralization
+      integer :: varid_nsmin           ! NetCDF variable ID for soil N mineralization
+      integer :: varid_nsimm           ! NetCDF variable ID for soil N immobilization
+      integer :: varid_nsnet           ! NetCDF variable ID for net N mineralization
+      integer :: varid_nminrl          ! NetCDF variable ID for mineral soil N
+      character(len=100) :: attr_name   ! String for assigning global and variable attributes
+      character(len=100) :: attr_units  ! String for assigning global and variable attributes
+      character(len=10)  :: date_string ! String for assigning date to global attributes
+      character(len=8)   :: time_string ! String for assigning time to global attributes
       integer :: verbose=0
       integer :: npt, ilon, ilat, itime
-      integer, allocatable :: IGBP_PFT(:,:)	! IGBP_PFT(nlon,nlat) IGBP PFT classification (1-18)
-      real(4), allocatable :: landarea(:,:)	! landarea(nlon,nlat) km^2
-      real(4), allocatable :: var1(:,:,:)	! gridded output variable
-      real(4), allocatable :: var2(:,:,:)	! gridded output variable
-      real(4), allocatable :: var3(:,:,:)	! gridded output variable
-      real(4), allocatable :: var4(:,:,:)	! gridded output variable
-      real(4), allocatable :: var5(:,:,:)	! gridded output variable
-      real(4), allocatable :: var6(:,:,:)	! gridded output variable
-      real(4), allocatable :: var7(:,:,:)	! gridded output variable
-      real(4) :: time                      	! time to write to netcdf file
+      integer, allocatable :: IGBP_PFT(:,:)  ! IGBP_PFT(nlon,nlat) IGBP PFT classification (1-18)
+      real(4), allocatable :: landarea(:,:)  ! landarea(nlon,nlat) km^2
+      real(4), allocatable :: var1(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var2(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var3(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var4(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var5(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var6(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var7(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var8(:,:,:)    ! gridded output variable
+      real(4) :: time                        ! time to write to netcdf file
     
 
       if (verbose .ge. 0) print *, "Writing output to file ", trim(filename_ncOut_casa), "..."
 
 !Output these variables in NetCDF file:
-!       veg%iveg(npt)			- IGBP PFTs
-!       casamet%lat(npt)		- latitudes	
-!       casamet%lon(npt)		- longitudes
-!       casamet%areacell(npt)*(1.0e-6) 	- landarea (km^2)
-!       casabal%FCnppyear(npt) 		- NPP (gC/m2/yr) 
-!       casabal%FCrsyear(npt)		- soil respiration (gC/m2/yr)		
-!       casabal%FCrpyear(npt)		- plant respiration (gC/m2/yr)	
-!       casapool%cplantAn(npt,LEAF)	- plant leaf C (gC/m2)
-!       casapool%cplantAn(npt,WOOD)	- plant wood C (gC/m2)
-!       casapool%cplantAn(npt,FROOT)	- plant fine root C (gC/m2)
-!       casapool%clitterAn(npt,METB)	- metabolic litter C (gC/m2)
-!       casapool%clitterAn(npt,STR)	- structural litter C (gC/m2)
-!       casapool%clitterAn(npt,CWD)	- coarse woody debris C (gC/m2)
-!       casapool%csoilAn(npt,MIC)	- microbial soil  C (gC/m2)
-!       casapool%csoilAn(npt,SLOW)	- slow soil C (gC/m2)
-!       casapool%csoilAn(npt,PASS)	- passive soil C (gC/m2)
-!       casapool%nplantAn(npt,LEAF)	- plant leaf N (gN/m2)
-!       casapool%nplantAn(npt,WOOD)	- plant wood N (gN/m2)
-!       casapool%nplantAn(npt,FROOT)	- plant fine root N (gN/m2)
-!       casapool%nlitterAn(npt,METB)	- metabolic litter N (gN/m2)
-!       casapool%nlitterAn(npt,STR)	- structural litter N (gN/m2)
-!       casapool%nlitterAn(npt,CWD)	- coarse woody debris N (gN/m2)
-!       casapool%nsoilAn(npt,MIC)	- microbial soil N (gN/m2)
-!       casapool%nsoilAn(npt,SLOW)	- slow soil N (gN/m2)
-!       casapool%nsoilAn(npt,PASS)	- passive soil N (gN/m2)
+!       veg%iveg(npt)           - IGBP PFTs
+!       casamet%lat(npt)        - latitudes    
+!       casamet%lon(npt)        - longitudes
+!       casamet%areacell(npt)*(1.0e-6) - landarea (km^2)
+!       casabal%FCnppyear(npt)         - NPP (gC/m2/yr) 
+!       casabal%FCrsyear(npt)          - soil respiration (gC/m2/yr)        
+!       casabal%FCrpyear(npt)          - plant respiration (gC/m2/yr)    
+!       casapool%cplantAn(npt,LEAF)    - plant leaf C (gC/m2)
+!       casapool%cplantAn(npt,WOOD)    - plant wood C (gC/m2)
+!       casapool%cplantAn(npt,FROOT)   - plant fine root C (gC/m2)
+!       casapool%clitterAn(npt,METB)   - metabolic litter C (gC/m2)
+!       casapool%clitterAn(npt,STR)    - structural litter C (gC/m2)
+!       casapool%clitterAn(npt,CWD)    - coarse woody debris C (gC/m2)
+!       casapool%csoilAn(npt,MIC)      - microbial soil  C (gC/m2)
+!       casapool%csoilAn(npt,SLOW)     - slow soil C (gC/m2)
+!       casapool%csoilAn(npt,PASS)     - passive soil C (gC/m2)
+!       casapool%nplantAn(npt,LEAF)    - plant leaf N (gN/m2)
+!       casapool%nplantAn(npt,WOOD)    - plant wood N (gN/m2)
+!       casapool%nplantAn(npt,FROOT)   - plant fine root N (gN/m2)
+!       casapool%nlitterAn(npt,METB)   - metabolic litter N (gN/m2)
+!       casapool%nlitterAn(npt,STR)    - structural litter N (gN/m2)
+!       casapool%nlitterAn(npt,CWD)    - coarse woody debris N (gN/m2)
+!       casapool%nsoilAn(npt,MIC)      - microbial soil N (gN/m2)
+!       casapool%nsoilAn(npt,SLOW)     - slow soil N (gN/m2)
+!       casapool%nsoilAn(npt,PASS)     - passive soil N (gN/m2)
 
    dims(1) = 0
    dims(2) = 0
@@ -2418,11 +2518,14 @@ END SUBROUTINE ReadMetNcFile
    status = nf_def_var(ncid, 'tsoilC', NF_REAL, 3, dims, varid_tsoilC)
    if (status /= nf_noerr) call handle_err(status, "tsoilC")
 
-   status = nf_def_var(ncid, 'litInptMet', NF_REAL, 3, dims, varid_litInptMet)
-   if (status /= nf_noerr) call handle_err(status, "litInptMet")
+   status = nf_def_var(ncid, 'cLitInptMet', NF_REAL, 3, dims, varid_clitInptMet)
+   if (status /= nf_noerr) call handle_err(status, "cLitInptMet")
 
-   status = nf_def_var(ncid, 'litInptStruc', NF_REAL, 3, dims, varid_litInptStruc)
-   if (status /= nf_noerr) call handle_err(status, "litInptStruc")
+   status = nf_def_var(ncid, 'cLitInptStruc', NF_REAL, 3, dims, varid_clitInptStruc)
+   if (status /= nf_noerr) call handle_err(status, "cLitInptStruc")
+
+   status = nf_def_var(ncid, 'cpassInpt', NF_REAL, 3, dims, varid_cpassInpt)
+   if (status /= nf_noerr) call handle_err(status, "cpassInpt")
 
    status = nf_def_var(ncid, 'thetaLiq', NF_REAL, 3, dims, varid_thetaLiq)
    if (status /= nf_noerr) call handle_err(status, "thetaLiq")
@@ -2432,6 +2535,44 @@ END SUBROUTINE ReadMetNcFile
 
    status = nf_def_var(ncid, 'fW', NF_REAL, 3, dims, varid_fW)
    if (status /= nf_noerr) call handle_err(status, "f(W)")
+
+   !! Added N fluxes and pools -mdh 11/25/2019
+
+   status = nf_def_var(ncid, 'nLitInptMet', NF_REAL, 3, dims, varid_nlitInptMet)
+   if (status /= nf_noerr) call handle_err(status, "nLitInptMet")
+
+   status = nf_def_var(ncid, 'nLitInptStruc', NF_REAL, 3, dims, varid_nlitInptStruc)
+   if (status /= nf_noerr) call handle_err(status, "nLitInptStruc")
+
+   status = nf_def_var(ncid, 'nMinDep', NF_REAL, 3, dims, varid_nmindep)
+   if (status /= nf_noerr) call handle_err(status, "nMinDep")
+
+   status = nf_def_var(ncid, 'nMinFix', NF_REAL, 3, dims, varid_nminfix)
+   if (status /= nf_noerr) call handle_err(status, "nMinFix")
+
+   status = nf_def_var(ncid, 'nMinUptake', NF_REAL, 3, dims, varid_nminuptake)
+   if (status /= nf_noerr) call handle_err(status, "nMinUptake")
+
+   status = nf_def_var(ncid, 'nMinLeach', NF_REAL, 3, dims, varid_nminleach)
+   if (status /= nf_noerr) call handle_err(status, "nMinLeach")
+
+   status = nf_def_var(ncid, 'nMinLoss', NF_REAL, 3, dims, varid_nminloss)
+   if (status /= nf_noerr) call handle_err(status, "nMinLoss")
+
+   status = nf_def_var(ncid, 'nLitMineralization', NF_REAL, 3, dims, varid_nlittermin)
+   if (status /= nf_noerr) call handle_err(status, "nLitMineralization")
+
+   status = nf_def_var(ncid, 'nSoilMineralization', NF_REAL, 3, dims, varid_nsmin)
+   if (status /= nf_noerr) call handle_err(status, "nSoilMineralization")
+
+   status = nf_def_var(ncid, 'nSoilImmob', NF_REAL, 3, dims, varid_nsimm)
+   if (status /= nf_noerr) call handle_err(status, "nSoilImmob")
+
+   status = nf_def_var(ncid, 'nNetMineralization', NF_REAL, 3, dims, varid_nsnet)
+   if (status /= nf_noerr) call handle_err(status, "nNetMineralization")
+
+   status = nf_def_var(ncid, 'nMineral', NF_REAL, 3, dims, varid_nminrl)
+   if (status /= nf_noerr) call handle_err(status, "nMineral")
 
 
    ! Global attributes
@@ -2648,15 +2789,20 @@ END SUBROUTINE ReadMetNcFile
    attr_units = 'degrees C'
    call PutVariableAttributeReal(ncid, varid_tsoilC, attr_name, attr_units, MISSING_VALUE)
 
-   ! Attributes of litInptMet variable
-   attr_name = 'Metabolic Litter Inputs'
+   ! Attributes of cLitInptMet variable
+   attr_name = 'Metabolic Litter C Inputs'
    attr_units = 'gC m-2 yr-1'
-   call PutVariableAttributeReal(ncid, varid_litInptMet, attr_name, attr_units, MISSING_VALUE)
+   call PutVariableAttributeReal(ncid, varid_clitInptMet, attr_name, attr_units, MISSING_VALUE)
 
-   ! Attributes of litInptStruc variable
-   attr_name = 'Structural Litter Inputs'
+   ! Attributes of cLitInptStruc variable
+   attr_name = 'Structural Litter C Inputs'
    attr_units = 'gC m-2 yr-1'
-   call PutVariableAttributeReal(ncid, varid_litInptStruc, attr_name, attr_units, MISSING_VALUE)
+   call PutVariableAttributeReal(ncid, varid_clitInptStruc, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of cpassInpt variable
+   attr_name = 'Passive Pool C Inputs'
+   attr_units = 'gC m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_cpassInpt, attr_name, attr_units, MISSING_VALUE)
 
    ! Attributes of thetaLiq variable
    attr_name = 'Fraction of liquid soil water saturation (0.0-1.0)'
@@ -2672,6 +2818,68 @@ END SUBROUTINE ReadMetNcFile
    attr_name = 'soil moisture multiplier on decomposition rate (0.0-1.0)'
    attr_units = 'multiplier'
    call PutVariableAttributeReal(ncid, varid_fW, attr_name, attr_units, MISSING_VALUE)
+
+   !! Added annual N flux and pools -mdh 11/25/2019
+
+   ! Attributes of nLitInptMet variable
+   attr_name = 'Metabolic Litter N Inputs'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nlitInptMet, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nLitInptStruc variable
+   attr_name = 'Structural Litter N Inputs'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nlitInptStruc, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nMinDep variable
+   attr_name = 'N deposition'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nmindep, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nMinFix variable
+   attr_name = 'N Fixation'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nminfix, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nMinUptake variable
+   attr_name = 'Plant Mineral N Uptake'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nminuptake, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nMinLeach variable
+   attr_name = 'Mineral N Leaching'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nminleach, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nMinLoss variable
+   attr_name = 'Mineral N Loss (N2O)'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nminloss, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nLitMineralization variable
+   attr_name = 'Litter N Mineralization'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nlittermin, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nSoilMineralization variable
+   attr_name = 'Soil N Mineralization'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nsmin, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nSoilImmob variable
+   attr_name = 'Soil N Immobilization'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nsimm, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nNetMineralization variable
+   attr_name = 'Net N mineralization'
+   attr_units = 'gN m-2 yr-1'
+   call PutVariableAttributeReal(ncid, varid_nsnet, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of nMineral variable
+   attr_name = 'Mineral Soil N'
+   attr_units = 'gN m-2'
+   call PutVariableAttributeReal(ncid, varid_nminrl, attr_name, attr_units, MISSING_VALUE)
 
 
    ! --------------- End the definition phase so that variables can be written to the file ---------------
@@ -2725,12 +2933,13 @@ END SUBROUTINE ReadMetNcFile
    allocate(var5(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var6(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var7(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
+   allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
 
 
-!  casabal%FCnppyear(npt) 	- NPP (gC/m2/yr) 
-!  casabal%FCgppyear(npt) 	- GPP (gC/m2/yr) 
-!  casabal%FCrsyear(npt)	- soil respiration (gC/m2/yr)?		
-!  casabal%FCrpyear(npt)	- plant respiration (gC/m2/yr)?		
+!  casabal%FCnppyear(npt)     - NPP (gC/m2/yr) 
+!  casabal%FCgppyear(npt)     - GPP (gC/m2/yr) 
+!  casabal%FCrsyear(npt)    - soil respiration (gC/m2/yr)?        
+!  casabal%FCrpyear(npt)    - plant respiration (gC/m2/yr)?        
 !  casapoolAn%cplantAn(npt,LEAF)  - average annual plant leaf C (gC/m2)
 !  casapoolAn%cplantAn(npt,WOOD)  - average annual plant wood C (gC/m2)
 !  casapoolAn%cplantAn(npt,FROOT) - average annual plant fine root C (gC/m2)
@@ -2803,12 +3012,12 @@ END SUBROUTINE ReadMetNcFile
    if (status /= nf_noerr) call handle_err(status, "put_var(cfroot)")
 
 
-!  casapoolAn%clitterAn(npt,METB)	- average annual metabolic litter C (gC/m2)
-!  casapoolAn%clitterAn(npt,STR)	- average annual structural litter C (gC/m2)
-!  casapoolAn%clitterAn(npt,CWD)	- average annual coarse woody debris C (gC/m2)
-!  casapoolAn%csoilAn(npt,MIC)		- average annual microbial soil  C (gC/m2)
-!  casapoolAn%csoilAn(npt,SLOW)		- average annual slow soil C (gC/m2)
-!  casapoolAn%csoilAn(npt,PASS)		- average annual passive soil C (gC/m2)
+!  casapoolAn%clitterAn(npt,METB)    - average annual metabolic litter C (gC/m2)
+!  casapoolAn%clitterAn(npt,STR)    - average annual structural litter C (gC/m2)
+!  casapoolAn%clitterAn(npt,CWD)    - average annual coarse woody debris C (gC/m2)
+!  casapoolAn%csoilAn(npt,MIC)        - average annual microbial soil  C (gC/m2)
+!  casapoolAn%csoilAn(npt,SLOW)        - average annual slow soil C (gC/m2)
+!  casapoolAn%csoilAn(npt,PASS)        - average annual passive soil C (gC/m2)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -2853,12 +3062,12 @@ END SUBROUTINE ReadMetNcFile
    if (status /= nf_noerr) call handle_err(status, "put_var(csoilpass)")
 
 
-!  casapoolAn%nplantAn(npt,LEAF)	- average annual plant leaf N (gN/m2)
-!  casapoolAn%nplantAn(npt,WOOD)	- average annual plant wood N (gN/m2)
-!  casapoolAn%nplantAn(npt,FROOT)	- average annual plant fine root N (gN/m2)
-!  casapoolAn%nlitterAn(npt,METB)	- average annual metabolic litter N (gN/m2)
-!  casapoolAn%nlitterAn(npt,STR)	- average annual structural litter N (gN/m2)
-!  casapoolAn%nlitterAn(npt,CWD)	- average annual coarse woody debris N (gN/m2)
+!  casapoolAn%nplantAn(npt,LEAF)    - average annual plant leaf N (gN/m2)
+!  casapoolAn%nplantAn(npt,WOOD)    - average annual plant wood N (gN/m2)
+!  casapoolAn%nplantAn(npt,FROOT)    - average annual plant fine root N (gN/m2)
+!  casapoolAn%nlitterAn(npt,METB)    - average annual metabolic litter N (gN/m2)
+!  casapoolAn%nlitterAn(npt,STR)    - average annual structural litter N (gN/m2)
+!  casapoolAn%nlitterAn(npt,CWD)    - average annual coarse woody debris N (gN/m2)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -2903,13 +3112,14 @@ END SUBROUTINE ReadMetNcFile
    if (status /= nf_noerr) call handle_err(status, "put_var(nlitcwd)")
 
 
-!  casapoolAn%nsoilAn(npt,MIC)	  - average annual microbial soil N (gN/m2)
-!  casapoolAn%nsoilAn(npt,SLOW)	  - average annual slow soil N (gN/m2)
+!  casapoolAn%nsoilAn(npt,MIC)    - average annual microbial soil N (gN/m2)
+!  casapoolAn%nsoilAn(npt,SLOW)   - average annual slow soil N (gN/m2)
 !  casapoolAn%nsoilAn(npt,PASS)   - average annual passive soil N (gN/m2)
 !  casapoolAn%tairAn(npt)         - average annual air temperature (C)
 !  casapoolAn%tsoilAn(npt)        - average annual soil temperature (C)
 !  casaflux%ClitInptMetAn(npt)    - metabolic litter inputs (gC/m2/yr)
 !  casaflux%ClitInptStrucAn(npt)  - structural litter inputs (gC/m2/yr)
+!  casaflux%CpassInptAn(npt)      - inputs to passive soil pool (gC/m2/yr)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -2918,6 +3128,7 @@ END SUBROUTINE ReadMetNcFile
    var5(:,:,:) = MISSING_VALUE
    var6(:,:,:) = MISSING_VALUE
    var7(:,:,:) = MISSING_VALUE
+   var8(:,:,:) = MISSING_VALUE
 
    itime = 1
    do npt = 1, mp
@@ -2935,6 +3146,7 @@ END SUBROUTINE ReadMetNcFile
       var5(ilon,ilat,itime) = casapoolAn%tsoilAn(npt)
       var6(ilon,ilat,itime) = casaflux%ClitInptMetAn(npt)
       var7(ilon,ilat,itime) = casaflux%ClitInptStrucAn(npt)
+      var8(ilon,ilat,itime) = casaflux%CpassInptAn(npt)
       !write(*,*) 'var7(',ilon,ilat,itime,')=', var7(ilon,ilat,itime)
    enddo
 
@@ -2953,21 +3165,34 @@ END SUBROUTINE ReadMetNcFile
    status =  nf_put_var(ncid, varid_tsoilC, var5, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(tsoilC)")
 
-   status =  nf_put_var(ncid, varid_litInptMet, var6, start3, count3)
-   if (status /= nf_noerr) call handle_err(status, "put_var(litInptMet)")
+   status =  nf_put_var(ncid, varid_clitInptMet, var6, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cLitInptMet)")
 
-   status =  nf_put_var(ncid, varid_litInptStruc, var7, start3, count3)
-   if (status /= nf_noerr) call handle_err(status, "put_var(litInptStruc)")
+   status =  nf_put_var(ncid, varid_clitInptStruc, var7, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cLitInptStruc)")
+
+   status =  nf_put_var(ncid, varid_cpassInpt, var8, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cpassInpt)")
 
 
 !  f(T) and f(W) output added 11/20/2017. ThetaLiq added 11/27/2017.
 !  casaflux%fTAn(npt)  - mean annual soil temperature multiplier on decomposition rate (0.0-1.0+)
 !  casaflux%fWAn(npt)  - mean annual soil moisure multiplier on decomposition rate (0.0-1.0)
 !  casaflux%thetaLiqAn(npt)  - mean annual fraction of liquid water saturation (0.0-1.0)
+!  casapoolAn%NsoilminAn(npt) - mean annual mineral soil N (gN/m2)
+!  casaflux%NlitInptMetAn(npt) - total annual metabolic litter N inputs (gN/m2/yr)
+!  casaflux%NlitInptStrucAn(npt) - total annual structural litter N inputs (gN/m2/yr)
+!  casaflux%NmindepAn(npt) - total annual N deposition (gN/m2/yr)
+!  casaflux%NminfixAn(npt) - total annual N fixation (gN/m2/yr)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
    var3(:,:,:) = MISSING_VALUE
+   var4(:,:,:) = MISSING_VALUE
+   var5(:,:,:) = MISSING_VALUE
+   var6(:,:,:) = MISSING_VALUE
+   var7(:,:,:) = MISSING_VALUE
+   var8(:,:,:) = MISSING_VALUE
 
    itime = 1
    do npt = 1, mp
@@ -2981,22 +3206,97 @@ END SUBROUTINE ReadMetNcFile
       var1(ilon,ilat,itime) = casapoolAn%fTAn(npt)
       var2(ilon,ilat,itime) = casapoolAn%fWAn(npt)
       var3(ilon,ilat,itime) = casapoolAn%thetaLiqAn(npt)
+
+      var4(ilon,ilat,itime) = casapoolAn%NsoilminAn(npt)
+      var5(ilon,ilat,itime) = casaflux%NlitInptMetAn(npt)
+      var6(ilon,ilat,itime) = casaflux%NlitInptStrucAn(npt)
+      var7(ilon,ilat,itime) = casaflux%NmindepAn(npt)
+      var8(ilon,ilat,itime) = casaflux%NminfixAn(npt)
    enddo
 
 !! status =  nf_put_var(ncid, varid_fT, var1, start3, count3)
    status =  nf_put_vara_real(ncid, varid_fT, start3, count3, var1)
    if (status /= nf_noerr) call handle_err(status, "put_var(fT)")
  
-!! status =  nf_put_var(ncid, varid_fW, var2, start3, count3)
    status =  nf_put_vara_real(ncid, varid_fW, start3, count3, var2)
    if (status /= nf_noerr) call handle_err(status, "put_var(fW)")
 
-!! status =  nf_put_var(ncid, varid_thetaLiq, var3, start3, count3)
    status =  nf_put_vara_real(ncid, varid_thetaLiq, start3, count3, var3)
    if (status /= nf_noerr) call handle_err(status, "put_var(thetaLiq)")
 
+   status =  nf_put_vara_real(ncid, varid_nminrl, start3, count3, var4)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMineral)")
 
-   deallocate(var1,var2,var3,var4,var5,var6,var7,IGBP_PFT,landarea)
+   status =  nf_put_vara_real(ncid, varid_nlitinptmet, start3, count3, var5)
+   if (status /= nf_noerr) call handle_err(status, "put_var(NlitInptMet)")
+
+   status =  nf_put_vara_real(ncid, varid_nlitinptstruc, start3, count3, var6)
+   if (status /= nf_noerr) call handle_err(status, "put_var(NlitInptStruc)")
+
+   status =  nf_put_vara_real(ncid, varid_nmindep, start3, count3, var7)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinDep)")
+
+   status =  nf_put_vara_real(ncid, varid_nminfix, start3, count3, var8)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinFix)")
+
+
+!  casaflux%NminuptakeAn(npt) - total annual Plant N uptake (gN/m2/yr)
+!  casaflux%NminleachAn(npt) - total annual Mineral N Leaching (gN/m2/yr)
+!  casaflux%NminlossAn(npt) - total annual Mineral N Loss (gN/m2/yr)
+!  casaflux%NlitterminAn(npt) - total annual Litter N mineralization (gN/m2/yr)
+!  casaflux%NsminAn(npt) - total annual Soil N mineralization (gN/m2/yr)
+!  casaflux%NsimmAn(npt) - total annual Soil N Immobilization (gN/m2/yr)
+!  casaflux%NsnetAn(npt) - total annual Net N mineralization (gN/m2/yr)
+
+   var1(:,:,:) = MISSING_VALUE
+   var2(:,:,:) = MISSING_VALUE
+   var3(:,:,:) = MISSING_VALUE
+   var4(:,:,:) = MISSING_VALUE
+   var5(:,:,:) = MISSING_VALUE
+   var6(:,:,:) = MISSING_VALUE
+   var7(:,:,:) = MISSING_VALUE
+
+   itime = 1
+   do npt = 1, mp
+      ilon = casamet%ilon(npt)
+      ilat = casamet%ilat(npt)
+      if (casamet%ijgcm(npt) .ne. clmgrid%cellid(ilon,ilat)) then
+         print *, 'WritePoolFluxNcFile_casacnp_annual: casamet%ijgcm(', npt, ')=', casamet%ijgcm(npt)
+         print *, '   clmgrid%cellid(', ilon, ',', ilat, ')=', clmgrid%cellid(ilon,ilat)
+         STOP
+      endif
+      var1(ilon,ilat,itime) = casaflux%NminuptakeAn(npt)
+      var2(ilon,ilat,itime) = casaflux%NminleachAn(npt)
+      var3(ilon,ilat,itime) = casaflux%NminlossAn(npt)
+      var4(ilon,ilat,itime) = casaflux%NlitterminAn(npt)
+      var5(ilon,ilat,itime) = casaflux%NsminAn(npt)
+      var6(ilon,ilat,itime) = casaflux%NsimmAn(npt)
+      var7(ilon,ilat,itime) = casaflux%NsnetAn(npt)
+   enddo
+
+   status =  nf_put_vara_real(ncid, varid_nminuptake, start3, count3, var1)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinUptake)")
+
+   status =  nf_put_vara_real(ncid, varid_nminleach, start3, count3, var2)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinLeach)")
+
+   status =  nf_put_vara_real(ncid, varid_nminloss, start3, count3, var3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinLoss)")
+
+   status =  nf_put_vara_real(ncid, varid_nlittermin, start3, count3, var4)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nLitMineralization)")
+
+   status =  nf_put_vara_real(ncid, varid_nsmin, start3, count3, var5)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nSoilMineralization)")
+
+   status =  nf_put_vara_real(ncid, varid_nsimm, start3, count3, var6)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nSoilImmob)")
+
+   status =  nf_put_vara_real(ncid, varid_nsnet, start3, count3, var7)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nNetMineralization)")
+
+
+   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,IGBP_PFT,landarea)
 
    status = nf_close(ncid)
 
@@ -3026,109 +3326,124 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
     integer, parameter :: MISSING_INT = -9999
 
 !   ARGUMENTS
-      character(len=*), intent(in) :: filename_ncOut_casa	! NetCDF output file name 
-      integer, intent(in) :: mp			        ! number of points with valid data
-      integer, intent(in) :: year			! output year
-      integer, intent(in) :: iday			! output day
+      character(len=*), intent(in) :: filename_ncOut_casa    ! NetCDF output file name 
+      integer, intent(in) :: mp                    ! number of points with valid data
+      integer, intent(in) :: year            ! output year
+      integer, intent(in) :: iday            ! output day
 !   LOCAL VARIABLES
       integer :: i
-      integer :: ncid				! netcdf file ID
-      integer :: status				! function return status
-!     integer :: dimid_mp			! netcdf dimension id
-      integer :: dimid_lat			! netcdf dimension id
-      integer :: dimid_lon			! netcdf dimension id
-      integer :: dimid_time			! netcdf dimension id
-      integer :: nlon, nlat, ntimes	 	! Dimension sizes for NetCDf file
-      integer :: nwrtimes                       ! Number of times that will be written when this subroutine is called
-      integer :: dims(3)			! Array of NetCDF dimension IDs for defining variables
-      integer :: start1(1), count1(1)           ! start and count arrays for writing 1-D data from netcdf files
-      integer :: start2(2), count2(2)           ! start and count arrays for writing 2-D data from netcdf files
-      integer :: start3(3), count3(3)           ! start and count arrays for writing 3-D data from netcdf files
-      integer :: varid_lon, varid_lat		! NetCDF variable ID for latitude and longitude
-      integer :: varid_time			! NetCDF variable ID for time
-      integer :: varid_day			! NetCDF variable ID for day
-      integer :: varid_mask			! NetCDF variable ID for cellMissing(nlon,nlat)
-      integer :: varid_cellid			! NetCDF variable ID for cellid(nlon,nlat)
-      integer :: varid_igbp			! NetCDF variable ID for IGBP_PFT(nlon,nlat)
-      integer :: varid_landarea			! NetCDF variable ID for land area
-      integer :: varid_cleaf			! NetCDF variable ID for leaf C
-      integer :: varid_cwood			! NetCDF variable ID for wood C
-      integer :: varid_cfroot			! NetCDF variable ID for fine root C
-      integer :: varid_nleaf			! NetCDF variable ID for leaf N
-      integer :: varid_nwood			! NetCDF variable ID for wood N
-      integer :: varid_nfroot			! NetCDF variable ID for fine root N
-      integer :: varid_clitmetb			! NetCDF variable ID for metablic litter C
-      integer :: varid_clitstr			! NetCDF variable ID for structural litter C
-      integer :: varid_clitcwd			! NetCDF variable ID for coarse weeody debris C
-      integer :: varid_nlitmetb			! NetCDF variable ID for metablic litter N
-      integer :: varid_nlitstr			! NetCDF variable ID for structural litter N
-      integer :: varid_nlitcwd			! NetCDF variable ID for coarse weeody debris N
-      integer :: varid_csoilmic			! NetCDF variable ID for microbial soil C
-      integer :: varid_csoilslow		! NetCDF variable ID for slow soil C
-      integer :: varid_csoilpass		! NetCDF variable ID for passive soil C
-      integer :: varid_nsoilmic			! NetCDF variable ID for microbial soil N
-      integer :: varid_nsoilslow		! NetCDF variable ID for slow soil N
-      integer :: varid_nsoilpass		! NetCDF variable ID for passive soil N
-      integer :: varid_cnpp			! NetCDF variable ID for NPP C
-      integer :: varid_cgpp			! NetCDF variable ID for GPP C
-      integer :: varid_cresp			! NetCDF variable ID for soil respiration C
-      integer :: varid_tairC			! NetCDF variable ID for air temperature (C)
-      integer :: varid_tsoilC			! NetCDF variable ID for soil temperature (C)
-      integer :: varid_litInptMet               ! NetCDF variable ID for metabolic litter inputs
-      integer :: varid_litInptStruc	        ! NetCDF variable ID for structural litter inputs
-      integer :: varid_fT, varid_fW	        ! NetCDF variable ID for soil temperature and moisture decomposition rate modifiers
-      integer :: varid_thetaLiq                 ! NetCDF variable ID for fraction of liquid soil water saturation
-      character*100 :: attr_name		! String for assigning global and variable attributes
-      character*100 :: attr_units		! String for assigning global and variable attributes
-      character*10 :: date_string		! String for assigning date to global attributes
-      character*8 :: time_string		! String for assigning time to global attributes
+      integer :: ncid               ! netcdf file ID
+      integer :: status             ! function return status
+!     integer :: dimid_mp           ! netcdf dimension id
+      integer :: dimid_lat          ! netcdf dimension id
+      integer :: dimid_lon          ! netcdf dimension id
+      integer :: dimid_time         ! netcdf dimension id
+      integer :: nlon, nlat, ntimes     ! Dimension sizes for NetCDf file
+      integer :: nwrtimes               ! Number of times that will be written when this subroutine is called
+      integer :: dims(3)                ! Array of NetCDF dimension IDs for defining variables
+      integer :: start1(1), count1(1)   ! start and count arrays for writing 1-D data from netcdf files
+      !!integer :: start2(2), count2(2) ! start and count arrays for writing 2-D data from netcdf files
+      integer :: start3(3), count3(3)   ! start and count arrays for writing 3-D data from netcdf files
+      integer :: varid_lon, varid_lat   ! NetCDF variable ID for latitude and longitude
+      integer :: varid_time           ! NetCDF variable ID for time
+      integer :: varid_day            ! NetCDF variable ID for day
+      integer :: varid_mask           ! NetCDF variable ID for cellMissing(nlon,nlat)
+      integer :: varid_cellid         ! NetCDF variable ID for cellid(nlon,nlat)
+      integer :: varid_igbp           ! NetCDF variable ID for IGBP_PFT(nlon,nlat)
+      integer :: varid_landarea       ! NetCDF variable ID for land area
+      integer :: varid_cleaf          ! NetCDF variable ID for leaf C
+      integer :: varid_cwood          ! NetCDF variable ID for wood C
+      integer :: varid_cfroot         ! NetCDF variable ID for fine root C
+      integer :: varid_nleaf          ! NetCDF variable ID for leaf N
+      integer :: varid_nwood          ! NetCDF variable ID for wood N
+      integer :: varid_nfroot         ! NetCDF variable ID for fine root N
+      integer :: varid_clitmetb       ! NetCDF variable ID for metablic litter C
+      integer :: varid_clitstr        ! NetCDF variable ID for structural litter C
+      integer :: varid_clitcwd        ! NetCDF variable ID for coarse weeody debris C
+      integer :: varid_nlitmetb       ! NetCDF variable ID for metablic litter N
+      integer :: varid_nlitstr        ! NetCDF variable ID for structural litter N
+      integer :: varid_nlitcwd        ! NetCDF variable ID for coarse weeody debris N
+      integer :: varid_csoilmic       ! NetCDF variable ID for microbial soil C
+      integer :: varid_csoilslow      ! NetCDF variable ID for slow soil C
+      integer :: varid_csoilpass      ! NetCDF variable ID for passive soil C
+      integer :: varid_nsoilmic       ! NetCDF variable ID for microbial soil N
+      integer :: varid_nsoilslow      ! NetCDF variable ID for slow soil N
+      integer :: varid_nsoilpass      ! NetCDF variable ID for passive soil N
+      integer :: varid_cnpp           ! NetCDF variable ID for NPP C
+      integer :: varid_cgpp           ! NetCDF variable ID for GPP C
+      integer :: varid_cresp          ! NetCDF variable ID for soil respiration C
+      integer :: varid_tairC          ! NetCDF variable ID for air temperature (C)
+      integer :: varid_tsoilC         ! NetCDF variable ID for soil temperature (C)
+      integer :: varid_clitInptMet    ! NetCDF variable ID for metabolic litter inputs
+      integer :: varid_clitInptStruc  ! NetCDF variable ID for structural litter inputs
+      integer :: varid_cpassInpt      ! NetCDF variable ID for passive pool C inputs
+      integer :: varid_fT, varid_fW   ! NetCDF variable ID for soil temperature and moisture decomposition rate modifiers
+      integer :: varid_thetaLiq       ! NetCDF variable ID for fraction of liquid soil water saturation
+      !! Added N fluxes and pools -mdh 11/25/2019
+      integer :: varid_nlitInptMet     ! NetCDF variable ID for metabolic litter N inputs
+      integer :: varid_nlitInptStruc   ! NetCDF variable ID for structural litter N inputs
+      integer :: varid_nmindep         ! NetCDF variable ID for N deposition
+      integer :: varid_nminfix         ! NetCDF variable ID for N fixation
+      integer :: varid_nminuptake      ! NetCDF variable ID for plant N uptake
+      integer :: varid_nminleach       ! NetCDF variable ID for mineral N leaching
+      integer :: varid_nminloss        ! NetCDF variable ID for mineral N loss (N2O)
+      integer :: varid_nlittermin      ! NetCDF variable ID for litter N mineralization
+      integer :: varid_nsmin           ! NetCDF variable ID for soil N mineralization
+      integer :: varid_nsimm           ! NetCDF variable ID for soil N immobilization
+      integer :: varid_nsnet           ! NetCDF variable ID for net N mineralization
+      integer :: varid_nminrl          ! NetCDF variable ID for mineral soil N
+      character*100 :: attr_name       ! String for assigning global and variable attributes
+      character*100 :: attr_units      ! String for assigning global and variable attributes
+      character*10 :: date_string      ! String for assigning date to global attributes
+      character*8 :: time_string       ! String for assigning time to global attributes
       integer :: verbose=0
       integer :: npt, ilon, ilat, itime
-      integer, allocatable :: IGBP_PFT(:,:)	! IGBP_PFT(nlon,nlat) IGBP PFT classification (1-18)
-      real(4), allocatable :: time(:)          	! time array (1..ntimes)
-      integer, allocatable :: days(:)          	! day array (1..ntimes)
-      real(4), allocatable :: landarea(:,:)	! landarea(nlon,nlat) km^2
-      real(4), allocatable :: var1(:,:,:)	! gridded output variable
-      real(4), allocatable :: var2(:,:,:)	! gridded output variable
-      real(4), allocatable :: var3(:,:,:)	! gridded output variable
-      real(4), allocatable :: var4(:,:,:)	! gridded output variable
-      real(4), allocatable :: var5(:,:,:)	! gridded output variable
-      real(4), allocatable :: var6(:,:,:)	! gridded output variable
-      real(4), allocatable :: var7(:,:,:)	! gridded output variable
+      integer, allocatable :: IGBP_PFT(:,:)  ! IGBP_PFT(nlon,nlat) IGBP PFT classification (1-18)
+      real(4), allocatable :: time(:)        ! time array (1..ntimes)
+      integer, allocatable :: days(:)        ! day array (1..ntimes)
+      real(4), allocatable :: landarea(:,:)  ! landarea(nlon,nlat) km^2
+      real(4), allocatable :: var1(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var2(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var3(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var4(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var5(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var6(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var7(:,:,:)    ! gridded output variable
+      real(4), allocatable :: var8(:,:,:)    ! gridded output variable
     
 
       if (verbose .ge. 1) print *, "Writing output to file ", trim(filename_ncOut_casa), " on day", iday, "..."
 
 !Output these variables in NetCDF file:
-!       veg%iveg(npt)			- IGBP PFTs
-!       casamet%lat(npt)		- latitudes	
-!       casamet%lon(npt)		- longitudes
-!       casamet%areacell(npt)*(1.0e-6) 	- landarea (km^2)
-!       casaflux%Cnpp(npt)              - NPP (gC/m2/day) 
-!       casaflux%Cgpp(npt)              - GPP (gC/m2/day) 
-!       casaflux%Crsoil(npt)            - soil respiration (gC/m2/day) 		
-!       casaflux%Crp(npt)               - plant respiration (gC/m2/day) 
-!       casapool%cplant(npt,LEAF)	- plant leaf C (gC/m2)
-!       casapool%cplant(npt,WOOD)	- plant wood C (gC/m2)
-!       casapool%cplant(npt,FROOT)	- plant fine root C (gC/m2)
-!       casapool%clitter(npt,METB)	- metabolic litter C (gC/m2)
-!       casapool%clitter(npt,STR)	- structural litter C (gC/m2)
-!       casapool%clitter(npt,CWD)	- coarse woody debris C (gC/m2)
-!       casapool%csoil(npt,MIC)		- microbial soil  C (gC/m2)
-!       casapool%csoil(npt,SLOW)	- slow soil C (gC/m2)
-!       casapool%csoil(npt,PASS)	- passive soil C (gC/m2)
-!       casapool%nplant(npt,LEAF)	- plant leaf N (gN/m2)
-!       casapool%nplant(npt,WOOD)	- plant wood N (gN/m2)
-!       casapool%nplant(npt,FROOT)	- plant fine root N (gN/m2)
-!       casapool%nlitter(npt,METB)	- metabolic litter N (gN/m2)
-!       casapool%nlitter(npt,STR)	- structural litter N (gN/m2)
-!       casapool%nlitter(npt,CWD)	- coarse woody debris N (gN/m2)
-!       casapool%nsoil(npt,MIC)	 	- microbial soil N (gN/m2)
-!       casapool%nsoil(npt,SLOW)	- slow soil N (gN/m2)
-!       casapool%nsoil(npt,PASS)	- passive soil N (gN/m2)
-!       casaflux%fT(npt)                - temperature effect on soil decomposition rate 
-!       casaflux%fW(npt)                - moisture effect on soil decomposition rate 
-!       casaflux%thetaLiq(npt)          - fraction of liquid soil water saturation (0.0-1.0)
+!       veg%iveg(npt)           - IGBP PFTs
+!       casamet%lat(npt)        - latitudes    
+!       casamet%lon(npt)        - longitudes
+!       casamet%areacell(npt)*(1.0e-6)     - landarea (km^2)
+!       casaflux%Cnpp(npt)      - NPP (gC/m2/day) 
+!       casaflux%Cgpp(npt)      - GPP (gC/m2/day) 
+!       casaflux%Crsoil(npt)    - soil respiration (gC/m2/day)         
+!       casaflux%Crp(npt)       - plant respiration (gC/m2/day) 
+!       casapool%cplant(npt,LEAF)    - plant leaf C (gC/m2)
+!       casapool%cplant(npt,WOOD)    - plant wood C (gC/m2)
+!       casapool%cplant(npt,FROOT)   - plant fine root C (gC/m2)
+!       casapool%clitter(npt,METB)   - metabolic litter C (gC/m2)
+!       casapool%clitter(npt,STR)    - structural litter C (gC/m2)
+!       casapool%clitter(npt,CWD)    - coarse woody debris C (gC/m2)
+!       casapool%csoil(npt,MIC)      - microbial soil  C (gC/m2)
+!       casapool%csoil(npt,SLOW)     - slow soil C (gC/m2)
+!       casapool%csoil(npt,PASS)     - passive soil C (gC/m2)
+!       casapool%nplant(npt,LEAF)    - plant leaf N (gN/m2)
+!       casapool%nplant(npt,WOOD)    - plant wood N (gN/m2)
+!       casapool%nplant(npt,FROOT)   - plant fine root N (gN/m2)
+!       casapool%nlitter(npt,METB)   - metabolic litter N (gN/m2)
+!       casapool%nlitter(npt,STR)    - structural litter N (gN/m2)
+!       casapool%nlitter(npt,CWD)    - coarse woody debris N (gN/m2)
+!       casapool%nsoil(npt,MIC)      - microbial soil N (gN/m2)
+!       casapool%nsoil(npt,SLOW)     - slow soil N (gN/m2)
+!       casapool%nsoil(npt,PASS)     - passive soil N (gN/m2)
+!       casaflux%fT(npt)             - temperature effect on soil decomposition rate 
+!       casaflux%fW(npt)             - moisture effect on soil decomposition rate 
+!       casaflux%thetaLiq(npt)       - fraction of liquid soil water saturation (0.0-1.0)
 
    dims(1) = 0
    dims(2) = 0
@@ -3280,11 +3595,14 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       status = nf_def_var(ncid, 'tsoilC', NF_REAL, 3, dims, varid_tsoilC)
       if (status /= nf_noerr) call handle_err(status, "tsoilC")
    
-      status = nf_def_var(ncid, 'litInptMet', NF_REAL, 3, dims, varid_litInptMet)
-      if (status /= nf_noerr) call handle_err(status, "litInptMet")
+      status = nf_def_var(ncid, 'cLitInptMet', NF_REAL, 3, dims, varid_clitInptMet)
+      if (status /= nf_noerr) call handle_err(status, "cLitInptMet")
 
-      status = nf_def_var(ncid, 'litInptStruc', NF_REAL, 3, dims, varid_litInptStruc)
-      if (status /= nf_noerr) call handle_err(status, "litInptStruc")
+      status = nf_def_var(ncid, 'cLitInptStruc', NF_REAL, 3, dims, varid_clitInptStruc)
+      if (status /= nf_noerr) call handle_err(status, "cLitInptStruc")
+
+      status = nf_def_var(ncid, 'cpassInpt', NF_REAL, 3, dims, varid_cpassInpt)
+      if (status /= nf_noerr) call handle_err(status, "cpassInpt")
 
       status = nf_def_var(ncid, 'thetaLiq', NF_REAL, 3, dims, varid_thetaLiq)
       if (status /= nf_noerr) call handle_err(status, "thetaLiq")
@@ -3296,6 +3614,44 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       if (status /= nf_noerr) call handle_err(status, "fW")
 
 
+      !! Added daily N fluxes and pools -mdh 11/25/2019
+   
+      status = nf_def_var(ncid, 'nLitInptMet', NF_REAL, 3, dims, varid_nlitInptMet)
+      if (status /= nf_noerr) call handle_err(status, "nLitInptMet")
+   
+      status = nf_def_var(ncid, 'nLitInptStruc', NF_REAL, 3, dims, varid_nlitInptStruc)
+      if (status /= nf_noerr) call handle_err(status, "nLitInptStruc")
+   
+      status = nf_def_var(ncid, 'nMinDep', NF_REAL, 3, dims, varid_nmindep)
+      if (status /= nf_noerr) call handle_err(status, "nMinDep")
+   
+      status = nf_def_var(ncid, 'nMinFix', NF_REAL, 3, dims, varid_nminfix)
+      if (status /= nf_noerr) call handle_err(status, "nMinFix")
+   
+      status = nf_def_var(ncid, 'nMinUptake', NF_REAL, 3, dims, varid_nminuptake)
+      if (status /= nf_noerr) call handle_err(status, "nMinUptake")
+   
+      status = nf_def_var(ncid, 'nMinLeach', NF_REAL, 3, dims, varid_nminleach)
+      if (status /= nf_noerr) call handle_err(status, "nMinLeach")
+   
+      status = nf_def_var(ncid, 'nMinLoss', NF_REAL, 3, dims, varid_nminloss)
+      if (status /= nf_noerr) call handle_err(status, "nMinLoss")
+   
+      status = nf_def_var(ncid, 'nLitMineralization', NF_REAL, 3, dims, varid_nlittermin)
+      if (status /= nf_noerr) call handle_err(status, "nLitMineralization")
+   
+      status = nf_def_var(ncid, 'nSoilMineralization', NF_REAL, 3, dims, varid_nsmin)
+      if (status /= nf_noerr) call handle_err(status, "nSoilMineralization")
+   
+      status = nf_def_var(ncid, 'nSoilImmob', NF_REAL, 3, dims, varid_nsimm)
+      if (status /= nf_noerr) call handle_err(status, "nSoilImmob")
+   
+      status = nf_def_var(ncid, 'nNetMineralization', NF_REAL, 3, dims, varid_nsnet)
+      if (status /= nf_noerr) call handle_err(status, "nNetMineralization")
+   
+      status = nf_def_var(ncid, 'nMineral', NF_REAL, 3, dims, varid_nminrl)
+      if (status /= nf_noerr) call handle_err(status, "nMineral")
+   
       ! Global attributes
       attr_name = 'CASACNP model output'
       status = nf_put_att_text(ncid, NF_GLOBAL, 'title', len(trim(attr_name)), trim(attr_name))
@@ -3510,15 +3866,20 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       attr_units = 'degrees C'
       call PutVariableAttributeReal(ncid, varid_tsoilC, attr_name, attr_units, MISSING_VALUE)
 
-      ! Attributes of litInptMet variable
-      attr_name = 'Metabolic Litter Inputs'
+      ! Attributes of cLitInptMet variable
+      attr_name = 'Metabolic Litter C Inputs'
       attr_units = 'gC m-2 day-1'
-      call PutVariableAttributeReal(ncid, varid_litInptMet, attr_name, attr_units, MISSING_VALUE)
+      call PutVariableAttributeReal(ncid, varid_clitInptMet, attr_name, attr_units, MISSING_VALUE)
  
-      ! Attributes of litInptStruc variable
-      attr_name = 'Structural Litter Inputs'
+      ! Attributes of cLitInptStruc variable
+      attr_name = 'Structural Litter C Inputs'
       attr_units = 'gC m-2 day-1'
-      call PutVariableAttributeReal(ncid, varid_litInptStruc, attr_name, attr_units, MISSING_VALUE)
+      call PutVariableAttributeReal(ncid, varid_clitInptStruc, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of cpassInpt variable
+      attr_name = 'Passive Pool C Inputs'
+      attr_units = 'gC m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_cpassInpt, attr_name, attr_units, MISSING_VALUE)
 
       ! Attributes of thetaLiq variable
       attr_name = 'fraction of liquid soil water saturation (0.0-1.0)'
@@ -3535,7 +3896,70 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       attr_units = 'multiplier'
       call PutVariableAttributeReal(ncid, varid_fW, attr_name, attr_units, MISSING_VALUE)
 
-   
+
+      !! Added daily N flux and pools -mdh 11/25/2019
+
+      ! Attributes of nLitInptMet variable
+      attr_name = 'Metabolic Litter N Inputs'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nlitInptMet, attr_name, attr_units, MISSING_VALUE)
+ 
+      ! Attributes of nLitInptStruc variable
+      attr_name = 'Structural Litter N Inputs'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nlitInptStruc, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nMinDep variable
+      attr_name = 'N deposition'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nmindep, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nMinFix variable
+      attr_name = 'N Fixation'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nminfix, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nMinUptake variable
+      attr_name = 'Plant Mineral N Uptake'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nminuptake, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nMinLeach variable
+      attr_name = 'Mineral N Leaching'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nminleach, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nMinLoss variable
+      attr_name = 'Mineral N Loss (N2O)'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nminloss, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nLitMineralization variable
+      attr_name = 'Litter N Mineralization'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nlittermin, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nSoilMineralization variable
+      attr_name = 'Soil N Mineralization'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nsmin, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nSoilImmob variable
+      attr_name = 'Soil N Immobilization'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nsimm, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nNetMineralization variable
+      attr_name = 'Net N mineralization'
+      attr_units = 'gN m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_nsnet, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of nMineral variable
+      attr_name = 'Mineral Soil N'
+      attr_units = 'gN m-2'
+      call PutVariableAttributeReal(ncid, varid_nminrl, attr_name, attr_units, MISSING_VALUE)
+
+
       ! --------------- End the definition phase so that variables can be written to the file ---------------
       status = nf_enddef(ncid)
       if (status /= nf_noerr) call handle_err(status, "enddef")
@@ -3684,11 +4108,14 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       status = nf_inq_varid(ncid, 'tsoilC',varid_tsoilC)
       if (status /= nf_noerr) call handle_err(status, "tsoilC")
 
-      status = nf_inq_varid(ncid, 'litInptMet',varid_litInptMet)
-      if (status /= nf_noerr) call handle_err(status, "litInptMet")
+      status = nf_inq_varid(ncid, 'cLitInptMet',varid_clitInptMet)
+      if (status /= nf_noerr) call handle_err(status, "cLitInptMet")
 
-      status = nf_inq_varid(ncid, 'litInptStruc',varid_litInptStruc)
-      if (status /= nf_noerr) call handle_err(status, "litInptStruc")
+      status = nf_inq_varid(ncid, 'cLitInptStruc',varid_clitInptStruc)
+      if (status /= nf_noerr) call handle_err(status, "cLitInptStruc")
+
+      status = nf_inq_varid(ncid, 'cpassInpt',varid_cpassInpt)
+      if (status /= nf_noerr) call handle_err(status, "cpassInpt")
 
       status = nf_inq_varid(ncid, 'thetaLiq',varid_thetaLiq)
       if (status /= nf_noerr) call handle_err(status, "thetaLiq")
@@ -3698,6 +4125,45 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
 
       status = nf_inq_varid(ncid, 'fW',varid_fW)
       if (status /= nf_noerr) call handle_err(status, "f(W)")
+
+
+      !! Added daily N fluxes and pools -mdh 11/14/2019
+
+      status = nf_inq_varid(ncid, 'nLitInptMet',varid_nlitInptMet)
+      if (status /= nf_noerr) call handle_err(status, "nLitInptMet")
+
+      status = nf_inq_varid(ncid, 'nLitInptStruc',varid_nlitInptStruc)
+      if (status /= nf_noerr) call handle_err(status, "nLitInptStruc")
+
+      status = nf_inq_varid(ncid, 'nMinDep',varid_nmindep)
+      if (status /= nf_noerr) call handle_err(status, "nMinDep")
+
+      status = nf_inq_varid(ncid, 'nMinFix',varid_nminfix)
+      if (status /= nf_noerr) call handle_err(status, "nMinFix")
+
+      status = nf_inq_varid(ncid, 'nMinUptake',varid_nminuptake)
+      if (status /= nf_noerr) call handle_err(status, "nMinUptake")
+
+      status = nf_inq_varid(ncid, 'nMinLeach',varid_nminleach)
+      if (status /= nf_noerr) call handle_err(status, "nMinLeach")
+
+      status = nf_inq_varid(ncid, 'nMinLoss',varid_nminloss)
+      if (status /= nf_noerr) call handle_err(status, "nMinLoss")
+
+      status = nf_inq_varid(ncid, 'nLitMineralization',varid_nlittermin)
+      if (status /= nf_noerr) call handle_err(status, "nLitMineralization")
+
+      status = nf_inq_varid(ncid, 'nSoilMineralization',varid_nsmin)
+      if (status /= nf_noerr) call handle_err(status, "nSoilMineralization")
+
+      status = nf_inq_varid(ncid, 'nSoilImmob',varid_nsimm)
+      if (status /= nf_noerr) call handle_err(status, "nSoilImmob")
+
+      status = nf_inq_varid(ncid, 'nNetMineralization',varid_nsnet)
+      if (status /= nf_noerr) call handle_err(status, "nNetMineralization")
+
+      status = nf_inq_varid(ncid, 'nMineral',varid_nminrl)
+      if (status /= nf_noerr) call handle_err(status, "nMineral")
 
    endif  !end iday==1
 
@@ -3716,12 +4182,13 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
    allocate(var5(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
    allocate(var6(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
    allocate(var7(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
+   allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
 
 
 !  casaflux%Cnpp(npt)         - NPP (gC/m2/day) 
 !  casaflux%Cgpp(npt)         - GPP (gC/m2/day) 
-!  casaflux%Crsoil(npt)       - soil respiration (gC/m2/day) 		
-!  casaflux%Crp(npt)          - plant respiration (gC/m2/day) 		
+!  casaflux%Crsoil(npt)       - soil respiration (gC/m2/day)         
+!  casaflux%Crp(npt)          - plant respiration (gC/m2/day)         
 !  casapool%cplant(npt,LEAF)  - plant leaf C (gC/m2)
 !  casapool%cplant(npt,WOOD)  - plant wood C (gC/m2)
 !  casapool%cplant(npt,FROOT) - plant fine root C (gC/m2)
@@ -3785,12 +4252,12 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
    if (status /= nf_noerr) call handle_err(status, "put_var(cfroot)")
 
 
-!  casapool%clitter(npt,METB)	- metabolic litter C (gC/m2)
-!  casapool%clitter(npt,STR)	- structural litter C (gC/m2)
-!  casapool%clitter(npt,CWD)	- coarse woody debris C (gC/m2)
-!  casapool%csoil(npt,MIC)	- microbial soil  C (gC/m2)
-!  casapool%csoil(npt,SLOW)	- slow soil C (gC/m2)
-!  casapool%csoil(npt,PASS)	- passive soil C (gC/m2)
+!  casapool%clitter(npt,METB) - metabolic litter C (gC/m2)
+!  casapool%clitter(npt,STR)  - structural litter C (gC/m2)
+!  casapool%clitter(npt,CWD)  - coarse woody debris C (gC/m2)
+!  casapool%csoil(npt,MIC)    - microbial soil  C (gC/m2)
+!  casapool%csoil(npt,SLOW)   - slow soil C (gC/m2)
+!  casapool%csoil(npt,PASS)   - passive soil C (gC/m2)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -3841,12 +4308,12 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
    if (status /= nf_noerr) call handle_err(status, "put_var(csoilpass)")
 
 
-!  casapool%nplant(npt,LEAF)	- plant leaf N (gN/m2)
-!  casapool%nplant(npt,WOOD)	- plant wood N (gN/m2)
-!  casapool%nplant(npt,FROOT)	- plant fine root N (gN/m2)
-!  casapool%nlitter(npt,METB)	- metabolic litter N (gN/m2)
-!  casapool%nlitter(npt,STR)	- structural litter N (gN/m2)
-!  casapool%nlitter(npt,CWD)	- coarse woody debris N (gN/m2)
+!  casapool%nplant(npt,LEAF)  - plant leaf N (gN/m2)
+!  casapool%nplant(npt,WOOD)  - plant wood N (gN/m2)
+!  casapool%nplant(npt,FROOT) - plant fine root N (gN/m2)
+!  casapool%nlitter(npt,METB) - metabolic litter N (gN/m2)
+!  casapool%nlitter(npt,STR)  - structural litter N (gN/m2)
+!  casapool%nlitter(npt,CWD)  - coarse woody debris N (gN/m2)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -3897,13 +4364,14 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
    if (status /= nf_noerr) call handle_err(status, "put_var(nlitcwd)")
 
 
-!  casapool%nsoil(npt,MIC)	- microbial soil N (gN/m2)
-!  casapool%nsoil(npt,SLOW)	- slow soil N (gN/m2)
-!  casapool%nsoil(npt,PASS)	- passive soil N (gN/m2)
+!  casapool%nsoil(npt,MIC)    - microbial soil N (gN/m2)
+!  casapool%nsoil(npt,SLOW)    - slow soil N (gN/m2)
+!  casapool%nsoil(npt,PASS)    - passive soil N (gN/m2)
 !  casamet%tairk(npt)           - air temperature (K)
 !  casamet%tsoilavg(npt)        - soil temperature (K)
 !  casaflux%ClitInptMet(npt)    - metabolic litter inputs (gC/m2/dy)
 !  casaflux%ClitInptStruc(npt)  - structural litter inputs (gC/m2/dy)
+!  casaflux%CpassInpt(npt)      - inputs to passive soil pool (gC/m2/dy)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -3912,6 +4380,7 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
    var5(:,:,:) = MISSING_VALUE
    var6(:,:,:) = MISSING_VALUE
    var7(:,:,:) = MISSING_VALUE
+   var8(:,:,:) = MISSING_VALUE
 
    itime = 1
    do npt = 1, mp
@@ -3929,6 +4398,7 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       var5(ilon,ilat,itime) = casamet%tsoilavg(npt) - tkzeroc
       var6(ilon,ilat,itime) = casaflux%ClitInptMet(npt)
       var7(ilon,ilat,itime) = casaflux%ClitInptStruc(npt)
+      var8(ilon,ilat,itime) = casaflux%CpassInpt(npt)
 !     write(*,*) 'casaflux%ClitInptStruc(',npt,')=', casaflux%ClitInptStruc(npt)
 !     write(*,*) 'var7(',ilon,ilat,itime,')=', var7(ilon,ilat,itime)
    enddo
@@ -3953,21 +4423,34 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
    status =  nf_put_vara_real(ncid, varid_tsoilC, start3, count3, var5)
    if (status /= nf_noerr) call handle_err(status, "put_var(tsoilC)")
 
-   status =  nf_put_vara_real(ncid, varid_litInptMet, start3, count3, var6)
-   if (status /= nf_noerr) call handle_err(status, "put_var(litInptMet)")
+   status =  nf_put_vara_real(ncid, varid_clitInptMet, start3, count3, var6)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cLitInptMet)")
 
-   status =  nf_put_vara_real(ncid, varid_litInptStruc, start3, count3, var7)
-   if (status /= nf_noerr) call handle_err(status, "put_var(litInptStruc)")
+   status =  nf_put_vara_real(ncid, varid_clitInptStruc, start3, count3, var7)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cLitInptStruc)")
+
+   status =  nf_put_vara_real(ncid, varid_cpassInpt, start3, count3, var8)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cpassInpt)")
 
 
 !  f(T) and f(W) output added 11/20/2017. ThetaLiq added 11/27/2017
 !  casapool%fT(npt)  - daily soil temperature multiplier on decomposition rate (0.0-1.0+)
-!  casapool%fW(npt)  - daily soil moisure multiplier on decomposition rate (0.0-1.0)
+!  casapool%fW(npt)  - daily soil moisture multiplier on decomposition rate (0.0-1.0)
 !  casapool%thetaLiq(npt)  - fraction of liquid soil water saturation (0.0-1.0)
+!  casapoolAn%Nsoilmin(npt) - daily mineral soil N (gN/m2)
+!  casaflux%NlitInptMet(npt) - daily metabolic litter N inputs (gN/m2/yr)
+!  casaflux%NlitInptStruc(npt) - daily structural litter N inputs (gN/m2/yr)
+!  casaflux%Nmindep(npt) - daily N deposition (gN/m2/yr)
+!  casaflux%Nminfix(npt) - daily N fixation (gN/m2/yr)
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
    var3(:,:,:) = MISSING_VALUE
+   var4(:,:,:) = MISSING_VALUE
+   var5(:,:,:) = MISSING_VALUE
+   var6(:,:,:) = MISSING_VALUE
+   var7(:,:,:) = MISSING_VALUE
+   var8(:,:,:) = MISSING_VALUE
 
    itime = 1
    do npt = 1, mp
@@ -3981,21 +4464,97 @@ END SUBROUTINE WritePoolFluxNcFile_casacnp_annual
       var1(ilon,ilat,itime) = casapool%fT(npt)
       var2(ilon,ilat,itime) = casapool%fW(npt)
       var3(ilon,ilat,itime) = casapool%thetaLiq(npt)
+
+      var4(ilon,ilat,itime) = casapool%Nsoilmin(npt)
+      var5(ilon,ilat,itime) = casaflux%NlitInptMet(npt)
+      var6(ilon,ilat,itime) = casaflux%NlitInptStruc(npt)
+      var7(ilon,ilat,itime) = casaflux%Nmindep(npt)
+      var8(ilon,ilat,itime) = casaflux%Nminfix(npt)
    enddo
 
 !! status =  nf_put_var(ncid, varid_fT, var1, start3, count3)
    status =  nf_put_vara_real(ncid, varid_fT, start3, count3, var1)
    if (status /= nf_noerr) call handle_err(status, "put_var(fT)")
  
-!! status =  nf_put_var(ncid, varid_fW, var2, start3, count3)
    status =  nf_put_vara_real(ncid, varid_fW, start3, count3, var2)
    if (status /= nf_noerr) call handle_err(status, "put_var(fW)")
 
-!! status =  nf_put_var(ncid, varid_thetaLiq, var3, start3, count3)
    status =  nf_put_vara_real(ncid, varid_thetaLiq, start3, count3, var3)
    if (status /= nf_noerr) call handle_err(status, "put_var(thetaLiq)")
 
-   deallocate(var1,var2,var3,var4,var5,var6,var7)
+   status =  nf_put_vara_real(ncid, varid_nminrl, start3, count3, var4)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMineral)")
+
+   status =  nf_put_vara_real(ncid, varid_nlitinptmet, start3, count3, var5)
+   if (status /= nf_noerr) call handle_err(status, "put_var(NlitInptMet)")
+
+   status =  nf_put_vara_real(ncid, varid_nlitinptstruc, start3, count3, var6)
+   if (status /= nf_noerr) call handle_err(status, "put_var(NlitInptStruc)")
+
+   status =  nf_put_vara_real(ncid, varid_nmindep, start3, count3, var7)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinDep)")
+
+   status =  nf_put_vara_real(ncid, varid_nminfix, start3, count3, var8)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinFix)")
+
+
+!  casaflux%Nminuptake(npt) - Plant N uptake (gN/m2/day)
+!  casaflux%Nminleach(npt) - Mineral N Leaching (gN/m2/day)
+!  casaflux%Nminloss(npt) - Mineral N Loss (gN/m2/day)
+!  casaflux%Nlittermin(npt) - Litter N mineralization (gN/m2/day)
+!  casaflux%Nsmin(npt) - Soil N mineralization (gN/m2/day)
+!  casaflux%Nsimm(npt) - Soil N Immobilization (gN/m2/day)
+!  casaflux%Nsnet(npt) - Net N mineralization (gN/m2/day)
+
+   var1(:,:,:) = MISSING_VALUE
+   var2(:,:,:) = MISSING_VALUE
+   var3(:,:,:) = MISSING_VALUE
+   var4(:,:,:) = MISSING_VALUE
+   var5(:,:,:) = MISSING_VALUE
+   var6(:,:,:) = MISSING_VALUE
+   var7(:,:,:) = MISSING_VALUE
+
+   itime = 1
+   do npt = 1, mp
+      ilon = casamet%ilon(npt)
+      ilat = casamet%ilat(npt)
+      if (casamet%ijgcm(npt) .ne. clmgrid%cellid(ilon,ilat)) then
+         print *, 'WritePoolFluxNcFile_casacnp_annual: casamet%ijgcm(', npt, ')=', casamet%ijgcm(npt)
+         print *, '   clmgrid%cellid(', ilon, ',', ilat, ')=', clmgrid%cellid(ilon,ilat)
+         STOP
+      endif
+      var1(ilon,ilat,itime) = casaflux%Nminuptake(npt)
+      var2(ilon,ilat,itime) = casaflux%Nminleach(npt)
+      var3(ilon,ilat,itime) = casaflux%Nminloss(npt)
+      var4(ilon,ilat,itime) = casaflux%Nlittermin(npt)
+      var5(ilon,ilat,itime) = casaflux%Nsmin(npt)
+      var6(ilon,ilat,itime) = casaflux%Nsimm(npt)
+      var7(ilon,ilat,itime) = casaflux%Nsnet(npt)
+   enddo
+
+   status =  nf_put_vara_real(ncid, varid_nminuptake, start3, count3, var1)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinUptake)")
+
+   status =  nf_put_vara_real(ncid, varid_nminleach, start3, count3, var2)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinLeach)")
+
+   status =  nf_put_vara_real(ncid, varid_nminloss, start3, count3, var3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nMinLoss)")
+
+   status =  nf_put_vara_real(ncid, varid_nlittermin, start3, count3, var4)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nLitMineralization)")
+
+   status =  nf_put_vara_real(ncid, varid_nsmin, start3, count3, var5)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nSoilMineralization)")
+
+   status =  nf_put_vara_real(ncid, varid_nsimm, start3, count3, var6)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nSoilImmob)")
+
+   status =  nf_put_vara_real(ncid, varid_nsnet, start3, count3, var7)
+   if (status /= nf_noerr) call handle_err(status, "put_var(nNetMineralization)")
+
+
+   deallocate(var1,var2,var3,var4,var5,var6,var7,var8)
 
    status = nf_close(ncid)
 
@@ -4059,9 +4618,9 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
    real(r_2), dimension(mp)     :: xnlimit,xplimit,xnplimit,xnuptake,xpuptake,xnpuptake
    real(r_2), dimension(mp)     :: yavgtair,betaco2
    integer,   dimension(mp)     :: nyavgtair
-   real(r_2)    xratio,co2cp
-   real(r_2)    nppScalar
-   real, dimension(mp)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
+   real(r_2)                    :: xratio,co2cp
+   real(r_2)                    :: nppScalar
+   real(r_2), dimension(mp)     :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd,nwd2str
 
    data mdoy/31,59,90,120,151,181,212,243,273,304,334,365/
    data middoy/15,46,74,105,135,166,196,227,258,288,319,349/
@@ -4177,17 +4736,26 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
         casapoolAn%CsoilAn=0.0; casapoolAn%CplantAn=0.0; casapoolAn%ClitterAn=0.0
         casapoolAn%NsoilAn=0.0; casapoolAn%NplantAn=0.0; casapoolAn%NlitterAn=0.0
         casapoolAn%PsoilAn=0.0; casapoolAn%PplantAn=0.0; casapoolAn%PlitterAn=0.0
-        casaflux%ClitInptMetAn = 0.0; casaflux%ClitInptStrucAn = 0.0
+        casaflux%ClitInptMetAn = 0.0; casaflux%ClitInptStrucAn = 0.0; casaflux%CpassInptAn = 0.0
+        casaflux%NlitInptMetAn = 0.0; casaflux%NlitInptStrucAn = 0.0
         casapoolAn%tairAn=0.0; casapoolAn%tsoilAn=0.0
         casapoolAn%fTAn=0.0; casapoolAn%fWAn=0.0; casapoolAn%thetaLiqAn=0.0;
+        !! Added annual N pools and fluxes 11/25/2019 -mdh
+        casapoolAn%NsoilminAn = 0.0; casaflux%NmindepAn = 0.0; casaflux%NminfixAn = 0.0
+        casaflux%NminuptakeAn = 0.0; casaflux%NminlossAn = 0.0; casaflux%NminleachAn = 0.0
+        casaflux%NlitterminAn = 0.0; casaflux%NsminAn = 0.0; casaflux%NsimmAn = 0.0; casaflux%NsnetAn = 0.0
    
-        !! Initialize average annual fluxes and average daily pool values over the 
-        !! most recent myear years for MIMICS. For output only. These fluxes and pools 
-        !! are accumulated in mimics_caccum (mimics_cycle.f90). The means are computed 
-        !! in mimics_poolfluxout (mimics_cycle.f90). -MDH 01/26/2015
-        mimicsfluxAn%ClitInputAn=0.0; mimicsfluxAn%ChrespAn=0.0 
-        mimicspoolAn%ClitterAn=0.0;   mimicspoolAn%CmicrobeAn=0.0; mimicspoolAn%CsoilAn=0.0
-        mimicspoolAn%fTAn=0.0;   mimicspoolAn%fWAn=0.0; mimicspoolAn%thetaLiqAn=0.0; mimicspoolAn%thetaFrznAn=0.0
+        if (isomModel == MIMICS) then
+            !! Initialize average annual fluxes and average daily pool values over the 
+            !! most recent myear years for MIMICS. For output only. These fluxes and pools 
+            !! are accumulated in mimics_caccum (mimics_cycle.f90). The means are computed 
+            !! in mimics_poolfluxout (mimics_cycle.f90). -MDH 01/26/2015
+            mimicsfluxAn%ClitInputAn=0.0; mimicsfluxAn%ChrespAn=0.0 ;  mimicsfluxAn%CSOMpInputAn=0.0
+            mimicspoolAn%ClitterAn=0.0;   mimicspoolAn%CmicrobeAn=0.0; mimicspoolAn%CsoilAn=0.0
+            mimicspoolAn%NlitterAn=0.0;   mimicspoolAn%NmicrobeAn=0.0; mimicspoolAn%NsoilAn=0.0; 
+            mimicsfluxAn%NlitInputAn=0.0; mimicspoolAn%fTAn=0.0;       mimicspoolAn%fWAn=0.0; 
+            mimicspoolAn%thetaLiqAn=0.0;  mimicspoolAn%thetaFrznAn=0.0
+        endif
    
         iYrCnt = iYrCnt + 1
         if (initcasa < 2) then
@@ -4244,7 +4812,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
           do iday=iday1,iday2
 
              ndoy=(iyear-1)*365+iday
-             casaflux%Cgpp(:)  = xcgpp(:,ndoy)		      !Added -mdh 3/24/2014 
+             casaflux%Cgpp(:)  = xcgpp(:,ndoy)              !Added -mdh 3/24/2014 
              casaflux%Cnpp(:)  = xcnpp(:,ndoy) * xnplimit(:)  ! casaflux%Cnpp(:) is reassigned in SUBROUTINE casa_rplant
              if (iYrCnt >= deltYr) then
                  casamet%tairk(:)  = xtairk(:,ndoy)    + deltair
@@ -4348,7 +4916,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
           !! to output CSV files every 100 years.
           if (MOD((nloop-1)*myear+iyear, 100) == 0) then
               writeToRestartCSVfile = .true.
-              write(*,*) 'Writing to restart files year: ', (nloop-1)*mloop+iyear
+              write(*,*) 'Writing to restart files year: ', (nloop-1)*myear+iyear
           else
               writeToRestartCSVfile = .false.
           endif
@@ -4360,7 +4928,11 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
              call WritePoolFluxNcFile_casacnp_annual(filename_ncOut_casa_spin_yr, mp, wrtYr)
           endif
           if (isomModel == MIMICS) then
-               call mimics_poolfluxout(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+               if (icycle == 1) then
+                 call mimics_poolfluxout(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+               else
+                 call mimics_poolfluxout_CN(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+               endif
                if (mdaily /= 1) then
                    !NOTE: The daily .nc output for MIMICS occurs above within the iday loop
                    call WritePoolFluxNcFile_mimics_annual(filename_ncOut_mimics_spin_yr, mp, wrtYr)
@@ -4398,7 +4970,11 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
          endif
 
          if (isomModel == MIMICS) then
-             call mimics_poolfluxout(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+             if (icycle == 1) then
+                 call mimics_poolfluxout(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+             else
+                 call mimics_poolfluxout_CN(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+             endif
              if (mdaily /= 1) then
                  call WritePoolFluxNcFile_mimics_annual(filename_ncOut_mimics, mp, wrtYr)
              endif
@@ -4407,7 +4983,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
              call corpse_poolfluxout(filename_corpseepool,mp,writeToRestartCSVfile)
              if (casafile%iptToSaveIndx > 0) then
                  !Write point-specific output to sPtFileNameCORPSE
-                 call WritePointCORPSE(sPtFileNameCORPSE,casafile%iptToSaveIndx,mp)
+                 call WritePointCORPSE(sPtFileNameCORPSE,casafile%iptToSaveIndx)
              endif
              ! Output current year's CORPSE results for transient run (-mdh 5/16/2016)
              if (mdaily == 1) then
@@ -4430,8 +5006,8 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
   ! END OF SIMULATION 
 
 ! close(98)
-93    format(4(i6,',',2x),100(f15.6,',',2x))
-981   format(4(i6,',',2x),100(f15.6,',',2x))
+!93    format(4(i6,',',2x),100(f15.6,',',2x))
+!981   format(4(i6,',',2x),100(f15.6,',',2x))
 END SUBROUTINE casacnpdriver
 
 !----------------------------------------------------------------------------------------------------
@@ -4464,12 +5040,15 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
                  'casapool%Csoil(MIC),casapool%Csoil(SLOW),casapool%Csoil(PASS),', & 
                  'casapool%Nsoil(MIC),casapool%Nsoil(SLOW),casapool%Nsoil(PASS),', & 
                  'casaflux%Crsoil,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd,', & 
-                 'casaflux%cgpp,casaflux%cnpp,casaflux%crmplant(LEAF),casaflux%crmplant(WOOD),casaflux%crmplant(FROOT),', &
-                 'casaflux%crgplant,phen%phase,casaflux%fracCalloc(LEAF),casaflux%fracCalloc(WOOD),casaflux%fracCalloc(FROOT),', &
-                 'casapool%fT,casapool%fW'
+                 'casaflux%Cgpp,casaflux%Cnpp,casaflux%Crmplant(LEAF),casaflux%Crmplant(WOOD),casaflux%Crmplant(FROOT),', &
+                 'casaflux%Crgplant,phen%phase,casaflux%fracCalloc(LEAF),casaflux%fracCalloc(WOOD),casaflux%fracCalloc(FROOT),', &
+                 'casapool%fT,casapool%fW,casaflux%CpassInpt,casapool%Nsoilmin,casaflux%Nminuptake,', &
+                 'casaflux%Nlittermin,casaflux%Nsmin,casaflux%Nsimm,casaflux%Nminleach,casaflux%Nminloss,xkNlimiting,', &
+                 'klitter(METB),klitter(STR),klitter(CWD),ksoil(MIC),ksoil(SLOW),ksoil(PASS),', &
+                 'casaflux%NminDep,casaflux%NminFix,casaflux%NlitInptMet,casaflux%NlitInptStruc'
   
   close(213)
-  703 format(a89,a90,a66,a66,a62,a62,a82,a101,a108,a23)
+  703 format(a89,a90,a66,a66,a62,a62,a82,a101,a108,a81,a99,a75,a77)
 
   ! The contents of this file are written each day in subroutine WritePointCASA which is called
   ! at the end of each day from subroutine biogeochem.
@@ -4481,6 +5060,8 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
       sPtFileNameMIMICS = trim(dirPtFile) // 'POINT_mimics_' // trim(ptstr) // '.csv' 
       !Create the header for the point file.  Append to the file later.
       open(214,file=sPtFileNameMIMICS)
+
+      if (icycle == 2) then
 !!                             10        20        30        40        50        60        70        80        90        100
 !!                    12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
       write(214,121) 'npt,ijgcm,iYrCnt,doy,tsoilavg,moistavg,hresp,inptMetC,inputStrC,LITm,LITs,MICr,MICk,SOMa,SOMc,SOMp,',   &
@@ -4498,12 +5079,50 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
                      'Vint,Kint,Tsoil,Tmoist,NPPan,CWD,ratLigN,', &
                      'cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd,', &
                      'fAVAL(1),fAVAL(2),fCHEM(1),fCHEM(2),fPHYS(1),fPHYS(2),', &
-                     'Kmod(R1),Kmod(R2),Kmod(R3),Kmod(K1),Kmod(K2),Kmod(K3),'
-      close(214)
-      121 format(a99,a42,a40,a60,a34,a22,a54,a42,a33,a33,a33,a33,a41,a66,a54,a54)
+                     'Kmod(R1),Kmod(R2),Kmod(R3),Kmod(K1),Kmod(K2),Kmod(K3),cSOMpIn,', &
 
-      ! The contents of this file are written each day in subroutine mimics_soil_forwardMM
-      ! or mimics_soil_reverseMM.
+                     'inptMetN,inputStrN,LITmN,LITsN,MICrN,MICkN,SOMaN,SOMcN,SOMpN,DIN,', &
+                     'dLITmN,dLITsN,dMICrN,dMICkN,dSOMaN,dSOMcN,dSOMpN,dDIN,', &
+                     'LITminN(1),LITminN(2),LITminN(3),LITminN(4),', &
+                     'MICtrnN(1),MICtrnN(2),MICtrnN(3),MICtrnN(4),MICtrnN(5),MICtrnN(6),', &
+                     'SOMminN(1),SOMminN(2),DEsorbN,OXIDATN,', &
+                     'DINup_r,DINup_k,upMICrC,upMICrN,upMICkC,upMICkN,', &
+                     'Overflow_r,Overflow_k,Nspill_r,Nspill_k,Cbalance,Nbalance,', &
+                     'nleaf2met,nleaf2str,nroot2met,nroot2str,nwd2str,nwood2cwd'
+
+          ! The contents of this file are written each day in subroutine mimics_soil_reverseMM_CN
+
+      else
+ 
+!!                             10        20        30        40        50        60        70        80        90        100
+!!                    12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+      write(214,122) 'npt,ijgcm,iYrCnt,doy,tsoilavg,moistavg,hresp,inptMetC,inputStrC,LITm,LITs,MICr,MICk,SOMa,SOMc,SOMp,',   &
+                     'dLITm,dLITs,dMICr,dMICk,dSOMa,dSOMc,dSOMp,', &
+                     'LITmin(1),LITmin(2),LITmin(3),LITmin(4),',  &
+                     'MICtrn(1),MICtrn(2),MICtrn(3),MICtrn(4),MICtrn(5),MICtrn(6),', &
+                     'SOMmin(1),SOMmin(2),DEsorb,OXIDAT,', &
+                     'fmet,tauMod,tauR,tauK,', &
+                     'Vmax(R1),Vmax(R2),Vmax(R3),Vmax(K1),Vmax(K2),Vmax(K3),', &
+                     'Km(R1),Km(R2),Km(R3),Km(K1),Km(K2),Km(K3),', &
+                     'Vslope(R1),Vslope(R2),Vslope(R3),', &
+                     'Vslope(K1),Vslope(K2),Vslope(K3),', &
+                     'Kslope(R1),Kslope(R2),Kslope(R3),', &
+                     'Kslope(K1),Kslope(K2),Kslope(K3),', &
+                     'Vint,Kint,Tsoil,Tmoist,NPPan,CWD,ratLigN,', &
+                     'cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd,', &
+                     'fAVAL(1),fAVAL(2),fCHEM(1),fCHEM(2),fPHYS(1),fPHYS(2),', &
+                     'Kmod(R1),Kmod(R2),Kmod(R3),Kmod(K1),Kmod(K2),Kmod(K3),cSOMpIn,Cbalance,'
+
+          ! The contents of this file are written each day in subroutine mimics_soil_forwardMM
+          ! or mimics_soil_reverseMM.
+
+      endif
+
+      close(214)
+      121 format(a99,a42,a40,a60,a34,a22,a54,a42,a33,a33,a33,a33,a41,a66,a54,a62, a65,a54,a44,a66,a38,a48,a58,a57)
+      122 format(a99,a42,a40,a60,a34,a22,a54,a42,a33,a33,a33,a33,a41,a66,a54,a71)
+
+
 
   else if (isomModel == CORPSE) then
       iptToSave_corpse = casafile%iptToSave
@@ -4534,7 +5153,7 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
   USE phenvariable
   implicit none
   integer, intent(in) :: iYrCnt, idoy, mp
-  real, dimension(mp), intent(in)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
+  real(r_2), dimension(mp), intent(in)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
 
   ! Local Variables
   integer :: npt
@@ -4551,14 +5170,19 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
                  casapool%Nsoil(npt,MIC),casapool%Nsoil(npt,SLOW),casapool%Nsoil(npt,PASS), &
                  casaflux%Crsoil(npt),cleaf2met(npt),cleaf2str(npt),croot2met(npt),croot2str(npt), &
                  cwd2str(npt),cwd2co2(npt),cwood2cwd(npt), &
-                 casaflux%cgpp(npt),casaflux%cnpp(npt), &
-                 casaflux%crmplant(npt,LEAF),casaflux%crmplant(npt,WOOD),casaflux%crmplant(npt,FROOT), &
-                 casaflux%crgplant(npt),real(phen%phase(npt)), &
+                 casaflux%Cgpp(npt),casaflux%Cnpp(npt), &
+                 casaflux%Crmplant(npt,LEAF),casaflux%Crmplant(npt,WOOD),casaflux%Crmplant(npt,FROOT), &
+                 casaflux%Crgplant(npt),real(phen%phase(npt)), &
                  casaflux%fracCalloc(npt,LEAF),casaflux%fracCalloc(npt,WOOD),casaflux%fracCalloc(npt,FROOT), &
-                 casapool%fT(npt),casapool%fW(npt)
+                 casapool%fT(npt),casapool%fW(npt),casaflux%CpassInpt,casapool%Nsoilmin,casaflux%Nminuptake, &
+                 casaflux%Nlittermin(npt),casaflux%Nsmin(npt),casaflux%Nsimm(npt), &
+                 casaflux%Nminleach(npt),casaflux%Nminloss(npt),casaflux%xkNlimiting(npt), &
+                 casaflux%klitter(npt,METB),casaflux%klitter(npt,STR),casaflux%klitter(npt,CWD), &
+                 casaflux%ksoil(npt,MIC),casaflux%ksoil(npt,SLOW),casaflux%ksoil(npt,PASS), &
+                 casaflux%NminDep,casaflux%NminFix,casaflux%NlitInptMet,casaflux%NlitInptStruc
   close(213)
 
-  701 format(5(i6,','),40(f12.5,','))
+  701 format(5(i6,','),54(f12.5,','),f12.8,4(',',f12.5))
 
 
 END SUBROUTINE WritePointCASA
@@ -4578,7 +5202,7 @@ SUBROUTINE InsertYearInNcFileName(fileName_ncOut, year)
 
     back = .true.
 
-    write(syear,'(i4)') year	! copy year to string syear
+    write(syear,'(i4)') year    ! copy year to string syear
     if (year < 1000) then
         syear(1:1) = '0'
     endif
