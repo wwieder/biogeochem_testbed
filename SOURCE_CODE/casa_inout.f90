@@ -44,11 +44,12 @@
 ! for each grid cell are read directly from a file rather than assigned
 ! from soil type (1-7).
 !
-! Melannie D. Hartman, March 2014 - November 2017
+! Melannie D. Hartman, March 2014 - December 2019
 ! Removed NPP and LAI from met.nc files. -mdh 11/6/2017
 ! Echo CASA parameter values as they are read in (subroutine casa_readbiome). -mdh 11/6/2017
 ! Echo restart file contents (subroutine casa_init). -mdh 11/6/2017
 ! Add N fluxes to netCDF output. -mdh 11/25/2019
+! Added new set of parameters to the botton of the CASA PFT parameter file. -mdh 12/23/2019
 !--------------------------------------------------------------------------------
 
 SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
@@ -61,9 +62,9 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
   implicit none
   character(len=100)  fname_cnpbiome
   character(len=100)  filename_soilprop
-  character(len=200)  buffer
+  character(len=300)  buffer
   integer mvt,mst
-  integer  i,iv1,nv,ns,nv0,nv1,nv2,nv3,nv4,nv5,nv6,nv7,nv8,nv9,nv10,nv11,npt,iv,is,iso
+  integer  i,iv1,nv,ns,nv0,nv1,nv2,nv3,nv4,nv5,nv6,nv7,nv8,nv9,nv10,nv11,nv12,npt,iv,is,iso
   real(r_2),    dimension(mvt)          :: leafage,frootage,woodage
   real(r_2),    dimension(mvt)          :: totroot
   real(r_2),    dimension(mvt)          :: cwdage,metage,strage
@@ -390,6 +391,45 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
       ENDDO
 !@@@@@@@@@@@@@@@@@@@@@
 
+!!-------------------------------------------------------------------------------------------
+!! Added this section (-MDH 12/23/2019)
+
+      ! Set default values
+      casabiome%xkNlimitmin(:) = 0.50
+      casabiome%xkNlimitmax(:) = 2.0
+      casabiome%fracRootExud(:) = 0.0 
+      casabiome%CNRootExud(:) = 15.0 
+      casabiome%CUEmetbmic(:) = 0.45 
+      casabiome%CUEstrmic(:) = 0.45 
+      casabiome%CUEstrslow(:) = 0.70 
+      casabiome%CUEcwdmic(:) = 0.40 
+      casabiome%CUEcwdslow(:) = 0.70 
+      casabiome%CUEmicslow(:) = 1.0 
+      casabiome%CUEmicpass(:) = 1.0 
+      casabiome%CUEpassslow(:) = 0.45 
+
+      ! Handle unexpected end of file
+      read(101,'(a)', end=999) buffer
+      write(*,*) trim(buffer)
+      read(101,'(a)',end=999) buffer
+      write(*,*) trim(buffer)
+      DO nv=1,mvt
+        read(101,*,end=999) nv12, &
+             casabiome%xkNlimitmin(nv),casabiome%xkNlimitmax(nv),casabiome%fracRootExud(nv), &
+             casabiome%CNRootExud(nv),casabiome%CUEmetbmic(nv),casabiome%CUEstrmic(nv), &
+             casabiome%CUEstrslow(nv),casabiome%CUEcwdmic(nv),casabiome%CUEcwdslow(nv), &
+             casabiome%CUEmicslow(nv),casabiome%CUEmicpass(nv),casabiome%CUEpassslow(nv)                  
+        write(*,'(i2,1x,12(f7.4,1x))') nv12, &
+             casabiome%xkNlimitmin(nv),casabiome%xkNlimitmax(nv),casabiome%fracRootExud(nv), &
+             casabiome%CNRootExud(nv),casabiome%CUEmetbmic(nv),casabiome%CUEstrmic(nv), &
+             casabiome%CUEstrslow(nv),casabiome%CUEcwdmic(nv),casabiome%CUEcwdslow(nv), &
+             casabiome%CUEmicslow(nv),casabiome%CUEmicpass(nv),casabiome%CUEpassslow(nv)                    
+        !print *, 'nv12',nv12
+
+      ENDDO
+!!-------------------------------------------------------------------------------------------
+
+999   continue
       close(101)
       write(*,*) "Done reading CASA biome-specific parameters from file ", fname_cnpbiome, "..."
 

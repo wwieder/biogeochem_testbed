@@ -716,7 +716,7 @@ SUBROUTINE casa_coeffsoil(xklitter,xksoil,veg,soil,casabiome,casaflux,casamet)
   TYPE (casa_met),              INTENT(INOUT) :: casamet
 
   ! local variables
-  INTEGER j,k,kk,nland             !i: for plant pool, j for litter, k for soil
+  INTEGER j,k,kk,nland,nv       !i: for plant pool, j for litter, k for soil
 
   casaflux%fromLtoS(:,:,:)      = 0.0   
   casaflux%fromStoS(:,:,:)      = 0.0                                
@@ -751,27 +751,50 @@ SUBROUTINE casa_coeffsoil(xklitter,xksoil,veg,soil,casabiome,casaflux,casamet)
        casaflux%ksoil(:,pass) = casaflux%ksoil(:,pass)* 1.5 
     ENDWHERE  ! 
 
-                                          ! flow from litter to soil 
-    casaflux%fromLtoS(:,mic,metb)   = 0.45                                  
-                                          ! metb -> mic
-    casaflux%fromLtoS(:,mic,str)   = 0.45*(1.0-casabiome%fracLigninplant(veg%iveg(:),leaf))  
-                                          ! str -> mic
-    casaflux%fromLtoS(:,slow,str)  = 0.7 * casabiome%fracLigninplant(veg%iveg(:),leaf)       
-                                          ! str -> slow
-    casaflux%fromLtoS(:,mic,cwd)   = 0.40*(1.0 - casabiome%fracLigninplant(veg%iveg(:),wood)) 
-                                          ! CWD -> fmic
-    casaflux%fromLtoS(:,slow,cwd)  = 0.7 * casabiome%fracLigninplant(veg%iveg(:),wood)        
-                                          ! CWD -> slow
- 
+    !! Allow carbon use efficiencies to be read from the casa pft parameter file. -MDH 12/23/2019 
+!                                         ! flow from litter to soil 
+!   casaflux%fromLtoS(:,mic,metb)   = 0.45                                  
+!                                         ! metb -> mic
+!   casaflux%fromLtoS(:,mic,str)   = 0.45*(1.0-casabiome%fracLigninplant(veg%iveg(:),leaf))  
+!                                         ! str -> mic
+!   casaflux%fromLtoS(:,slow,str)  = 0.7 * casabiome%fracLigninplant(veg%iveg(:),leaf)       
+!                                         ! str -> slow
+!   casaflux%fromLtoS(:,mic,cwd)   = 0.40*(1.0 - casabiome%fracLigninplant(veg%iveg(:),wood)) 
+!                                         ! CWD -> fmic
+!   casaflux%fromLtoS(:,slow,cwd)  = 0.7 * casabiome%fracLigninplant(veg%iveg(:),wood)        
+!                                         ! CWD -> slow
+!
 !! set the following two backflow to set (see Bolker 199x)
 !    casaflux%fromStoS(:,mic,slow)  = 0.45 * (0.997 - 0.009 *soil%clay(:))
 !    casaflux%fromStoS(:,mic,pass)  = 0.45
+!
+!   casaflux%fromStoS(:,slow,mic)  = (0.85 - 0.68 * (soil%clay(:)+soil%silt(:))) &
+!                                    * (0.997 - 0.032*soil%clay(:))
+!   casaflux%fromStoS(:,pass,mic)  = (0.85 - 0.68 * (soil%clay(:)+soil%silt(:))) &
+!                                    * (0.003 + 0.032*soil%clay(:))
+!   casaflux%fromStoS(:,pass,slow) = 0.45 * (0.003 + 0.009 * soil%clay(:)) 
 
-    casaflux%fromStoS(:,slow,mic)  = (0.85 - 0.68 * (soil%clay(:)+soil%silt(:))) &
+
+    casaflux%fromLtoS(:,mic,metb)  = casabiome%CUEmetbmic(veg%iveg(:))                                  
+                                          ! metb -> mic
+    casaflux%fromLtoS(:,mic,str)   = casabiome%CUEstrmic(veg%iveg(:)) * (1.0-casabiome%fracLigninplant(veg%iveg(:),leaf))  
+                                          ! str -> mic
+    casaflux%fromLtoS(:,slow,str)  = casabiome%CUEstrslow(veg%iveg(:)) * casabiome%fracLigninplant(veg%iveg(:),leaf)       
+                                          ! str -> slow
+    casaflux%fromLtoS(:,mic,cwd)   = casabiome%CUEcwdmic(veg%iveg(:)) * (1.0-casabiome%fracLigninplant(veg%iveg(:),wood)) 
+                                          ! CWD -> fmic
+    casaflux%fromLtoS(:,slow,cwd)  = casabiome%CUEcwdslow(veg%iveg(:)) * casabiome%fracLigninplant(veg%iveg(:),wood)        
+                                          ! CWD -> slow
+ 
+     !! set the following two backflow to set (see Bolker 199x)
+     !casaflux%fromStoS(nv,mic,slow)  = 0.0
+     !casaflux%fromStoS(nv,mic,pass)  = 0.0
+
+    casaflux%fromStoS(:,slow,mic)  = casabiome%CUEmicslow(veg%iveg(:)) * (0.85 - 0.68*(soil%clay(:)+soil%silt(:))) &
                                      * (0.997 - 0.032*soil%clay(:))
-    casaflux%fromStoS(:,pass,mic)  = (0.85 - 0.68 * (soil%clay(:)+soil%silt(:))) &
+    casaflux%fromStoS(:,pass,mic)  = casabiome%CUEmicpass(veg%iveg(:)) * (0.85 - 0.68*(soil%clay(:)+soil%silt(:))) &
                                      * (0.003 + 0.032*soil%clay(:))
-    casaflux%fromStoS(:,pass,slow) = 0.45 * (0.003 + 0.009 * soil%clay(:) ) 
+    casaflux%fromStoS(:,pass,slow) = casabiome%CUEpassslow(veg%iveg(:)) * (0.003 + 0.009*soil%clay(:)) 
 
   ENDWHERE
    

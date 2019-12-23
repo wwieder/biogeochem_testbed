@@ -206,14 +206,20 @@ SUBROUTINE casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
   ENDDO
 
   ! Now check if there is sufficient mineral N 
+  ! Use parameters from CASA PFT parameter file. -mdh 12/23/2019
+  ! casabiome%xkNlimitmin(veg%iveg(:)) replaces 0.5
+  ! casabiome%xkNlimitmax(veg%iveg(:)) replaces 2.0
   WHERE(casamet%iveg2(:)/=icewater)
-    WHERE((casapool%Nsoilmin(:)-2.0) > 0.0) 
+    !WHERE((casapool%Nsoilmin(:)-2.0) > 0.0) 
+    WHERE((casapool%Nsoilmin(:)-casabiome%xkNlimitmax(veg%iveg(:))) > 0.0) 
       xkNlimiting(:) = 1.0
     ELSEWHERE
       ! Linear ramp from 0.0 to 1.0 for 0.5 < casapool%Nsoilmin(:) < 2.0
       ! y = (y2 - y1) / (x2 - x1) * (x - x2) + y2
 
-      xkNlimiting(:) = (1.0 - 0.0) / (2.0 - 0.5) * (casapool%Nsoilmin(:) - 2.0) + 1.0
+      !xkNlimiting(:) = (1.0 - 0.0) / (2.0 - 0.5) * (casapool%Nsoilmin(:) - 2.0) + 1.0
+      xkNlimiting(:) = (1.0 - 0.0) / (casabiome%xkNlimitmax(veg%iveg(:)) - casabiome%xkNlimitmin(veg%iveg(:))) &
+                       * (casapool%Nsoilmin(:) - casabiome%xkNlimitmax(veg%iveg(:))) + 1.0
       xkNlimiting(:) = MAX(0.0, xkNlimiting(:)) 
       xkNlimiting(:) = MIN(1.0, xkNlimiting(:))
     ENDWHERE

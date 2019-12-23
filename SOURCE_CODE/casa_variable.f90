@@ -172,7 +172,20 @@ MODULE casavariable
                                        maxfinelitter,  &
                                        maxcwd,         &             
                                        nintercept,     &  
-                                       nslope             
+                                       nslope,         &
+
+                                       xkNlimitmin,    &             
+                                       xkNlimitmax,    &             
+                                       fracRootExud,   &             
+                                       CNRootExud,     &    
+                                       CUEmetbmic,     &         
+                                       CUEstrmic,      &         
+                                       CUEstrslow,     &         
+                                       CUEcwdmic,      &         
+                                       CUEcwdslow,     &         
+                                       CUEmicslow,     &         
+                                       CUEmicpass,     &         
+                                       CUEpassslow
 
     REAL(r_2), DIMENSION(:,:),POINTER :: plantrate,     &
                                        rmplant,         &
@@ -475,6 +488,20 @@ SUBROUTINE alloc_casavariable(mp,mvtype,ms)
            casabiome%maxcwd(mvtype),                 &
            casabiome%nintercept(mvtype),             &
            casabiome%nslope(mvtype),                 &
+
+           casabiome%xkNlimitmin(mvtype),            &             
+           casabiome%xkNlimitmax(mvtype),            &             
+           casabiome%fracRootExud(mvtype),           &             
+           casabiome%CNRootExud(mvtype),             &    
+           casabiome%CUEmetbmic(mvtype),             &         
+           casabiome%CUEstrmic(mvtype),              &         
+           casabiome%CUEstrslow(mvtype),             &         
+           casabiome%CUEcwdmic(mvtype),              &         
+           casabiome%CUEcwdslow(mvtype),             &         
+           casabiome%CUEmicslow(mvtype),             &         
+           casabiome%CUEmicpass(mvtype),             &         
+           casabiome%CUEpassslow(mvtype),            &
+
            casabiome%plantrate(mvtype,mplant),       &
            casabiome%rmplant(mvtype,mplant),         &
            casabiome%fracnpptoP(mvtype,mplant),      &
