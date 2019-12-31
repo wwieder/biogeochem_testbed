@@ -1497,14 +1497,23 @@ SUBROUTINE casa_Nrequire(xnCnpp,Nreqmin,Nreqmax,NtransPtoP,veg, &
   ! local variable
   INTEGER :: np
   REAL(r_2), DIMENSION(mp,mplant)     :: ncplantmax
+  REAL(r_2) :: fNC
 
   Nreqmin(:,:)    = 0.0
   Nreqmax(:,:)    = 0.0
   NtransPtoP(:,:) = 0.0
   
+  ! It appears that the new parameters casabiome%xkNlimitmin and casabiome%xkNlimitmax should
+  ! replace 0.5 and 2.0 below. The multiplier is 0.0 <= max(0.0,2.0**(0.5*casapool%Nsoilmin(np))-1.0) <= 1.0,
+  ! and therefore casabiome%ratioNCplantmin <= ncplantmax <= casabiome%ratioNCplantmax,
+  ! but changing values 0.5 and 2.0 alters the range of this multiplier.
+  ! This 0.0-1.0 multiplier is a near linear function so I replaced it with a linear
+  ! function that uses casabiome%xkNlimitmin and casabiome%xkNlimitmax.  -mdh 12/31/2019.
+
   DO np=1,mp
   IF(casamet%iveg2(np)/=icewater) THEN
-    if(casapool%Nsoilmin(np)<2.0) then
+    !if(casapool%Nsoilmin(np)<2.0) then
+    if (casapool%Nsoilmin(np)< casabiome%xkNlimitmax(veg%iveg(np))) then
      !  ncplantmax(np,leaf) =casabiome%ratioNCplantmin(veg%iveg(np),leaf)  &
      !                      +(casabiome%ratioNCplantmax(veg%iveg(np),leaf)-casabiome%ratioNCplantmin(veg%iveg(np),leaf)) &
      !                        * min(1.0,max(0.0,casapool%Nsoilmin(np)*0.5)) 
@@ -1515,16 +1524,39 @@ SUBROUTINE casa_Nrequire(xnCnpp,Nreqmin,Nreqmax,NtransPtoP,veg, &
      !                      +(casabiome%ratioNCplantmax(veg%iveg(np),froot)-casabiome%ratioNCplantmin(veg%iveg(np),froot)) &
      !                        * min(1.0,max(0.0,casapool%Nsoilmin(np)*0.5)) 
 
+     ! Code replaced. -mdh 12/31/2019
+     ! ncplantmax(np,leaf) =casabiome%ratioNCplantmin(veg%iveg(np),leaf)  &
+     !                     +(casabiome%ratioNCplantmax(veg%iveg(np),leaf)-casabiome%ratioNCplantmin(veg%iveg(np),leaf)) &
+     !                       * min(1.0,max(0.0,2.0**(0.5*casapool%Nsoilmin(np))-1.0)) 
+     ! ncplantmax(np,wood) =casabiome%ratioNCplantmin(veg%iveg(np),wood)  &
+     !                     +(casabiome%ratioNCplantmax(veg%iveg(np),wood)-casabiome%ratioNCplantmin(veg%iveg(np),wood)) &
+     !                       * min(1.0,max(0.0,2.0**(0.5*casapool%Nsoilmin(np))-1.0)) 
+     ! ncplantmax(np,froot) =casabiome%ratioNCplantmin(veg%iveg(np),froot)  &
+     !                     +(casabiome%ratioNCplantmax(veg%iveg(np),froot)-casabiome%ratioNCplantmin(veg%iveg(np),froot)) &
+     !                       * min(1.0,max(0.0,2.0**(0.5*casapool%Nsoilmin(np))-1.0)) 
+
+       ! N limitation, so use plant N:C ratio that is between the min N:C and max N:C to compute N demand. 
+       ! Linear ramp from 0.0 to 1.0 for casabiome%xkNlimitmin < casapool%Nsoilmin(:) < casabiome%xkNlimitmax
+       ! y = (y2 - y1) / (x2 - x1) * (x - x2) + y2
+       ! max(0.0,fNC) = 0 when casapool%Nsoilmin <= casabiome%xkNlimitmin, low N 
+       !                  ncplantmax(np,:) = casabiome%ratioNCplantmin(veg%iveg(np),:)
+       ! max(0.0,fNC) = 1 when casapool%Nsoilmin >= casabiome%xkNlimitmax, ample N 
+       !                  ncplantmax(np,:) = casabiome%ratioNCplantmin(veg%iveg(np),:)) + NC ratio difference
+
+       fNC = (1.0 - 0.0) / (casabiome%xkNlimitmax(veg%iveg(np)) - casabiome%xkNlimitmin(veg%iveg(np))) &
+                       * (casapool%Nsoilmin(np) - casabiome%xkNlimitmax(veg%iveg(np))) + 1.0
+
        ncplantmax(np,leaf) =casabiome%ratioNCplantmin(veg%iveg(np),leaf)  &
                            +(casabiome%ratioNCplantmax(veg%iveg(np),leaf)-casabiome%ratioNCplantmin(veg%iveg(np),leaf)) &
-                             * min(1.0,max(0.0,2.0**(0.5*casapool%Nsoilmin(np))-1.0)) 
+                             * min(1.0,max(0.0,fNC)) 
        ncplantmax(np,wood) =casabiome%ratioNCplantmin(veg%iveg(np),wood)  &
                            +(casabiome%ratioNCplantmax(veg%iveg(np),wood)-casabiome%ratioNCplantmin(veg%iveg(np),wood)) &
-                             * min(1.0,max(0.0,2.0**(0.5*casapool%Nsoilmin(np))-1.0)) 
+                             * min(1.0,max(0.0,fNC)) 
        ncplantmax(np,froot) =casabiome%ratioNCplantmin(veg%iveg(np),froot)  &
                            +(casabiome%ratioNCplantmax(veg%iveg(np),froot)-casabiome%ratioNCplantmin(veg%iveg(np),froot)) &
-                             * min(1.0,max(0.0,2.0**(0.5*casapool%Nsoilmin(np))-1.0)) 
+                             * min(1.0,max(0.0,fNC)) 
     else
+      ! No N limitation, so use maximum plant N:C ratio to compute N demand. 
       ncplantmax(np,leaf)  = casabiome%ratioNCplantmax(veg%iveg(np),leaf) 
       ncplantmax(np,wood)  = casabiome%ratioNCplantmax(veg%iveg(np),wood) 
       ncplantmax(np,froot) = casabiome%ratioNCplantmax(veg%iveg(np),froot) 
