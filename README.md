@@ -69,8 +69,9 @@ git commit    (this will open up a text file where you can add comments
 git log --decorate --oneline --graph
 
 #### Create and check out new branch, best to start from the latest upstream/master
-##### This example makes a branch from remote (not local) master
+##### This example makes a branch from remote (not local) master _or_ branch
 git checkout --no-track -b mybranch upstream/master
+git checkout --no-track -b branch_name upstream/branch_name
 
 
 
