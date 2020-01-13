@@ -857,6 +857,10 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
    casaflux%FluxCtolitter = 0.0
    casaflux%FluxNtolitter = 0.0
    casaflux%FluxPtolitter = 0.0
+   ! Added root exudate flux -mdh 1/13/2020
+   casaflux%Cexudate = 0.0
+   casaflux%Nexudate = 0.0
+   casaflux%Pexudate = 0.0
 
    ! added by ypwang following Chris Lu 5/nov/2012
 
@@ -885,6 +889,11 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
 !    PRINT *, 'casapool%cplant(npt,:) = ', casapool%cplant(npt,:)
     casapool%dCplantdt(npt,:)  =  casaflux%Cnpp(npt) * casaflux%fracCalloc(npt,:)     &
                                - casaflux%kplant(npt,:)  * casapool%cplant(npt,:)
+
+    ! Compute root exudate C flux as a fraction of froot NPP. -mdh 1/13/2020
+    casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) * casaflux%fracCalloc(npt,froot))  
+    casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt)   
+
     ! change here made by ypw on 26august 2011
     ! calculate fraction c to labile pool as a fraction of gpp, not npp
     ! casapool%dClabiledt(npt)   = casaflux%Cnpp(npt)    * casaflux%fracClabile(npt)
@@ -892,7 +901,10 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
     ! added by ypwang 5/nov/2012
     cleaf2met(npt) = casaflux%fromPtoL(npt,metb,leaf)  * casaflux%kplant(npt,leaf)  * casapool%cplant(npt,leaf)
     cleaf2str(npt) = casaflux%fromPtoL(npt,str,leaf)   * casaflux%kplant(npt,leaf)  * casapool%cplant(npt,leaf)
-    croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
+    ! Add casaflux%Cexudate(npt) to metabolic litter. -mdh 1/13/2019
+    !croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
+    croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot) &
+                     + casaflux%Cexudate(npt)
     croot2str(npt) = casaflux%fromPtoL(npt,str,froot)  * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
     cwood2cwd(npt) = casaflux%fromPtoL(npt,cwd,wood)   * casaflux%kplant(npt,wood)  * casapool%cplant(npt,wood)
 
@@ -912,6 +924,14 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                         * casabiome%ftransNPtoL(veg%iveg(npt),wood)
        casapool%dNplantdt(npt,froot)  = -casaflux%kplant(npt,froot) * casapool%Nplant(npt,froot) &
                                         * casabiome%ftransNPtoL(veg%iveg(npt),froot)
+
+       ! Compute root exudate N flux as a fraction of froot N uptake. -mdh 1/13/2020
+       if (casaflux%Cexudate(npt) > 0.0) then
+         casaflux%Nexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Nminuptake(npt) &
+                                  * casaflux%fracNalloc(npt,froot))
+         casapool%dNplantdt(npt,froot) = casapool%dNplantdt(npt,froot) - casaflux%Nexudate(npt)
+       endif
+
        ! added by ypwang 5/nov/2012
 
        nleaf2str(npt) = casaflux%fromPtoL(npt,str,leaf) * casaflux%kplant(npt,leaf)  &
@@ -920,6 +940,7 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                       * casapool%cplant(npt,froot)      * ratioNCstrfix
 
        nleaf2met(npt) = -casapool%dNplantdt(npt,leaf)  - nleaf2str(npt)
+       ! dNplantdt includes casaflux%Nexudate. -mdh 1/13/2020
        nroot2met(npt) = -casapool%dNplantdt(npt,froot) - nroot2str(npt)
        nwood2cwd(npt) = -casapool%dNplantdt(npt,wood)
 
@@ -943,6 +964,13 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                      * casabiome%ftransPPtoL(veg%iveg(npt),wood)
        casapool%dPplantdt(npt,froot)  = - casaflux%kplant(npt,froot) * casapool%Pplant(npt,froot) &
                                      * casabiome%ftransPPtoL(veg%iveg(npt),froot)
+
+       ! Compute root exudate P flux as a fraction of froot P uptake. -mdh 1/13/2020
+       if (casaflux%Cexudate(npt) > 0.0) then
+         casaflux%Pexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Plabuptake(npt) &
+                                 * casaflux%fracPalloc(npt,froot))
+         casapool%dPplantdt(npt,froot) = casapool%dPplantdt(npt,froot) - casaflux%Pexudate(npt)
+       endif
        ! added by ypwang 5/nov/2012
 
        pleaf2str(npt) = casaflux%fromPtoL(npt,str,leaf) * casaflux%kplant(npt,leaf)  &
@@ -950,10 +978,11 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
        proot2str(npt) = casaflux%fromPtoL(npt,str,froot)* casaflux%kplant(npt,froot) &
                       * casapool%cplant(npt,froot)      * ratioNCstrfix/ratioNPstrfix
        pleaf2met(npt) = -casapool%dPplantdt(npt,leaf)  - pleaf2str(npt)
+       ! dPplantdt includes casaflux%Pexudate. -mdh 1/13/2020
        proot2met(npt) = -casapool%dPplantdt(npt,froot) - proot2str(npt)
        pwood2cwd(npt) = -casapool%dPplantdt(npt,wood)
 
-
+       
     ENDIF
 
 
@@ -965,6 +994,9 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                  * casapool%cplant(npt,nP)
        ENDDO
     ENDDO
+ 
+    ! It appears that the calculation above did not account for Cexudate from froot to metb. -mdh 1/13/2020
+    casaflux%FluxCtolitter(npt,metb) = casaflux%FluxCtolitter(npt,metb) + casaflux%Cexudate(npt)
 
 !    PRINT *, 'before 2nd icycle >1; npt, mp', npt, mp
     IF(icycle > 1) THEN
@@ -972,6 +1004,7 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                * casapool%cplant(npt,leaf)       * ratioNCstrfix              &     
                                + casaflux%fromPtoL(npt,str,froot)* casaflux%kplant(npt,froot) &
                                * casapool%cplant(npt,froot)      * ratioNCstrfix  
+       ! FluxNtolitter includes Nexudate in dNplantdt calculation. -mdh 1/13/2019
        casaflux%FluxNtolitter(npt,metb) = -casapool%dNplantdt(npt,leaf)-casapool%dNplantdt(npt,froot) &
                                           - casaflux%FluxNtolitter(npt,str)
        casaflux%FluxNtolitter(npt,CWD) = -casapool%dNplantdt(npt,wood)
@@ -990,6 +1023,7 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                * casapool%cplant(npt,leaf)       * ratioNCstrfix/ratioNPstrfix        &     
                                + casaflux%fromPtoL(npt,str,froot)* casaflux%kplant(npt,froot) &
                                * casapool%cplant(npt,froot)      * ratioNCstrfix/ratioNPstrfix
+       ! FluxPtolitter includes Pexudate in dPplantdt calculation. -mdh 1/13/2019
        casaflux%FluxPtolitter(npt,metb) = -casapool%dPplantdt(npt,leaf)-casapool%dPplantdt(npt,froot) &
                                - casaflux%FluxPtolitter(npt,str)
        casaflux%FluxPtolitter(npt,CWD) = -casapool%dPplantdt(npt,wood)

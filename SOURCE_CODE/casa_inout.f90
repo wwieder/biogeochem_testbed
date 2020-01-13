@@ -398,7 +398,7 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
       casabiome%xkNlimitmin(:) = 0.50
       casabiome%xkNlimitmax(:) = 2.0
       casabiome%fracRootExud(:) = 0.0 
-      casabiome%CNRootExud(:) = 15.0 
+!     casabiome%CNRootExud(:) = 15.0 
       casabiome%CUEmetbmic(:) = 0.45 
       casabiome%CUEstrmic(:) = 0.45 
       casabiome%CUEstrslow(:) = 0.70 
@@ -416,12 +416,12 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
       DO nv=1,mvt
         read(101,*,end=999) nv12, &
              casabiome%xkNlimitmin(nv),casabiome%xkNlimitmax(nv),casabiome%fracRootExud(nv), &
-             casabiome%CNRootExud(nv),casabiome%CUEmetbmic(nv),casabiome%CUEstrmic(nv), &
+             casabiome%CUEmetbmic(nv),casabiome%CUEstrmic(nv), &
              casabiome%CUEstrslow(nv),casabiome%CUEcwdmic(nv),casabiome%CUEcwdslow(nv), &
              casabiome%CUEmicslow(nv),casabiome%CUEmicpass(nv),casabiome%CUEpassslow(nv)                  
         write(*,'(i2,1x,12(f7.4,1x))') nv12, &
              casabiome%xkNlimitmin(nv),casabiome%xkNlimitmax(nv),casabiome%fracRootExud(nv), &
-             casabiome%CNRootExud(nv),casabiome%CUEmetbmic(nv),casabiome%CUEstrmic(nv), &
+             casabiome%CUEmetbmic(nv),casabiome%CUEstrmic(nv), &
              casabiome%CUEstrslow(nv),casabiome%CUEcwdmic(nv),casabiome%CUEcwdslow(nv), &
              casabiome%CUEmicslow(nv),casabiome%CUEmicpass(nv),casabiome%CUEpassslow(nv)                    
         !print *, 'nv12',nv12
@@ -5085,10 +5085,10 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
                  'casapool%fT,casapool%fW,casaflux%CpassInpt,casapool%Nsoilmin,casaflux%Nminuptake,', &
                  'casaflux%Nlittermin,casaflux%Nsmin,casaflux%Nsimm,casaflux%Nminleach,casaflux%Nminloss,xkNlimiting,', &
                  'klitter(METB),klitter(STR),klitter(CWD),ksoil(MIC),ksoil(SLOW),ksoil(PASS),', &
-                 'casaflux%NminDep,casaflux%NminFix,casaflux%NlitInptMet,casaflux%NlitInptStruc'
-  
+                 'casaflux%NminDep,casaflux%NminFix,casaflux%NlitInptMet,casaflux%NlitInptStruc,', &
+                 'casaflux%Cexudate,casaflux%Nexudate'
   close(213)
-  703 format(a89,a90,a66,a66,a62,a62,a82,a101,a108,a81,a99,a75,a77)
+  703 format(a89,a90,a66,a66,a62,a62,a82,a101,a108,a81,a99,a75,a78,a35)
 
   ! The contents of this file are written each day in subroutine WritePointCASA which is called
   ! at the end of each day from subroutine biogeochem.
@@ -5219,10 +5219,11 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
                  casaflux%Nminleach(npt),casaflux%Nminloss(npt),casaflux%xkNlimiting(npt), &
                  casaflux%klitter(npt,METB),casaflux%klitter(npt,STR),casaflux%klitter(npt,CWD), &
                  casaflux%ksoil(npt,MIC),casaflux%ksoil(npt,SLOW),casaflux%ksoil(npt,PASS), &
-                 casaflux%NminDep,casaflux%NminFix,casaflux%NlitInptMet,casaflux%NlitInptStruc
+                 casaflux%NminDep,casaflux%NminFix,casaflux%NlitInptMet,casaflux%NlitInptStruc, &
+                 casaflux%Cexudate,casaflux%Nexudate
   close(213)
 
-  701 format(5(i6,','),54(f12.5,','),f12.8,4(',',f12.5))
+  701 format(5(i6,','),54(f12.5,','),f12.8,4(',',f12.5),2(',',f12.8))
 
 
 END SUBROUTINE WritePointCASA

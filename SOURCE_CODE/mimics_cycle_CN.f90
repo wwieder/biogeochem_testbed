@@ -51,6 +51,8 @@
 !   8/24/2015 - Added reverse Michaelis-Menton option (subroutine mimics_soil_reverseMM)
 !   4/29/2019 - Added MIMICS-CN code reverse Michaelis-Menton
 !     SUBROUTINE mimics_soil_reverseMM_CN
+!   1/13/2020 - Added root exudate flux to mimics_delplant (C only) and 
+!               mimics_delplant_CN
 !
 !--------------------------------------------------------------------------------
 
@@ -219,6 +221,10 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
   casaflux%FluxCtolitter = 0.0
   casaflux%FluxNtolitter = 0.0
   casaflux%FluxPtolitter = 0.0
+  ! Added root exudate flux -mdh 1/13/2020
+  casaflux%Cexudate = 0.0
+  casaflux%Nexudate = 0.0
+  casaflux%Pexudate = 0.0
 
   mimicsbiome%ligninNratioAvg(:) = 0.0
   casapool%dClitterdt(:,:) = 0.0
@@ -248,6 +254,11 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
 
           casapool%dCplantdt(npt,:)= casaflux%Cnpp(npt) * casaflux%fracCalloc(npt,:)   &
                                      - casaflux%kplant(npt,:) * casapool%cplant(npt,:)
+
+          ! Compute root exudate C flux as a fraction of froot NPP. -mdh 1/13/2020
+          casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) &
+                                   * casaflux%fracCalloc(npt,froot))  
+          casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt) 
    
           ! Calculate fraction C to labile pool as a fraction of GPP, not NPP
           casapool%dClabiledt(npt) = casaflux%Cgpp(npt) * casaflux%fracClabile(npt) - casaflux%clabloss(npt)
@@ -255,7 +266,10 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
           !Compute litter inputs from casa (gC/m2/day)
           cleaf2met(npt) = casaflux%fromPtoL(npt,metb,leaf)  * casaflux%kplant(npt,leaf)  * casapool%cplant(npt,leaf)
           cleaf2str(npt) = casaflux%fromPtoL(npt,str,leaf)   * casaflux%kplant(npt,leaf)  * casapool%cplant(npt,leaf)
-          croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
+          ! Add casaflux%Cexudate(npt) to metabolic litter. -mdh 1/13/2019
+          !croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
+          croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot) &
+                           + casaflux%Cexudate(npt)
           croot2str(npt) = casaflux%fromPtoL(npt,str,froot)  * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
           cwood2cwd(npt) = casaflux%fromPtoL(npt,cwd,wood)   * casaflux%kplant(npt,wood)  * casapool%cplant(npt,wood)
 
@@ -387,6 +401,10 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
   casaflux%FluxCtolitter = 0.0
   casaflux%FluxNtolitter = 0.0
   casaflux%FluxPtolitter = 0.0
+  ! Added root exudate flux -mdh 1/13/2020
+  casaflux%Cexudate = 0.0
+  casaflux%Nexudate = 0.0
+  casaflux%Pexudate = 0.0
 
   mimicsbiome%ligninNratioAvg(:) = 0.0
   casapool%dClitterdt(:,:) = 0.0
@@ -418,6 +436,11 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
 
           casapool%dCplantdt(npt,:)= casaflux%Cnpp(npt) * casaflux%fracCalloc(npt,:)   &
                                      - casaflux%kplant(npt,:) * casapool%cplant(npt,:)
+
+          ! Compute root exudate C flux as a fraction of froot NPP. -mdh 1/13/2020
+          casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) &
+                                   * casaflux%fracCalloc(npt,froot))  
+          casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt) 
    
           ! Calculate fraction C to labile pool as a fraction of GPP, not NPP
           casapool%dClabiledt(npt) = casaflux%Cgpp(npt) * casaflux%fracClabile(npt) - casaflux%clabloss(npt)
@@ -425,7 +448,10 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
           !Compute litter inputs from casa (gC/m2/day)
           cleaf2met(npt) = casaflux%fromPtoL(npt,metb,leaf)  * casaflux%kplant(npt,leaf)  * casapool%cplant(npt,leaf)
           cleaf2str(npt) = casaflux%fromPtoL(npt,str,leaf)   * casaflux%kplant(npt,leaf)  * casapool%cplant(npt,leaf)
-          croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
+          ! Add casaflux%Cexudate(npt) to metabolic litter. -mdh 1/13/2019
+          !croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
+          croot2met(npt) = casaflux%fromPtoL(npt,metb,froot) * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot) &
+                           + casaflux%Cexudate(npt)
           croot2str(npt) = casaflux%fromPtoL(npt,str,froot)  * casaflux%kplant(npt,froot) * casapool%cplant(npt,froot)
           cwood2cwd(npt) = casaflux%fromPtoL(npt,cwd,wood)   * casaflux%kplant(npt,wood)  * casapool%cplant(npt,wood)
 
@@ -442,6 +468,14 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
                                               * casabiome%ftransNPtoL(veg%iveg(npt),wood)
              casapool%dNplantdt(npt,froot)  = -casaflux%kplant(npt,froot) * casapool%Nplant(npt,froot) &
                                               * casabiome%ftransNPtoL(veg%iveg(npt),froot)
+
+             ! Compute root exudate N flux as a fraction of froot N uptake. -mdh 1/13/2020
+             if (casaflux%Cexudate(npt) > 0.0) then
+               casaflux%Nexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Nminuptake(npt) &
+                                        * casaflux%fracNalloc(npt,froot))
+               casapool%dNplantdt(npt,froot) = casapool%dNplantdt(npt,froot) - casaflux%Nexudate(npt)
+             endif
+
              ! added by ypwang 5/nov/2012
       
              nleaf2str(npt) = casaflux%fromPtoL(npt,str,leaf) * casaflux%kplant(npt,leaf)  &
@@ -449,6 +483,7 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
              nroot2str(npt) = casaflux%fromPtoL(npt,str,froot)* casaflux%kplant(npt,froot) &
                             * casapool%cplant(npt,froot)      * ratioNCstrfix
       
+             ! dNplantdt includes casaflux%Nexudate. -mdh 1/13/2020
              nleaf2met(npt) = -casapool%dNplantdt(npt,leaf)  - nleaf2str(npt)
              nroot2met(npt) = -casapool%dNplantdt(npt,froot) - nroot2str(npt)
              nwood2cwd(npt) = -casapool%dNplantdt(npt,wood)

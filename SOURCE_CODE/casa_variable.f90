@@ -177,7 +177,6 @@ MODULE casavariable
                                        xkNlimitmin,    &             
                                        xkNlimitmax,    &             
                                        fracRootExud,   &             
-                                       CNRootExud,     &    
                                        CUEmetbmic,     &         
                                        CUEstrmic,      &         
                                        CUEstrslow,     &         
@@ -289,6 +288,11 @@ MODULE casavariable
                                        NlitInptMetAn,      &
                                        NlitInptStruc,      &
                                        NlitInptStrucAn,    &
+
+                                       Cexudate,      &
+                                       Nexudate,      &
+                                       Pexudate,      &
+
                                        Nminuptake,    &
                                        NminuptakeAn,  &
                                        Plabuptake,    &
@@ -492,7 +496,6 @@ SUBROUTINE alloc_casavariable(mp,mvtype,ms)
            casabiome%xkNlimitmin(mvtype),            &             
            casabiome%xkNlimitmax(mvtype),            &             
            casabiome%fracRootExud(mvtype),           &             
-           casabiome%CNRootExud(mvtype),             &    
            casabiome%CUEmetbmic(mvtype),             &         
            casabiome%CUEstrmic(mvtype),              &         
            casabiome%CUEstrslow(mvtype),             &         
@@ -589,6 +592,10 @@ SUBROUTINE alloc_casavariable(mp,mvtype,ms)
            casaflux%NlitInptMetAn(arraysize),            &
            casaflux%NlitInptStruc(arraysize),            &
            casaflux%NlitInptStrucAn(arraysize),          &
+
+           casaflux%Cexudate(arraysize),                 &
+           casaflux%Nexudate(arraysize),                 &
+           casaflux%Pexudate(arraysize),                 &
 
            casaflux%xkNlimiting(arraysize),              &
            casaflux%CpassInpt(arraysize),                &
