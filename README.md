@@ -34,6 +34,7 @@ Then, from the local directory you want to work from you can use the following c
 
 #### This will clone your remote repository (now called `origin`) to your local directory
 git clone https://github.com/`user`/biogeochem_testbed_1.1.git
+
 cd biogeochem_testbed_1.1
 
 #### Then you can link to the main, remote repo & call this `upstream`
