@@ -73,6 +73,8 @@ git log --decorate --oneline --graph
 ##### This example makes a branch from remote (not local) master _or_ branch
 git checkout --no-track -b mybranch upstream/master
 
+git fetch --all
+
 git checkout --no-track -b branch_name upstream/branch_name
 
 
