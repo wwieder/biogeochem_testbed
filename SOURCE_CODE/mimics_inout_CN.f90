@@ -373,6 +373,8 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
           ! fmet = fraction of plant residue transferred to metabolic litter (0.0 - 1.0)
           ! It is computed from the biome-specific lignin:N ratio for plant pool nP 
           !   (g lignin / g N) =  (g lignin / g C) / (g N / g C) 
+          ! When icycle > 1, mimicsbiome%ligninNratio will be reset in mimics_coeffplant. 
+          ! The value of mimicsbiome%ligninNratio below is used for C-only simulations. -mdh 1/20/2020
           mimicsbiome%ligninNratio(npt,nP) =  casabiome%fracLigninPlant(veg%iveg(npt), nP) &
                                               / max(0.001,casapool%ratioNCplant(npt,nP))
           ! write(*,*) 'lignin:N = ', mimicsbiome%ligninNratio(npt,nP)

@@ -94,20 +94,43 @@ SUBROUTINE mimics_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool,
 
   !Local variables
 ! REAL(r_2), DIMENSION(mp)  :: xk
+  REAL(r_2), DIMENSION(mp,mplant) :: ratioLignintoN
   INTEGER :: npt    
 
   casaflux%fromPtoL(:,:,:)      = 0.0
   casaflux%kplant(:,:)          = 0.0   
 
+  ! When simulating N, calculate dynamic lignin:N ratio and reset mimicsbiome%ligninNratio
+  ! which was initially calculated in mimics_readbiome. -mdh 1/20/2020
+  ! Note: this if statement cannot be inside the WHERE block.
+  if (icycle > 1) then
+      ! Dynamic ratioLignintoN calculation from casa_coeffplant. 
+      ! Reset mimicsbiome%ligninNratio (initially calculated in readbiome) to ratioLignintoN. -mdh 1/20/2020
+
+      ! using max function to avoid dividing by zero, ypw 14/may/2008
+      ratioLignintoN(:,leaf) = (casapool%Cplant(:,leaf) &
+                               /(max(1.0e-10,casapool%Nplant(:,leaf)) *casabiome%ftransNPtoL(veg%iveg(:),leaf))) &
+                               * casabiome%fracLigninplant(veg%iveg(:),leaf)  
+      ratioLignintoN(:,froot)= (casapool%Cplant(:,froot)&
+                               /(max(1.0e-10,casapool%Nplant(:,froot))*casabiome%ftransNPtoL(veg%iveg(:),froot))) &
+                               * casabiome%fracLigninplant(veg%iveg(:),froot) 
+      mimicsbiome%ligninNratio(:,leaf) = ratioLignintoN(:,leaf)
+      mimicsbiome%ligninNratio(:,froot) = ratioLignintoN(:,froot)
+  endif
+
   WHERE(casamet%iveg2 /= icewater)
+
       !Fraction of senesced plant biomass transferred to litter pools
       ! Use the fmet parameters also used in mimics_delplant (w.wieder 11/07/2016).
       !!casaflux%fromPtoL(:,metb,leaf)   = max(0.001, 0.85 - 0.013 * mimicsbiome%ligninNratio(:,leaf)) 
       !!casaflux%fromPtoL(:,metb,froot)  = max(0.001, 0.85 - 0.013 * mimicsbiome%ligninNratio(:,froot))
+
+
+
       casaflux%fromPtoL(:,metb,leaf)   = max(0.001, mimicsbiome%fmet_p(1)*(mimicsbiome%fmet_p(2)-mimicsbiome%fmet_p(3) &
-                                                    *mimicsbiome%ligninNratio(:,leaf))) 
+                                         *mimicsbiome%ligninNratio(:,leaf))) 
       casaflux%fromPtoL(:,metb,froot)  = max(0.001, mimicsbiome%fmet_p(1)*(mimicsbiome%fmet_p(2)-mimicsbiome%fmet_p(3) &
-                                                    *mimicsbiome%ligninNratio(:,froot)))
+                                         *mimicsbiome%ligninNratio(:,froot)))
       casaflux%fromPtoL(:,str,leaf)    = 1.0 - casaflux%fromPtoL(:,metb,leaf)
       casaflux%fromPtoL(:,str,froot)   = 1.0 - casaflux%fromPtoL(:,metb,froot)
       casaflux%fromPtoL(:,cwd,wood)    = 1.0
@@ -122,6 +145,11 @@ SUBROUTINE mimics_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool,
   ! When glai<glaimin,leaf biomass will not decrease anymore. (Q.Zhang 10/03/2011)
   DO npt = 1,mp 
       if(casamet%glai(npt).le.casabiome%glaimin(veg%iveg(npt))) casaflux%kplant(npt,leaf) = 0.0
+!     write(*,*)
+!     write(*,*) 'ratioLignintoN leaf, froot, wood =', &
+!                ratioLignintoN(npt,leaf), ratioLignintoN(npt,froot), ratioLignintoN(npt,wood)
+!     write(*,*) 'mimicsbiome%ligninNratio leaf, froot, wood =', &
+!                mimicsbiome%ligninNratio(npt,leaf), mimicsbiome%ligninNratio(npt,froot), mimicsbiome%ligninNratio(npt,wood)
   ENDDO
 
 
