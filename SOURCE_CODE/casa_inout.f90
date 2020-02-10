@@ -1647,6 +1647,7 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
       ! Accumulate C output variables
       call mimics_caccum(mp,cwd2co2)
       if (icycle > 1) then
+          ! Accumulate N output variables
           call mimics_naccum(mp)
       endif
 
@@ -5174,12 +5175,14 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
   endif
 
   ! Save the Index of the point to save 1..mp
-  do npt = 1,mp
-      if (casamet%ijgcm(npt) .eq. casafile%iptToSave) then 
-          casafile%iptToSaveIndx = npt
-          exit
-      endif
-  enddo
+! do npt = 1,mp
+!     if (casamet%ijgcm(npt) .eq. casafile%iptToSave) then 
+!         casafile%iptToSaveIndx = npt
+!         exit
+!     endif
+! enddo
+  casafile%iptToSaveIndx = casafile%iptToSave
+
 END SUBROUTINE WritePointFileHeaders
 
 !----------------------------------------------------------------------------------------------------
@@ -5214,13 +5217,13 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
                  casaflux%Crmplant(npt,LEAF),casaflux%Crmplant(npt,WOOD),casaflux%Crmplant(npt,FROOT), &
                  casaflux%Crgplant(npt),real(phen%phase(npt)), &
                  casaflux%fracCalloc(npt,LEAF),casaflux%fracCalloc(npt,WOOD),casaflux%fracCalloc(npt,FROOT), &
-                 casapool%fT(npt),casapool%fW(npt),casaflux%CpassInpt,casapool%Nsoilmin,casaflux%Nminuptake, &
+                 casapool%fT(npt),casapool%fW(npt),casaflux%CpassInpt(npt),casapool%Nsoilmin(npt),casaflux%Nminuptake(npt), &
                  casaflux%Nlittermin(npt),casaflux%Nsmin(npt),casaflux%Nsimm(npt), &
                  casaflux%Nminleach(npt),casaflux%Nminloss(npt),casaflux%xkNlimiting(npt), &
                  casaflux%klitter(npt,METB),casaflux%klitter(npt,STR),casaflux%klitter(npt,CWD), &
                  casaflux%ksoil(npt,MIC),casaflux%ksoil(npt,SLOW),casaflux%ksoil(npt,PASS), &
-                 casaflux%NminDep,casaflux%NminFix,casaflux%NlitInptMet,casaflux%NlitInptStruc, &
-                 casaflux%Cexudate,casaflux%Nexudate
+                 casaflux%NminDep(npt),casaflux%NminFix(npt),casaflux%NlitInptMet(npt),casaflux%NlitInptStruc(npt), &
+                 casaflux%Cexudate(npt),casaflux%Nexudate(npt)
   close(213)
 
   701 format(5(i6,','),54(f12.5,','),f12.8,4(',',f12.5),2(',',f12.8))

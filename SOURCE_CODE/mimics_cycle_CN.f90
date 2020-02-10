@@ -96,26 +96,68 @@ SUBROUTINE mimics_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool,
 ! REAL(r_2), DIMENSION(mp)  :: xk
   REAL(r_2), DIMENSION(mp,mplant) :: ratioLignintoN
   INTEGER :: npt    
+  REAL(r_2), DIMENSION(mplant) :: CNplantMax
 
   casaflux%fromPtoL(:,:,:)      = 0.0
   casaflux%kplant(:,:)          = 0.0   
 
   ! When simulating N, calculate dynamic lignin:N ratio and reset mimicsbiome%ligninNratio
   ! which was initially calculated in mimics_readbiome. -mdh 1/20/2020
-  ! Note: this if statement cannot be inside the WHERE block.
-  if (icycle > 1) then
-      ! Dynamic ratioLignintoN calculation from casa_coeffplant. 
-      ! Reset mimicsbiome%ligninNratio (initially calculated in readbiome) to ratioLignintoN. -mdh 1/20/2020
 
-      ! using max function to avoid dividing by zero, ypw 14/may/2008
-      ratioLignintoN(:,leaf) = (casapool%Cplant(:,leaf) &
-                               /(max(1.0e-10,casapool%Nplant(:,leaf)) *casabiome%ftransNPtoL(veg%iveg(:),leaf))) &
-                               * casabiome%fracLigninplant(veg%iveg(:),leaf)  
-      ratioLignintoN(:,froot)= (casapool%Cplant(:,froot)&
-                               /(max(1.0e-10,casapool%Nplant(:,froot))*casabiome%ftransNPtoL(veg%iveg(:),froot))) &
-                               * casabiome%fracLigninplant(veg%iveg(:),froot) 
-      mimicsbiome%ligninNratio(:,leaf) = ratioLignintoN(:,leaf)
-      mimicsbiome%ligninNratio(:,froot) = ratioLignintoN(:,froot)
+  ! ATTENTION: troubleshooting here becasue the lignin:N can be outrageoulsy large. 
+  ! It happens when there is a lot of C but little plant N. 
+  ! Restrict ratioLignintoN using maximum C:N ratio for the plant part. -mdh 2/3/2020
+ 
+  if (icycle > 1) then
+      do npt = 1,mp 
+          if (casamet%iveg2(npt) /= icewater) then
+              ! Dynamic ratioLignintoN calculation from casa_coeffplant. 
+              ! Reset mimicsbiome%ligninNratio (initially calculated in readbiome) to ratioLignintoN. -mdh 1/20/2020
+    
+!             ! using max function to avoid dividing by zero, ypw 14/may/2008
+!             ratioLignintoN(:,leaf) = (casapool%Cplant(:,leaf) &
+!                                  /(max(1.0e-10,casapool%Nplant(:,leaf)) *casabiome%ftransNPtoL(veg%iveg(:),leaf))) &
+!                                  * casabiome%fracLigninplant(veg%iveg(:),leaf)  
+!             ratioLignintoN(:,froot)= (casapool%Cplant(:,froot)&
+!                                      /(max(1.0e-10,casapool%Nplant(:,froot))*casabiome%ftransNPtoL(veg%iveg(:),froot))) &
+!                                  * casabiome%fracLigninplant(veg%iveg(:),froot) 
+    
+              CNplantMax(leaf) = 1.0 / casabiome%ratioNCplantmin(veg%iveg(npt),leaf)
+              CNplantMax(froot) = 1.0 / casabiome%ratioNCplantmin(veg%iveg(npt),froot)
+              CNplantMax(wood) = 1.0 / casabiome%ratioNCplantmin(veg%iveg(npt),wood)
+    
+              if (casapool%Cplant(npt,leaf) / max(1.0e-10,casapool%Nplant(npt,leaf)) > CNplantMax(leaf)) then
+                  ratioLignintoN(npt,leaf) = CNplantMax(leaf) / casabiome%ftransNPtoL(veg%iveg(npt),leaf) &
+                                       * casabiome%fracLigninplant(veg%iveg(npt),leaf)  
+              else
+                  ratioLignintoN(npt,leaf) = (casapool%Cplant(npt,leaf) &
+                                       /(max(1.0e-10,casapool%Nplant(npt,leaf)) *casabiome%ftransNPtoL(veg%iveg(npt),leaf))) &
+                                       * casabiome%fracLigninplant(veg%iveg(npt),leaf)  
+              endif
+    
+              if (casapool%Cplant(npt,froot) / max(1.0e-10,casapool%Nplant(npt,froot)) > CNplantMax(froot)) then
+                  ratioLignintoN(npt,froot) = CNplantMax(froot) / casabiome%ftransNPtoL(veg%iveg(npt),froot) &
+                                       * casabiome%fracLigninplant(veg%iveg(npt),froot)  
+              else
+                  ratioLignintoN(npt,froot) = (casapool%Cplant(npt,froot) &
+                                       /(max(1.0e-10,casapool%Nplant(npt,froot)) *casabiome%ftransNPtoL(veg%iveg(npt),froot))) &
+                                       * casabiome%fracLigninplant(veg%iveg(npt),froot)  
+              endif
+    
+              mimicsbiome%ligninNratio(:,leaf) = ratioLignintoN(:,leaf)
+              mimicsbiome%ligninNratio(:,froot) = ratioLignintoN(:,froot)
+          end if
+
+!         if (npt == 19) then
+!             write(*,*)
+!             write(*,*) 'ratioLignintoN(npt,leaf) =', ratioLignintoN(npt,leaf)
+!             write(*,*) 'ratioLignintoN(npt,froot) =', ratioLignintoN(npt,froot)
+!             write(*,*) 'froot C:N =', casapool%Cplant(npt,froot) / max(1.0e-10,casapool%Nplant(npt,froot))
+!             write(*,*) 'casabiome%ftransNPtoL(veg%iveg(npt),froot) =', casabiome%ftransNPtoL(veg%iveg(npt),froot)
+!             write(*,*) 'casabiome%fracLigninplant(veg%iveg(npt),froot) =', casabiome%fracLigninplant(veg%iveg(npt),froot)
+!         endif
+ 
+      end do
   endif
 
   WHERE(casamet%iveg2 /= icewater)
@@ -881,7 +923,8 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
 !     if (casamet%ijgcm(npt) .eq. 11018) then    ! Evergreen needleleaf (1)
 !     if (casamet%ijgcm(npt) .eq. 11569) then    ! Evergreen broadleaf (2)
 
-      if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then 
+!     if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then 
+      if (npt .eq. iptToSave_mimics) then 
           ! Write to point file daily if mdaily==1, else write once a year on day 365. -mdh 5/14/2018
           if ((mdaily == 1) .or. (idoy==365)) then
               call WritePointMIMICS(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
@@ -1141,7 +1184,8 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
           write(*,'(a13,f10.6)') 'Chresp = ', mimicsflux%Chresp(npt)
       endif
 
-      if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then 
+!     if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then 
+      if (npt .eq. iptToSave_mimics) then 
           ! Write to point file daily if mdaily==1, else write once a year on day 365. -mdh 5/14/2018
           if ((mdaily == 1) .or. (idoy==365)) then
               call WritePointMIMICS(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
@@ -1435,6 +1479,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
   real(r_2) :: air_filled_porosity !Fraction of 1.0.  Different from 1.0-theta_liq since it includes ice
   real(r_2) :: fW              ! CORPSE moisture function theta_liq^3*(1-air_filled_porosity)^2.5,
                                ! WW adjusted to give max values of 1, min = 0.01
+  real(r_2) :: ClitInputNPPhr  ! NPP in mg C/cm3/hour
   real(r_2) :: DINstart  ! Amount of DIN available to microbes at the beginning of the day (mg N/cm3)
   REAL(r_2), parameter :: wfpscoefa=0.55   ! Kelly et al. (2000) JGR, Figure 2b), optimal wfps 
   REAL(r_2), parameter :: wfpscoefb=1.70   ! Kelly et al. (2000) JGR, Figure 2b)
@@ -1448,10 +1493,6 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
   real(r_2) NorgSum1, NorgSum2
   real(r_2) Nbalance
 
-! if (iptToSave_mimics > 0) then
-!     open(214,file=sPtFileNameMIMICS, access='APPEND')
-! endif
-
   !ATTENTION: where are parameters mimicsbiome%fracNimport_r and mimicsbiome%fracNimport_k used? -mdh 6/21/2019
 
   NHOURSf = real(NHOURS)
@@ -1463,6 +1504,9 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 
       ! (mg N/cm3)*(1/1000)(g/mg)*(10000)(cm2/m2)*depth(cm) = g N/m2
       unitConv = 10.0*mimicsbiome%depth(veg%iveg(npt))    ! Convert mgN/cm3 to gN/m2 by multipling by this factor
+
+      ! Convert annual NPP (gC/m2/yr) to mgC/cm3/hour
+      ClitInputNPPhr = NHOURSfrac * casaflux%CnppAn(npt) / unitConv / 365.0 
 
       fNLeakHr = casaflux%fNminleach(npt)/ real(24)  ! casa fNminleach value is 1/day
       ! mimicsbiome%fracDINavailMIC is a new parameter which allows only a fraction of soil mineral N
@@ -1525,7 +1569,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
                                  * mimicsbiome%av(K3) * mimicsbiome%Vmod(K3) * fW
     
       ! casaflux%CnppAn(npt) =  average annual NPP (gC/m2/yr)
-      ! mimicsbiome%tauMod(npt) = SQRT(asaflux%CnppAn(npt)/100)
+      ! mimicsbiome%tauMod(npt) = SQRT(casaflux%CnppAn(npt)/100)
       mimicsbiome%tauMod(npt) = SQRT(casaflux%CnppAn(npt)/mimicsbiome%tauModDenom)
       mimicsbiome%tauMod(npt) = MAX(mimicsbiome%tauMod_MIN, mimicsbiome%tauMod(npt))
       mimicsbiome%tauMod(npt) = MIN(mimicsbiome%tauMod_MAX, mimicsbiome%tauMod(npt))
@@ -1543,18 +1587,35 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       mimicsbiome%tauK(npt) = mimicsbiome%tau_k(1) * &
                                 exp(mimicsbiome%tau_k(2) * mimicsbiome%fmet(npt)) * mimicsbiome%tauMod(npt)
 
-      ! Modification of tauR and tauK for MIMICS-CN (-mdh 4/29/2019)
-      ! Emily's R code for reference
+! This code was from the oringinal version of MIMICS-CN. -mdh 2/10/2020
+!     ! Modification of tauR and tauK for MIMICS-CN (-mdh 4/29/2019)
+!     ! Emily's R code for reference
+!     ! turnover      <<- c(5.2e-4*exp(0.3*(fMET)), 2.4e-4*exp(0.1*(fMET)))	#WORKS BETTER FOR N_RESPONSE RATIO
+!     ! turnover_MOD1 <<- sqrt(ANPP_C[s]/100)  #basicaily standardize against NWT
+!     ! turnover      <<- turnover * turnover_MOD1
+!     ! #turnover     <<- turnover * 2 #Sulman et al. 2018
+!     ! turnover      <<- turnover * 1.7
+!     ! turnover      <<- turnover^2*0.55/(.45*Inputs) #  Inputs(1)=metabolic, Inputs(2)=structural (mgC/cm3/hr)
+!
+!     ! Multiply ClitInput by NHOURSfrac = 1/NHOURSf
+!     !mimicsbiome%tauR(npt) = (1.7*mimicsbiome%tauR(npt))**2.0*0.55/(0.45*mimicsflux%ClitInput(npt,metbc)*NHOURSfrac)
+!     !mimicsbiome%tauK(npt) = (1.7*mimicsbiome%tauK(npt))**2.0*0.55/(0.45*mimicsflux%ClitInput(npt,struc)*NHOURSfrac)
+
+      ! Use code updates from Emily 10/24/2019. -mdh 2/10/2020
+      ! Also use ANPP, converted to mgC/cm3/hr as the litter input instead of instantaneous litter input. -mdh 2/10/2020
       ! turnover      <<- c(5.2e-4*exp(0.3*(fMET)), 2.4e-4*exp(0.1*(fMET)))	#WORKS BETTER FOR N_RESPONSE RATIO
       ! turnover_MOD1 <<- sqrt(ANPP_C[s]/100)  #basicaily standardize against NWT
+      ! turnover_MOD1[turnover_MOD1 < 0.6] <<- 0.6 # correction not used in LIDET resutls 
+      ! turnover_MOD1[turnover_MOD1 > 1.3] <<- 1.3      #Sulman et al. 2018
       ! turnover      <<- turnover * turnover_MOD1
-      ! #turnover     <<- turnover * 2 #Sulman et al. 2018
-      ! turnover      <<- turnover * 1.7
-      ! turnover      <<- turnover^2*0.55/(.45*Inputs) #  Inputs(1)=metabolic, Inputs(2)=structural (mgC/cm3/hr)
+      ! turnover <<- turnover/2.2
+      ! turnover <<- turnover^2*0.55/(.45*Inputs)
 
-      ! Multiply ClitInput by NHOURSfrac = 1/NHOURSf
-      mimicsbiome%tauR(npt) = (1.7*mimicsbiome%tauR(npt))**2.0*0.55/(0.45*mimicsflux%ClitInput(npt,metbc)*NHOURSfrac)
-      mimicsbiome%tauK(npt) = (1.7*mimicsbiome%tauK(npt))**2.0*0.55/(0.45*mimicsflux%ClitInput(npt,struc)*NHOURSfrac)
+      ! ATTENTION: comment out density dependent modifications to tauR and tauK
+      ! because they are causing some cells to produce NANs. -mdh 2/10/2020
+      ! ClitInputNPPhr is annual NPP (gC/m2/yr) converted to mgC/cm3/hour
+!     mimicsbiome%tauR(npt) = (mimicsbiome%tauR(npt)/2.2)**2.0*0.55/(0.45*ClitInputNPPhr)
+!     mimicsbiome%tauK(npt) = (mimicsbiome%tauK(npt)/2.2)**2.0*0.55/(0.45*ClitInputNPPhr)
 
       ! WW also modify TAU as a function of soil moisture, so things don't
       ! collapse in frozen soils...
@@ -1775,6 +1836,24 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           mimicspool%SOMpN(npt) = mimicspool%SOMpN(npt) + dSOMpN
           mimicspool%DIN(npt) = mimicspool%DIN(npt) + dDIN
 
+!     ! Code placed here temporarily for debugging hourly output. -mdh 2/3/2020
+!     if (npt .eq. iptToSave_mimics) then 
+!         ! Write to point file daily if mdaily==1, else write once a year on day 365. -mdh 5/14/2018
+!         if ((mdaily == 1) .or. (idoy==365)) then
+!             call WritePointMIMICS_CN(214, sPtFileNameMIMICS, npt, mp, ihr, idoy, &
+!                 cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
+!                 LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+!                 dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil, &
+!
+!                 nleaf2met,nleaf2str,nroot2met,nroot2str,nwd2str,nwood2cwd, &
+!                 LITminN, MICtrnN, SOMminN, DEsorbN, OXIDATN, &
+!                 dLITmN, dLITsN, dMICrN, dMICkN, dSOMaN, dSOMcN, dSOMpN, dDIN, &
+!                 DINup_r, DINup_k, upMICrC, upMICrN, upMICkC, upMICkN, & 
+!                 Overflow_r, Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance)
+!         endif 
+!     endif 
+
+
       end do
 
 
@@ -1872,7 +1951,8 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
     
       endif
 
-      if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then 
+!     if (casamet%ijgcm(npt) .eq. iptToSave_mimics) then 
+      if (npt .eq. iptToSave_mimics) then 
           ! Write to point file daily if mdaily==1, else write once a year on day 365. -mdh 5/14/2018
           if ((mdaily == 1) .or. (idoy==365)) then
               call WritePointMIMICS_CN(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
@@ -1889,7 +1969,6 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       endif 
        
   ENDIF
-
 
   end do
 

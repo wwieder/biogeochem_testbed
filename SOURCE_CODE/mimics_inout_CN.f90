@@ -2508,7 +2508,6 @@ SUBROUTINE WritePointMIMICS(unit1, sPtFileName, npt, mp, iYrCnt, idoy, &
     real(r_2), intent(IN)          :: dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk
     real(r_2), intent(IN)          :: Tsoil, Cbalance
 
-
     open(unit1,file=sPtFileNameMIMICS, access='APPEND')
 
     write(unit1,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),casamet%moistavg(npt),&
@@ -2591,6 +2590,8 @@ SUBROUTINE WritePointMIMICS_CN(unit1, sPtFileName, npt, mp, iYrCnt, idoy, &
     real(r_2), intent(IN)          :: Overflow_r, Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance
 
 
+
+    !write(*,*) 'Writing to sPtFileNameMIMICS for iYrCnt =', iYrCnt, ' and idoy = ', idoy
     open(unit1,file=sPtFileNameMIMICS, access='APPEND')
 
     write(unit1,102) npt,casamet%ijgcm(npt),iYrCnt,idoy,casamet%tsoilavg(npt),casamet%moistavg(npt),&
