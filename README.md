@@ -75,7 +75,9 @@ git checkout --no-track -b mybranch upstream/master
 
 git fetch --all
 
-git checkout --track upstream/Testbed_CN   #new branch has same name as remote branch
+#### Create a new branch has same name as remote branch & switch to it
+git checkout --track upstream/Testbed_CN   
+git checkout Testbed_CN
 
 #### To update your local branch to the remote repo just try
 git pull
