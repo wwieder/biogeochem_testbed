@@ -1492,7 +1492,7 @@ END SUBROUTINE casa_cnppool
 
 !-------------------------------------------------------------------------------- 
 ! Run all vegetation, litter, and soil subroutines for each point in the
-! grid of one day. 
+! grid for one day. 
 ! Added arguments cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
 !   so the call to WritePointCASA call could be moved out of this subroutine and into 
 !   casacnddriver. -mdh 5/14/2018.
@@ -1675,7 +1675,7 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
 
   else 
       write(*,*) 'Unexpected value for isomModel =', isomModel
-      write(*,*) 'Expecting 1, 2, or 3 in lst file'
+      write(*,*) 'Expecting 1, 2, or 3 in .lst file'
       STOP
   endif    
 
@@ -5174,6 +5174,17 @@ SUBROUTINE WritePointFileHeaders(dirPtFile,mp)
       ! simulation to write the header and contents to sPtFileNameCORPSE.
   endif
 
+  ! Write to Cbalance.csv and Nbalance.csv. -mdh 3/2/2020
+  open(220,file='Cbalance.csv')
+  write(220,'(a62)') 'npt,ijgcm,iYrCnt,doy,Cplant,Clitter,Cmic,Csom,Clabile,Cin,Cout'
+  close(220)
+  if (icycle == 2) then
+      open(221,file='Nbalance.csv')
+      write(221,'(a65)') 'npt,ijgcm,iYrCnt,doy,Nplant,Nlitter,Nmic,Nsom,Nsoilminrl,Nin,Nout'
+      close(221)
+  endif
+
+
   ! Save the Index of the point to save 1..mp
 ! do npt = 1,mp
 !     if (casamet%ijgcm(npt) .eq. casafile%iptToSave) then 
@@ -5194,12 +5205,18 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
   USE casavariable
   USE define_types
   USE phenvariable
+  USE mimicsparam
+  USE mimicsvariable
+
   implicit none
   integer, intent(in) :: iYrCnt, idoy, mp
   real(r_2), dimension(mp), intent(in)   :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd
 
   ! Local Variables
   integer :: npt
+  real(r_2):: Cplant,Clitter,Cmic,Csom,Clabile,Cin,Cout
+  real(r_2):: Nplant,Nlitter,Nmic,Nsom,Nminrl,Nin,Nout
+  real(r_2):: unitConv
 
 ! if (casamet%ijgcm(npt) .eq. casafile%iptToSave)  
   npt = casafile%iptToSaveIndx
@@ -5228,6 +5245,73 @@ SUBROUTINE WritePointCASA(iYrCnt,idoy,mp,cleaf2met,cleaf2str,croot2met,croot2str
 
   701 format(5(i6,','),54(f12.5,','),f12.8,4(',',f12.5),2(',',f12.8))
 
+  ! Write to Cbalance.csv. All units are gC/m2 for pools and gC/m2/day for fluxes. -mdh 3/2/2020
+  ! Write to Nbalance.csv. All units are gN/m2 for pools and gN/m2/day for fluxes. -mdh 3/2/2020
+
+
+  if (isomModel == CASACNP) then
+
+      open(220,file='Cbalance.csv',access='APPEND')
+      Cplant = sum(casapool%Cplant(npt,:))
+      Clitter = sum(casapool%Clitter(npt,:))
+      Cmic = casapool%Csoil(npt,MIC)
+      Csom = casapool%Csoil(npt,SLOW)+casapool%Csoil(npt,PASS)
+      !Clabile comes from GPP, and was once part of leaf maintenance respiration, but that is commented out.
+      Clabile = casapool%Clabile(npt)
+      !Cin = casaflux%Cnpp(npt) 
+      Cin = casaflux%Cgpp(npt) 
+      Cout = casaflux%Crsoil(npt)+sum(casaflux%Crmplant(npt,:))+casaflux%Crgplant(npt)+casaflux%Clabloss(npt)
+      write(220,702) npt,casamet%ijgcm(npt),iYrCnt,idoy,Cplant,Clitter,Cmic,Csom,Clabile,Cin,Cout
+      close(220)
+    
+      if (icycle == 2) then
+          open(221,file='Nbalance.csv',access='APPEND')
+          Nplant = sum(casapool%Nplant(npt,:))
+          Nlitter = sum(casapool%Nlitter(npt,:))
+          Nmic = casapool%Nsoil(npt,MIC)
+          Nsom = casapool%Nsoil(npt,SLOW)+casapool%Nsoil(npt,PASS)
+          Nminrl = casapool%Nsoilmin(npt)
+          Nin = casaflux%NminDep(npt) + casaflux%NminFix(npt)
+          Nout = casaflux%Nminleach(npt)+casaflux%Nminloss(npt)
+          write(221,703) npt,casamet%ijgcm(npt),iYrCnt,idoy,Nplant,Nlitter,Nmic,Nsom,Nminrl,Nin,Nout
+          close(221)
+      endif
+
+  else if (isomModel == MIMICS) then
+
+      ! (mg C/cm3)*(1/1000)(g/mg)*(10000)(cm2/m2)*depth(cm) = g C/m2
+      unitConv = 10.0*mimicsbiome%depth(veg%iveg(npt))    ! Convert mgC/cm3 to gC/m2 by multipling by this factor
+
+      open(220,file='Cbalance.csv',access='APPEND')
+      Cplant = sum(casapool%Cplant(npt,:))
+      Clitter = (mimicspool%LITm(npt) + mimicspool%LITs(npt))*unitConv
+      Cmic = (mimicspool%MICr(npt) + mimicspool%MICk(npt))*unitConv
+      Csom = (mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt))*unitConv
+      !Clabile comes from GPP, and was once part of leaf maintenance respiration, but that is commented out.
+      Clabile = casapool%Clabile(npt)
+      !Cin = casaflux%Cnpp(npt) 
+      Cin = casaflux%Cgpp(npt) 
+      Cout = mimicsflux%Chresp(npt)*unitConv + sum(casaflux%Crmplant(npt,:))+casaflux%Crgplant(npt)+casaflux%Clabloss(npt)
+      write(220,702) npt,casamet%ijgcm(npt),iYrCnt,idoy,Cplant,Clitter,Cmic,Csom,Clabile,Cin,Cout
+      close(220)
+    
+      if (icycle == 2) then
+          open(221,file='Nbalance.csv',access='APPEND')
+          Nplant = sum(casapool%Nplant(npt,:))
+          Nlitter = (mimicspool%LITmN(npt) + mimicspool%LITsN(npt))*unitConv
+          Nmic = (mimicspool%MICrN(npt) + mimicspool%MICkN(npt))*unitConv
+          Nsom = (mimicspool%SOMaN(npt) + mimicspool%SOMcN(npt) + mimicspool%SOMpN(npt))*unitConv
+          Nminrl = casapool%Nsoilmin(npt)
+          Nin = casaflux%NminDep(npt) + casaflux%NminFix(npt)
+          Nout = casaflux%Nminleach(npt)+casaflux%Nminloss(npt)
+          write(221,703) npt,casamet%ijgcm(npt),iYrCnt,idoy,Nplant,Nlitter,Nmic,Nsom,Nminrl,Nin,Nout
+          close(221)
+      endif
+
+  endif
+
+  702 format(4(i6,','),4(f16.8,','),3(f12.8,','))
+  703 format(4(i6,','),4(f15.8,','),3(f12.8,','))
 
 END SUBROUTINE WritePointCASA
 

@@ -1911,7 +1911,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       casaflux%Nminleach(npt) = NleachingLossMimics * unitConv
 
       ! Temporarily record Rh in the casaflux variable for model evaluation. -mdh 8/5/2019. Remove later.
-      casaflux%Crsoil = mimicsflux%Chresp(npt) * unitConv
+      casaflux%Crsoil = mimicsflux%Chresp(npt) * unitConv + cwd2co2
 
       CorgSum2 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
