@@ -291,6 +291,9 @@ PROGRAM offline_casacnp
 
   endif
 
+  ! Indicate that CnppAn, the previous years's ANPP, has not been initialized. -mdh 3/9/2020
+  casaflux%CnppAn(:) = -99.9
+
   if (initcasa < 2) then
 
      !Non-transient run.  One met.nc file is used for the entire simulation.
@@ -324,7 +327,7 @@ PROGRAM offline_casacnp
      else
         mreps = 1
      endif
-     mloop = 1
+     mloop = 1    ! For transient runs, mloop=1 is the number of times to loop through each met.nc file.
 
      do irep = 1, mreps
          do ityear = tyear1, tyear2
@@ -400,7 +403,6 @@ PROGRAM offline_casacnp
 
   close(10)
 
- 
   print *, 'simulation completed'
 101 format(a100)
 
