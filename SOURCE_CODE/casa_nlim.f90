@@ -162,12 +162,14 @@ SUBROUTINE casa_xkN(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
 END SUBROUTINE casa_xkN
 
 !======================================================================================================
-! This subroutine is similar to subroutine casa_xkN, but it removes calculations that
-! use CASA variables that are not set when MIMICS or CORPSE are the SOM models.
-! It also does a simple linear ramp between when 0.5 < casapool%soilNmin < 2.0.
+! Subroutine casa_xkN2 is similar to subroutine casa_xkN, but it does a simple linear ramp 
+! of xkNlimiting between 0.0 and 1.0 when xkNlimitmin < casapool%Nsoilmin < xkNlimitmax. 
+! (formerly when 0.5 < casapool%Nsoilmin < 2.0). 
 ! Melannie Hartman 11/11/2019
 
-SUBROUTINE casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+! Added isomModel argument to the casa_xkN2 function call. -mdh 3/23/2020.
+!!SUBROUTINE casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+SUBROUTINE casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg,isomModel)
 ! computing the reduction in litter and SOM decomposition 
 ! when decomposition rate is N-limiting
   IMPLICIT NONE
@@ -176,6 +178,7 @@ SUBROUTINE casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
   TYPE (casa_flux),         INTENT(INOUT) :: casaflux
   TYPE (casa_met),          INTENT(INOUT) :: casamet
   TYPE (casa_biome),        INTENT(INOUT) :: casabiome
+  INTEGER,                  INTENT(IN)    :: isomModel
 !    
   TYPE (veg_parameter_type),   INTENT(IN) :: veg  ! vegetation parameters
 
@@ -189,19 +192,32 @@ SUBROUTINE casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
 ! when N mode is activated. (Q.Zhang 23/05/2011)
 
   xkNlimiting(:) = 1.0
-!   PRINT *, 'within casa_xkN'
+!   PRINT *, 'within casa_xkN2'
 
   DO nland=1,mp
     IF (casamet%iveg2(nland)/=icewater) THEN
       ! calculate C:N ratio of newly formed SOM as function of soil mineral N pool
-      IF (casapool%Nsoilmin(nland) < 2.0) THEN
-        casapool%ratioNCsoilnew(nland,:) = casapool%ratioNCsoilmin(nland,:)  &
-                                           + (casapool%ratioNCsoilmax(nland,:) &
-                                           - casapool%ratioNCsoilmin(nland,:)) &
-                                           * max(0.0,casapool%Nsoilmin(nland)) / 2.0
-      ELSE
-        casapool%ratioNCsoilnew(nland,:) = casapool%ratioNCsoilmax(nland,:)
-      ENDIF
+      ! This code is only relevant to CASA SOM model. -mdh 3/23/2020.
+      if (isomModel == CASACNP) then
+
+        !!IF (casapool%Nsoilmin(nland) < 2.0) THEN
+        !!  ratioNCnew = ratioNCmin + (ratioNCmax-ratioNCmin)*max(0.0,Nsoilmin)/2.0
+        !!  casapool%ratioNCsoilnew(nland,:) = casapool%ratioNCsoilmin(nland,:)  &
+        !!                                     + (casapool%ratioNCsoilmax(nland,:) &
+        !!                                     - casapool%ratioNCsoilmin(nland,:)) &
+        !!                                     * max(0.0,casapool%Nsoilmin(nland)) / 2.0
+
+        ! Substitute 2.0 with xkNlimitmax. -mdh 3/23/2020.
+        IF (casapool%Nsoilmin(nland) < casabiome%xkNlimitmax(veg%iveg(nland))) THEN
+          !ratioNCnew = ratioNCmin + (ratioNCmax-ratioNCmin)*max(0.0,Nsoilmin)/xkNlimitmax
+          casapool%ratioNCsoilnew(nland,:) = casapool%ratioNCsoilmin(nland,:)  &
+                                             + (casapool%ratioNCsoilmax(nland,:) &
+                                             - casapool%ratioNCsoilmin(nland,:)) &
+                                             * max(0.0,casapool%Nsoilmin(nland)) / casabiome%xkNlimitmax(veg%iveg(nland))
+        ELSE
+          casapool%ratioNCsoilnew(nland,:) = casapool%ratioNCsoilmax(nland,:)
+        ENDIF
+      endif
     ENDIF
   ENDDO
 
@@ -223,16 +239,17 @@ SUBROUTINE casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
       xkNlimiting(:) = MAX(0.0, xkNlimiting(:)) 
       xkNlimiting(:) = MIN(1.0, xkNlimiting(:))
     ENDWHERE
-
-    ! If Clitter pool size larger >  maximum, turnover rate (klitter) will not constrained by Nsoilmin.
-    WHERE(sum(casapool%clitter,2) > casabiome%maxfinelitter(veg%iveg(:)) + casabiome%maxcwd(veg%iveg(:)))
-     xkNlimiting(:) = 1.0
-    ENDWHERE
   ENDWHERE
 
+  ! The following code is only relevant to the CASA SOM model. -mdh 3/23/2020.
+  if (isomModel == CASACNP) then
+    ! If Clitter pool (metb+struc+cwd) size larger > maximum, turnover rate (klitter) will not constrained by Nsoilmin.
+    WHERE(sum(casapool%clitter,2) > casabiome%maxfinelitter(veg%iveg(:)) + casabiome%maxcwd(veg%iveg(:)))
+      xkNlimiting(:) = 1.0
+    ENDWHERE
+  endif
+
   ! Added casaflux%xkNlimiting for output. -mdh 10/7/2019
-! write(*,*)
-! write(*,*) 'casapool%Nsoilmin(:)-2.0 =', casapool%Nsoilmin-2.0
   casaflux%xkNlimiting(:) = xkNlimiting(:)
 
 END SUBROUTINE casa_xkN2
