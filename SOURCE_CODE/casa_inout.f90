@@ -1548,11 +1548,15 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
 
       IF (icycle>1) THEN
           !call casa_xkN(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
-          ! Subroutine casa_xkN2 is similar to subroutine casa_xkN, but it removes calculations 
-          ! that use CASA variables that are not set when MIMICS or CORPSE are the SOM models.
-          ! It also does a simple linear ramp of xkNlimiting between 0.0 and 1.0
-          ! when 0.5 < casapool%soilNmin < 2.0.
-          call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          ! Subroutine casa_xkN2 is similar to subroutine casa_xkN, but
+          ! it does a simple linear ramp of xkNlimiting between 0.0 and 1.0
+          ! when xkNlimitmin < casapool%Nsoilmin < xkNlimitmax. 
+          ! (formerly when 0.5 < casapool%Nsoilmin < 2.0). 
+
+          ! Added isomModel argument to the casa_xkN2 function call. -mdh 3/23/2020.
+          !!call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg,isomModel)
+
           DO j=1,mlitter
               casaflux%klitter(:,j) = casaflux%klitter(:,j)* xkNlimiting(:)
           ENDDO
@@ -1600,11 +1604,15 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
   
       IF (icycle>1) THEN
           !call casa_xkN(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
-          ! Subroutine casa_xkN2 is similar to subroutine casa_xkN, but it removes calculations 
-          ! that use CASA variables that are not set when MIMICS or CORPSE are the SOM models.
-          ! It also does a simple linear ramp of xkNlimiting between 0.0 and 1.0
-          ! when 0.5 < casapool%soilNmin < 2.0.
-          call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          ! Subroutine casa_xkN2 is similar to subroutine casa_xkN, but
+          ! it does a simple linear ramp of xkNlimiting between 0.0 and 1.0
+          ! when xkNlimitmin < casapool%Nsoilmin < xkNlimitmax. 
+          ! (formerly when 0.5 < casapool%Nsoilmin < 2.0). 
+
+          ! Added isomModel argument to the casa_xkN2 function call. -mdh 3/23/2020.
+          !!call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg)
+          call casa_xkN2(xkNlimiting,casapool,casaflux,casamet,casabiome,veg,isomModel)
+
           DO j=1,mlitter
               casaflux%klitter(:,j) = casaflux%klitter(:,j)* xkNlimiting(:)
 !             write(*,*) 'biogeochem:'
