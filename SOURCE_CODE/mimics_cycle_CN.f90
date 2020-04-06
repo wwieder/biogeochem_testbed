@@ -1508,7 +1508,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       ! Convert annual NPP (gC/m2/yr) to mgC/cm3/hour
       ClitInputNPPhr = NHOURSfrac * casaflux%CnppAn(npt) / unitConv / 365.0 
 
-      fNLeakHr = casaflux%fNminleach(npt)/ real(24)  ! casa fNminleach value is 1/day
+      fNleakHr = casaflux%fNminleach(npt)/ real(24)  ! casa fNminleach value is 1/day
       ! mimicsbiome%fracDINavailMIC is a new parameter which allows only a fraction of soil mineral N
       ! to be available to microbes.  Emily's model did not have it since there was no N competition
       ! with plants. -mdh 6/21/2019

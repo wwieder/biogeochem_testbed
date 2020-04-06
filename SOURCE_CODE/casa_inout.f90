@@ -613,6 +613,7 @@ SUBROUTINE casa_readbiome(fname_cnpbiome,filename_soilprop,mvt,mst)
          casaflux%psorbmax(npt)    = xpsorbmax(iso)
          casaflux%fpleach(npt)     = xfPleach(iso)
          casaflux%Nminfix(npt)     = xnfixrate(iv1)/365.0  
+!        write(*,*) 'casa_readbiome: casaflux%Nminfix(',npt,') =', casaflux%Nminfix(npt)
 
 !!       !! Commented out this section (-MDH 6/9/2014)
 !!       casapool%rationcplant(npt,:)  = 1.0/ratioCNplant(iv1,:)
@@ -849,7 +850,11 @@ SUBROUTINE casa_readpoint(filename_cnppoint,mvt)
       veg%iveg(np)         = vtypex(np)
       soil%isoilm(np)      = stypex(np)
 !      casaflux%Nminfix(np) = annNfix/365.0
-       casaflux%Nminfix(np) = 0.0
+! Commented out the statement "casaflux%Nminfix(np) = 0.0".  Nminfix is read from CASA PFT file (casa_readbiome). 
+! This subroutine gets called multiple times in repeated transient runs (spinups), thus was
+! eliminating Nfixation, contributing to plant N limitation and severely reduced NPP in global runs. -mdh 4/6/2020
+!      casaflux%Nminfix(np) = 0.0
+!      write(*,*) 'WARNING readpoint: casaflux%Nminfix(',np,') =', casaflux%Nminfix(np)
       if(veg%iveg(np)==12.or.veg%iveg(np)==14) casaflux%Pdep(np)=casaflux%Pdep(np)+0.7/365.0    ! for P fertilizer =13 Mt P globally in 1994
    enddo 
 !   print * ,'veg type', veg%iveg   
