@@ -1,3 +1,4 @@
+module load compiler/gnu/8.1.0
 module load tool/netcdf/4.6.1/gcc
 rm *.o *.mod
 make -f Makefile.txt casaclm_mimics-cn_corpse
