@@ -1,6 +1,7 @@
-module load tool/netcdf/4.3.2/gcc
+module load tool/netcdf/4.6.1/gcc
 rm *.o *.mod
-make -f Makefile.txt casaclm_mimics_corpse_test
+make -f Makefile.txt casaclm_mimics-cn_corpse
+
 
 Code Updates 11/07/2016
 Melannie Hartman
