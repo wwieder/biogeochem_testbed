@@ -1,133 +1,46 @@
 """utility functions"""
-"""copied from klindsay, https://github.com/klindsay28/CESM2_coup_carb_cycle_JAMES/blob/master/utils.py"""
 
 import re
 import cftime
 import numpy as np
 import xarray as xr
-from cartopy.util import add_cyclic_point
-
+#from cartopy.util import add_cyclic_point
 #from xr_ds_ex import xr_ds_ex
 
-# generate annual means, weighted by days / month
-def weighted_annual_mean(array):
-    mon_day  = xr.DataArray(np.array([31,28,31,30,31,30,31,31,30,31,30,31]), dims=['month'])
-    mon_wgt  = mon_day/mon_day.sum()
-    return (array.rolling(time=12, center=False) # rolling
-            .construct("month") # construct the array
-            .isel(time=slice(11, None, 12)) # slice so that the first element is [1..12], second is [13..24]
-            .dot(mon_wgt, dims=["month"]))
+def sum_pools(ds_in, mod='MIM', CN='True'):
+    if mod == 'mim':
+        ds_in['cTOT'] = ds_in['cLITm']+ds_in['cLITs']+ds_in['cMICr']+ds_in['cMICk']+ \
+                        ds_in['cSOMa']+ds_in['cSOMc']+ds_in['cSOMp']
+        ds_in['cTOT'].attrs['long_name'] = 'sum of MIMICS SOC pools'
+        ds_in['cTOT'].attrs['units'] = ds_in['cLITm'].attrs['units']
 
-def copy_fill_settings(da_in, da_out):
-    """
-    propagate _FillValue and missing_value settings from da_in to da_out
-    return da_out
-    """
-    if '_FillValue' in da_in.encoding:
-        da_out.encoding['_FillValue'] = da_in.encoding['_FillValue']
-    else:
-        da_out.encoding['_FillValue'] = None
-    if 'missing_value' in da_in.encoding:
-        da_out.attrs['missing_value'] = da_in.encoding['missing_value']
-    return da_out
+        if CN == 'True':
+            ds_in['nTOT'] = ds_in['nLITm']+ds_in['nLITs']+ds_in['nMICr']+ds_in['nMICk']+ \
+                            ds_in['nSOMa']+ds_in['nSOMc']+ds_in['nSOMp']
+            ds_in['nTOT'].attrs['long_name'] = 'sum of MIMICS SON pools'
+            ds_in['nTOT'].attrs['units'] = ds_in['nLITm'].attrs['units']
 
-def dim_cnt_check(ds, varname, dim_cnt):
-    """confirm that varname in ds has dim_cnt dimensions"""
-    if len(ds[varname].dims) != dim_cnt:
-        msg_full = 'unexpected dim_cnt=%d, varname=%s' % (len(ds[varname].dims), varname)
-        raise ValueError(msg_full)
+            ds_in['cnTOT']= ds_in['cTOT'] / ds_in['nTOT']
+            ds_in['cnTOT'].attrs['long_name'] = 'MIMICS total SOM C:N ratio'
+        
+    if mod == 'cas':
+        ds_in['cTOT'] = ds_in['clitmetb']+ds_in['clitstr']+ds_in['csoilmic']+ \
+                        ds_in['csoilslow']+ds_in['csoilpass']
+        ds_in['cTOT'].attrs['long_name'] = 'sum of CASA SOC pools'
+        ds_in['cTOT'].attrs['units'] = ds_in['clitmetb'].attrs['units']
 
-def time_set_mid(ds, time_name, deep=False):
-    """
-    Return copy of ds with values of ds[time_name] replaced with midpoints of
-    ds[time_name].attrs['bounds'], if bounds attribute exists.
-    Except for time_name, the returned Dataset is a copy of ds2.
-    The copy is deep or not depending on the argument deep.
-    """
+        if CN == True:
+            ds_in['nTOT'] = ds_in['nlitmetb']+ds_in['nlitstr']+ds_in['nsoilmic']+ \
+                            ds_in['nsoilslow']+ds_in['nsoilpass']
+            ds_in['nTOT'].attrs['long_name'] = 'sum of CASA SON pools'
+            ds_in['nTOT'].attrs['units'] = ds_in['nlitmetb'].attrs['units']
 
-    ds_out = ds.copy(deep)
+            ds_in['cnTOT']= ds_in['cTOT'] / ds_in['nTOT']
+            ds_in['cnTOT'].attrs['long_name'] = 'CASA total SOM C:N ratio'
 
-    if "bounds" not in ds[time_name].attrs:
-        return ds_out
+    return ds_in
 
-    tb_name = ds[time_name].attrs["bounds"]
-    tb = ds[tb_name]
-    bounds_dim = next(dim for dim in tb.dims if dim != time_name)
-
-    # Use da = da.copy(data=...), in order to preserve attributes and encoding.
-
-    # If tb is an array of datetime objects then encode time before averaging.
-    # Do this because computing the mean on datetime objects with xarray fails
-    # if the time span is 293 or more years.
-    #     https://github.com/klindsay28/CESM2_coup_carb_cycle_JAMES/issues/7
-    if tb.dtype == np.dtype("O"):
-        units = "days since 0001-01-01"
-        calendar = "noleap"
-        tb_vals = cftime.date2num(ds[tb_name].values, units=units, calendar=calendar)
-        tb_mid_decode = cftime.num2date(
-            tb_vals.mean(axis=1), units=units, calendar=calendar
-        )
-        ds_out[time_name] = ds[time_name].copy(data=tb_mid_decode)
-    else:
-        ds_out[time_name] = ds[time_name].copy(data=tb.mean(bounds_dim))
-
-    return ds_out
-
-'''def time_set_mid(ds, time_name):
-    """
-    set ds[time_name] to midpoint of ds[time_name].attrs['bounds'], if bounds attribute exists
-    type of ds[time_name] is not changed
-    ds is returned
-    """
-
-    if 'bounds' not in ds[time_name].attrs:
-        return ds
-
-    # determine units and calendar of unencoded time values
-    if ds[time_name].dtype == np.dtype('O'):
-        units = 'days since 0000-01-01'
-        calendar = 'noleap'
-    else:
-        units = ds[time_name].attrs['units']
-        calendar = ds[time_name].attrs['calendar']
-
-    # construct unencoded midpoint values, assumes bounds dim is 2nd
-    tb_name = ds[time_name].attrs['bounds']
-    if ds[tb_name].dtype == np.dtype('O'):
-        tb_vals = cftime.date2num(ds[tb_name].values, units=units, calendar=calendar)
-    else:
-        tb_vals = ds[tb_name].values
-    tb_mid = tb_vals.mean(axis=1)
-
-    # set ds[time_name] to tb_mid
-    if ds[time_name].dtype == np.dtype('O'):
-        # WW changed for xarray 16
-        #ds[time_name].values = cftime.num2date(tb_mid, units=units, calendar=calendar) 
-        ds.assign_coords({time_name: tb_mid})
-    else:
-        #ds[time_name].values = tb_mid
-        ds.assign_coords({time_name: tb_mid})
-    return ds
-'''
-def time_year_plus_frac(ds, time_name):
-    """return time variable, as year plus fraction of year"""
-
-    # this is straightforward if time has units='days since 0000-01-01' and calendar='noleap'
-    # so convert specification of time to that representation
-
-    # get time values as an np.ndarray of cftime objects
-    if np.dtype(ds[time_name]) == np.dtype('O'):
-        tvals_cftime = ds[time_name].values
-    else:
-        tvals_cftime = cftime.num2date(
-            ds[time_name].values, ds[time_name].attrs['units'], ds[time_name].attrs['calendar'])
-
-    # convert cftime objects to representation mentioned above
-    tvals_days = cftime.date2num(tvals_cftime, 'days since 0000-01-01', calendar='noleap')
-
-    return tvals_days / 365.0
-
-
+        
 # add cyclic point
 def cyclic_dataarray(da, coord='lon'):
     """ Add a cyclic coordinate point to a DataArray along a specified
