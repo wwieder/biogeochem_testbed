@@ -4,9 +4,15 @@ import re
 import cftime
 import numpy as np
 import xarray as xr
-#from cartopy.util import add_cyclic_point
+
+import cartopy
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+from cartopy.util import add_cyclic_point
+
 #from xr_ds_ex import xr_ds_ex
 
+# sum of all soil C and N pools for MIMICS & CASA
 def sum_pools(ds_in, mod='MIM', CN='True'):
     if mod == 'mim':
         ds_in['cTOT'] = ds_in['cLITm']+ds_in['cLITs']+ds_in['cMICr']+ds_in['cMICk']+ \
@@ -40,7 +46,7 @@ def sum_pools(ds_in, mod='MIM', CN='True'):
 
     return ds_in
 
-        
+
 # add cyclic point
 def cyclic_dataarray(da, coord='lon'):
     """ Add a cyclic coordinate point to a DataArray along a specified
