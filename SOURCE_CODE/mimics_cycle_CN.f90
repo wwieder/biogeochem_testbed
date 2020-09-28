@@ -53,6 +53,7 @@
 !     SUBROUTINE mimics_soil_reverseMM_CN
 !   1/13/2020 - Added root exudate flux to mimics_delplant (C only) and 
 !               mimics_delplant_CN
+!   9/27/2020 - Updated Nleaching calculation
 !
 !--------------------------------------------------------------------------------
 
@@ -1471,7 +1472,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
   real(r_2) :: CNup_r, CNup_k
   real(r_2) :: DINup_r, DINup_k 
   real(r_2) :: Overflow_r, Overflow_k, Nspill_r, Nspill_k 
-  real(r_2) :: fNleakHr, NLeachingLoss, NleachingLossMimics, unitConv
+  real(r_2) :: unitConv
   real(r_2) :: NHOURSf, NHOURSfrac
   real(r_2) :: Tsoil           ! average soil temperature for the day (degrees C)
   real(r_2) :: theta_liq       ! WW average liquid soil water
@@ -1508,24 +1509,25 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       ! Convert annual NPP (gC/m2/yr) to mgC/cm3/hour
       ClitInputNPPhr = NHOURSfrac * casaflux%CnppAn(npt) / unitConv / 365.0 
 
-      fNleakHr = casaflux%fNminleach(npt)/ real(24)  ! casa fNminleach value is 1/day
+      ! CASACNP fluxes computed by MIMICS-CN. MIMICS-CN fluxes (mg N/cm3) will be converted to gN/m2.
+      casaflux%Nlittermin(npt) = 0.0  ! Gross N mineralization from litter decomposition (gN/m2/day)
+      casaflux%Nsmin(npt) = 0.0       ! Gross N mineraliztion from SOM decomposition (gN/m2/day)
+      casaflux%Nsimm(npt) = 0.0       ! Soil N immobilization (gN/m2/day)
+      casaflux%Nminloss(npt) = 0.0    ! N volatilization (N2O) (gN/m2/day)
+      casapool%dNsoilmindt(npt) = 0.0 ! Change in mineral N pool during 24-hour loop (gN/m2/day)
+
+      ! Compute mineral N leaching prior to MIMICS 24-hour loop, and remove N leaching calculations from this loop. -mdh 9/27/2020
+      casaflux%Nminleach(npt) = casapool%Nsoilmin(npt) * casaflux%fNminleach(npt)  ! N leached from mineral soil (gN/m2/day)
+      casapool%Nsoilmin(npt) = casapool%Nsoilmin(npt) - casaflux%Nminleach(npt)
+
       ! mimicsbiome%fracDINavailMIC is a new parameter which allows only a fraction of soil mineral N
       ! to be available to microbes.  Emily's model did not have it since there was no N competition
       ! with plants. -mdh 6/21/2019
       mimicspool%DIN(npt) = mimicsbiome%fracDINavailMIC*casapool%Nsoilmin(npt)/unitConv  ! Convert gN/m2 to mgN/cm3
       DINstart = mimicspool%DIN(npt)
 
-      NleachingLossMimics = 0.0
       mimicsflux%Chresp(npt) = 0.0
       mimicsflux%CSOMpInput(npt) = 0.0
-
-      ! CASACNP fluxes computed by MIMICS-CN. MIMICS-CN fluxes (mg N/cm3) will be converted to gN/m2.
-      casaflux%Nlittermin(npt) = 0.0  ! Gross N mineralization from litter decomposition (gN/m2/day)
-      casaflux%Nsmin(npt) = 0.0       ! Gross N mineraliztion from SOM decomposition (gN/m2/day)
-      casaflux%Nsimm(npt) = 0.0       ! Soil N immobilization (gN/m2/day)
-      casaflux%Nminloss(npt) = 0.0    ! N volatilization (N2O) (gN/m2/day)
-      casaflux%Nminleach(npt) = 0.0   ! N leached from system (gN/m2/day)
-      casapool%dNsoilmindt(npt) = 0.0 ! Change in mineral N pool (gN/m2/day)
 
       ! Vmax - temperature sensitive maximum reaction velocities (mg C (mg MIC)-1 h-1) 
       Tsoil = casamet%tsoilavg(npt) - tkzeroc
@@ -1739,12 +1741,11 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
     
 
           ! Partitions available DIN between microbial pools based on relative biomass
-          ! There is a problem here beacause 1-fNleakHr is a very large fraction of DIN.
           ! The amount of DIN uptake is not demand driven.  It is a fraction of a large pool. -mdh 7/29/2019
 
           ! Assume that microbes take up all mineral N that is available. The unneeded portion will be spilled later.
-          DINup_r = (1-fNleakHr)*mimicspool%DIN(npt)*mimicspool%MICr(npt)/(mimicspool%MICr(npt)+ mimicspool%MICk(npt)) 
-          DINup_k = (1-fNleakHr)*mimicspool%DIN(npt)*mimicspool%MICk(npt)/(mimicspool%MICr(npt)+ mimicspool%MICk(npt)) 
+          DINup_r = mimicspool%DIN(npt)*mimicspool%MICr(npt)/(mimicspool%MICr(npt)+ mimicspool%MICk(npt)) 
+          DINup_k = mimicspool%DIN(npt)*mimicspool%MICk(npt)/(mimicspool%MICr(npt)+ mimicspool%MICk(npt)) 
 
           upMICrC = mimicsbiome%MGE(1)*(LITmin(1)+SOMmin(1)) + mimicsbiome%MGE(2)*(LITmin(2))
           upMICrN = mimicsbiome%NUE(1)*(LITminN(1)+SOMminN(1)) + mimicsbiome%NUE(2)*(LITminN(2)) + DINup_r
@@ -1777,13 +1778,10 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           dMICkN = upMICkN - sum(MICtrnN(4:6)) - Nspill_k
           dSOMcN = mimicsflux%NlitInput(npt,struc)*NHOURSfrac * mimicsbiome%Fi(struc) + MICtrnN(2) + MICtrnN(5) - OXIDATN
           dSOMaN = MICtrnN(3) + MICtrnN(6) + DEsorbN + OXIDATN - SOMminN(1) - SOMminN(2)
-          NLeachingLoss = fNleakHr*mimicspool%DIN(npt)
           dDIN = (1-mimicsbiome%NUE(1))*(LITminN(1)+SOMminN(1)) + (1-mimicsbiome%NUE(2))*(LITminN(2)) +  &
                  (1-mimicsbiome%NUE(3))*(LITminN(3)+SOMminN(2)) + (1-mimicsbiome%NUE(4))*(LITminN(4)) +  &
-                 Nspill_r + Nspill_k - DINup_r - DINup_k - NLeachingLoss 
+                 Nspill_r + Nspill_k - DINup_r - DINup_k
  
-          NleachingLossMimics = NleachingLossMimics + NLeachingLoss 
-
           !Sum daily heterotrophic respiration flux (mgC/cm3) 
           mimicsflux%Chresp(npt) = mimicsflux%Chresp(npt)  &
                                    + (1.0 - mimicsbiome%MGE(1)) * (LITmin(1) + SOMmin(1)) &
@@ -1853,9 +1851,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 !         endif 
 !     endif 
 
-
-      end do
-
+      end do ! End of 24-hour lopp
 
       ! This is from casa_delsoil. Incorporate into this subroutine. -mdh 6/24/2019
       ! casaflux%Nsnet(npt)=casaflux%Nlittermin(npt)   &
@@ -1865,20 +1861,19 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       ! casaflux%Nmindep = N deposition (gN/m2/day) from netcdf input file, set in casacnpdriver each day.
       ! casaflux%Nminfix = biome-specific N fixation rate (gN/m2/day), set in casa_readbiome.
       ! casaflux%Nminloss = portion of Nsnet lost (assumed to be N2O) (gN/m2/day), calculated below.
-      ! casaflux%Nminleach = N leaching losses (gN/m2/day), calculated as NleachingLossMimics in the hourly loop above.
       ! casaflux%Nupland = N uptake by plants (gN/m2/day), calculated in casa_nuptake.
+      ! casaflux%Nminleach = N leaching losses (gN/m2/day) not subtracted here since they were removed before 24-hour loop. -mdh 9/27/2020
       !
       ! casapool%dNsoilmindt(npt)= casaflux%Nsnet(npt)&
       !                          + casaflux%Nmindep(npt) 
       !                          + casaflux%Nminfix(npt)   &
       !                          - casaflux%Nminloss(npt)  &
-      !                          - casaflux%Nminleach(npt) &
       !                          - casaflux%Nupland(npt) 
 
       ! The Nsnet calculation below is from casa_delsoil.
       casaflux%Nsnet(npt) = casaflux%Nlittermin(npt) + casaflux%Nsmin(npt) + casaflux%Nsimm(npt)
 
-      ! The Nminloss and Nminleach calculations below are from casa_delsoil.
+      ! The Nminloss calculations below are from casa_delsoil.
       ! There is additional leaching according to CASA model. -mdh 8/5/2019
       if (casapool%Nsoilmin(npt) > 2.0 .AND. casamet%tsoilavg(npt) > 273.12) THEN
         casaflux%Nminloss(npt)   = casaflux%fNminloss(npt)  &
@@ -1895,21 +1890,17 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 
       ! dNsoilmindt is used in mimics_cncycle to update casapool%Nsoilmin. 
       ! The change in soil mineral N for the day includes microbial uptake (Nsimm), 
-      ! N mineralization (Nlittermin+Nsmin), and mineral N leaching.
+      ! and N mineralization (Nlittermin+Nsmin)
       casapool%dNsoilmindt(npt) = unitConv*(mimicspool%DIN(npt) - DINstart)
 
       ! Add components of dNsoilmindt not included in MIMICS hourly calculations above. 
       ! This is everything but Nsnet=Nlittermin+Nsmin+Nsimm and mineral N leaching
+      ! casapool%dNsoilmindt(npt) is removed from casapool%Nsoilmin(npt) in subroutine mimics_cncycle.
       casapool%dNsoilmindt(npt) = casapool%dNsoilmindt(npt) &
                                   + casaflux%Nmindep(npt)   &
                                   + casaflux%Nminfix(npt)   &
                                   - casaflux%Nminloss(npt)  &
                                   - casaflux%Nupland(npt) 
-
-      ! NleachingLossMimics was part of dDIN, so it was already accounted for in the dNsoilmindt 
-      ! calculation above, but I added to the Nminleach value for output. -mdh 8/5/2019
-      casaflux%Nminleach(npt) = NleachingLossMimics * unitConv
-
       ! Temporarily record Rh in the casaflux variable for model evaluation. -mdh 8/5/2019. Remove later.
       casaflux%Crsoil = mimicsflux%Chresp(npt) * unitConv + cwd2co2
 
@@ -1941,7 +1932,6 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           write(*,'(a13,f10.6)') 'DINstart = ', DINstart
           write(*,'(a13,f10.6)') 'dDIN = ', mimicspool%DIN(npt) - DINstart
           write(*,'(a13,f10.6)') 'litNinput = ', mimicsflux%NlitInput(npt,metbc) + mimicsflux%NlitInput(npt,struc)
-          !write(*,'(a13,f10.6)') 'NleachLoss = ', NleachingLossMimics
           write(*,'(a13,f10.6)') 'Cbalance = ', Cbalance
           write(*,'(a13,f10.6)') 'CorgSum2 = ', CorgSum2
           write(*,'(a13,f10.6)') 'CorgSum1 = ', CorgSum1
