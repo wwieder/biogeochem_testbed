@@ -1,0 +1,10 @@
+# from compiling the model
+*.o
+*.mod
+
+# compiled code
+/SOURCE_CODE/casaclm_mimics_corpse_test
+/SOURCE_CODE/casaclm_mimics-cn_corpse  
+
+# model output
+*.nc
