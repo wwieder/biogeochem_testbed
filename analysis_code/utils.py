@@ -20,6 +20,14 @@ def sum_pools(ds_in, mod='MIM', CN='True'):
         ds_in['cTOT'].attrs['long_name'] = 'sum of MIMICS SOC pools'
         ds_in['cTOT'].attrs['units'] = ds_in['cLITm'].attrs['units']
 
+        ds_in['relMIC'] = (ds_in['cMICr']+ds_in['cMICk'])/ds_in['cTOT'] * 100
+        ds_in['relMIC'].attrs['long_name'] = 'MIC:SOC'
+        ds_in['relMIC'].attrs['units'] = '%'
+        
+        ds_in['MICrK'] = ds_in['cMICr']/ds_in['cMICk']
+        ds_in['MICrK'].attrs['long_name'] = 'MICr:MICK'
+        ds_in['MICrK'].attrs['units'] = ''
+
         if CN == 'True':
             ds_in['nTOT'] = ds_in['nLITm']+ds_in['nLITs']+ds_in['nMICr']+ds_in['nMICk']+ \
                             ds_in['nSOMa']+ds_in['nSOMc']+ds_in['nSOMp']
@@ -28,6 +36,9 @@ def sum_pools(ds_in, mod='MIM', CN='True'):
 
             ds_in['cnTOT']= ds_in['cTOT'] / ds_in['nTOT']
             ds_in['cnTOT'].attrs['long_name'] = 'MIMICS total SOM C:N ratio'
+            
+            ds_in['cnMIC']= (ds_in['cMICr'] + ds_in['cMICk'])/ (ds_in['nMICr'] + ds_in['nMICk'])
+            ds_in['cnTOT'].attrs['long_name'] = 'MIMICS microbial C:N ratio'
         
     if mod == 'cas':
         ds_in['cTOT'] = ds_in['clitmetb']+ds_in['clitstr']+ds_in['csoilmic']+ \
