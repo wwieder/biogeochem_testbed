@@ -1370,6 +1370,8 @@ SUBROUTINE mimics_caccum(mp,cwd2co2)
       mimicsfluxAn%ChrespAn(npt) = mimicsfluxAn%ChrespAn(npt) + mimicsflux%Chresp(npt) * unitConv 
       ! mimicsflux%CSOMpInput is in units of mg/c3 whereas mimicsfluxAn%CSOMpInputAn is gC/m2. -mdh 12/3/2018
       mimicsfluxAn%CSOMpInputAn(npt) = mimicsfluxAn%CSOMpInputAn(npt) + mimicsflux%CSOMpInput(npt) * unitConv 
+      mimicsfluxAn%Overflow_rAn(npt) = mimicsfluxAn%Overflow_rAn(npt) + mimicsflux%Overflow_r(npt) * unitConv 
+      mimicsfluxAn%Overflow_kAn(npt) = mimicsfluxAn%Overflow_kAn(npt) + mimicsflux%Overflow_k(npt) * unitConv 
 
       ! Added f(T), f(W), thetaLiq, thetaFrzn to MIMICS output. -mdh 11/27/2017
       mimicspoolAn%fTAn(npt) = mimicspoolAn%fTAn(npt) + mimicspool%fT(npt) 
@@ -1528,6 +1530,9 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 
       mimicsflux%Chresp(npt) = 0.0
       mimicsflux%CSOMpInput(npt) = 0.0
+      ! Accumulate daily Overflow_r and Overflow_k respiration and add to output netCDF file. -mdh 10/12/2020
+      mimicsflux%Overflow_r(npt) = 0.0
+      mimicsflux%Overflow_k(npt) = 0.0
 
       ! Vmax - temperature sensitive maximum reaction velocities (mg C (mg MIC)-1 h-1) 
       Tsoil = casamet%tsoilavg(npt) - tkzeroc
@@ -1752,12 +1757,16 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           CNup_r = upMICrC/(upMICrN + 1e-10) !avoiding /0
           Overflow_r = upMICrC - upMICrN*min(mimicsbiome%CN_r, CNup_r) 
           Nspill_r   = upMICrN - upMICrC/max(mimicsbiome%CN_r, CNup_r) 
+          ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
+          mimicsflux%Overflow_r(npt) = mimicsflux%Overflow_r(npt) + Overflow_r
 
           upMICkC = mimicsbiome%MGE(3)*(LITmin(3)+ SOMmin(2)) + mimicsbiome%MGE(4)*(LITmin(4))
           upMICkN = mimicsbiome%NUE(3)*(LITminN(3) + SOMminN(2)) + mimicsbiome%NUE(4)*LITminN(4) + DINup_k
           CNup_k = upMICkC/(upMICkN + 1e-10)
           Overflow_k = upMICkC - upMICkN*min(mimicsbiome%CN_k, CNup_k) 
           Nspill_k = upMICkN - upMICkC/max(mimicsbiome%CN_k, CNup_k)   
+          ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
+          mimicsflux%Overflow_k(npt) = mimicsflux%Overflow_k(npt) + Overflow_k
 
           ! Divide total litter inputs (mgC/cm3/day) by number of hours in the daily timestep (NHOURSf)
           ! Optimization: Multiply by NHOURSfrac = 1/NHOURSf
@@ -1851,7 +1860,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 !         endif 
 !     endif 
 
-      end do ! End of 24-hour lopp
+      end do ! End of 24-hour loop
 
       ! This is from casa_delsoil. Incorporate into this subroutine. -mdh 6/24/2019
       ! casaflux%Nsnet(npt)=casaflux%Nlittermin(npt)   &
@@ -1954,7 +1963,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
                   LITminN, MICtrnN, SOMminN, DEsorbN, OXIDATN, &
                   dLITmN, dLITsN, dMICrN, dMICkN, dSOMaN, dSOMcN, dSOMpN, dDIN, &
                   DINup_r, DINup_k, upMICrC, upMICrN, upMICkC, upMICkN, & 
-                  Overflow_r, Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance)
+                  mimicsflux%Overflow_r, mimicsflux%Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance)
           endif 
       endif 
        

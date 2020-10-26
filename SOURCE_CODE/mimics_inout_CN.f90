@@ -430,6 +430,13 @@ SUBROUTINE mimics_init(filename_mimicsipool,mp,ms,mst)
   mimicspool%SOMcN(:) = 0.0 
   mimicspool%SOMpN(:) = 0.0 
 
+  mimicsflux%ClitInput(:,:) = 0.0
+  mimicsflux%Chresp(:) = 0.0
+  mimicsflux%CSOMpInput(:) = 0.0
+  mimicsflux%Overflow_r(:) = 0.0
+  mimicsflux%Overflow_k(:) = 0.0
+  mimicsflux%NlitInput(:,:) = 0.0
+
   WHERE(casamet%iveg2 /= icewater)
       mimicspool%LITm(:) = 1.0
       mimicspool%LITs(:) = 1.0
@@ -699,6 +706,9 @@ SUBROUTINE mimics_poolfluxout_CN(filename_mimicsepool,mp,iYrCnt,myear,writeToRes
   mimicsfluxAn%CLitInputAn(:,:) = mimicsfluxAn%CLitInputAn(:,:) * xyear2   
   mimicsfluxAn%CSOMpInputAn(:)  = mimicsfluxAn%CSOMpInputAn(:) * xyear2    
   mimicsfluxAn%NLitInputAn(:,:) = mimicsfluxAn%NLitInputAn(:,:) * xyear2   
+  ! Overflow_r and Overflow_k added to NetCDF output file. -mdh 10/12/2020
+  mimicsfluxAn%Overflow_rAn(:)  = mimicsfluxAn%Overflow_rAn(:) * xyear2    
+  mimicsfluxAn%Overflow_kAn(:)  = mimicsfluxAn%Overflow_kAn(:) * xyear2    
 
 !--------------------------------------------------------------------------
 
@@ -839,6 +849,8 @@ END SUBROUTINE mimics_poolfluxout_CN
       integer :: varid_cSOMpIn                  ! NetCDF variable ID for physically protected soil C inputs
       integer :: varid_cLitIn_m                 ! NetCDF variable ID for metabolic litter Input C
       integer :: varid_cLitIn_s                 ! NetCDF variable ID for structural litter Input C
+      integer :: varid_of_r                     ! NetCDF variable ID for Overflow_r respiration
+      integer :: varid_of_k                     ! NetCDF variable ID for Overflow_k respiration
 
       integer :: varid_nLITm                    ! NetCDF variable ID for metablic litter N
       integer :: varid_nLITs                    ! NetCDF variable ID for structural litter N
@@ -873,11 +885,6 @@ END SUBROUTINE mimics_poolfluxout_CN
       real(4), allocatable :: var8(:,:,:)       ! gridded output variable
       real(4), allocatable :: var9(:,:,:)       ! gridded output variable
       real(4), allocatable :: var10(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var11(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var12(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var13(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var14(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var15(:,:,:)      ! gridded output variable
       real(4) :: time                           ! time in years (1..ntimes)
 
       if (verbose .ge. 0) print *, "Writing output to file ", trim(filename_ncOut), "..."
@@ -1004,6 +1011,15 @@ END SUBROUTINE mimics_poolfluxout_CN
 
    status = nf_def_var(ncid, 'cLitInput_struc', NF_REAL, 3, dims, varid_cLitIn_s)
    if (status /= nf_noerr) call handle_err(status, "cLitInput_struc")
+
+
+   ! Added annual overflow respiration variables. -mdh 10/12/2020
+
+   status = nf_def_var(ncid, 'cOverflow_r', NF_REAL, 3, dims, varid_of_r)
+   if (status /= nf_noerr) call handle_err(status, "cOverflow_r")
+
+   status = nf_def_var(ncid, 'cOverflow_k', NF_REAL, 3, dims, varid_of_k)
+   if (status /= nf_noerr) call handle_err(status, "cOverflow_k")
 
 
    ! Added Annual N variables. -mdh 11/30/2019
@@ -1198,6 +1214,19 @@ END SUBROUTINE mimics_poolfluxout_CN
    call PutVariableAttributeReal(ncid, varid_cSOMp, attr_name, attr_units, MISSING_VALUE)
 
 
+   ! Added annual Overflow_r and Overflow_k variables. -mdh 10/12/2020
+
+   ! Attributes of cOverflow_r variable
+   attr_name = 'Overflow respiration from MICr'
+   attr_units = 'gC m-2 year-1'
+   call PutVariableAttributeReal(ncid, varid_of_r, attr_name, attr_units, MISSING_VALUE)
+
+   ! Attributes of cOverflow_k variable
+   attr_name = 'Overflow respiration from MICk'
+   attr_units = 'gC m-2 year-1'
+   call PutVariableAttributeReal(ncid, varid_of_k, attr_name, attr_units, MISSING_VALUE)
+
+
    ! Added N variables. -mdh 11/30/2019
 
    ! Attributes of nLITm variable
@@ -1325,17 +1354,11 @@ END SUBROUTINE mimics_poolfluxout_CN
    allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var9(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
    allocate(var10(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
-   allocate(var11(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
-   allocate(var12(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
-   allocate(var13(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
-   allocate(var14(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
-   allocate(var15(1:clmgrid%nlon,1:clmgrid%nlat,1:ntimes))
 
 !  Average annual values for fluxes and pools
 !  mimicsfluxAn%CLitInputAn(npt,METBC)  - metabolic litter inputs (gC/m2/yr)
 !  mimicsfluxAn%CLitInputAn(npt,STRUC)  - structural litter inputs (gC/m2/yr)
 !  mimicsfluxAn%ChrespAn(npt)           - heterotrophic respiration flux (gC/m2/yr)
-!  mimicsfluxAn%CSOMpInputAn(npt)       - inputs to SOMp (gC/m2/yr)
 !  mimicspoolAn%ClitterAn(npt,METBC)    - metabolic litter pool (gC/m2)
 !  mimicspoolAn%ClitterAn(npt,STRUC)    - structural litter pool (gC/m2)
 !  mimicspoolAn%CmicrobeAn(npt,RSEL)    - r-selected microbe pool (gC/m2)
@@ -1343,10 +1366,7 @@ END SUBROUTINE mimics_poolfluxout_CN
 !  mimicspoolAn%CsoilAn(npt,AVAL)       - available SOM pool (gC/m2)
 !  mimicspoolAn%CsoilAn(npt,CHEM)       - chemically protected SOM pool (gC/m2)
 !  mimicspoolAn%CsoilAn(npt,PHYS)       - physically protected SOM pool (gC/m2)
-!  mimicspoolAn%thetaLiqAn(npt)         - MIMICS mean annual fraction of liquid water saturation
-!  mimicspoolAn%thetaFrznAn(npt)        - MIMICS mean annual fraction of frozen water saturation
-!  mimicspoolAn%fTAn(npt)               - MIMICS mean annual soil temperature function
-!  mimicspoolAn%fWAn(npt)               - MIMICS mean annual soil moisture function
+
 
    IGBP_PFT(:,:) = MISSING_INT
    landarea(:,:) = MISSING_VALUE
@@ -1360,11 +1380,6 @@ END SUBROUTINE mimics_poolfluxout_CN
    var8(:,:,:) = MISSING_VALUE
    var9(:,:,:) = MISSING_VALUE
    var10(:,:,:) = MISSING_VALUE
-   var11(:,:,:) = MISSING_VALUE
-   var12(:,:,:) = MISSING_VALUE
-   var13(:,:,:) = MISSING_VALUE
-   var14(:,:,:) = MISSING_VALUE
-   var15(:,:,:) = MISSING_VALUE
 
    itime = 1
    do npt = 1, mp
@@ -1403,11 +1418,6 @@ END SUBROUTINE mimics_poolfluxout_CN
       var6(ilon,ilat,itime)  = mimicspoolAn%CsoilAn(npt,AVAL)
       var7(ilon,ilat,itime)  = mimicspoolAn%CsoilAn(npt,CHEM)
       var8(ilon,ilat,itime)  = mimicspoolAn%CsoilAn(npt,PHYS)
-      var11(ilon,ilat,itime) = mimicspoolAn%thetaLiqAn(npt)   
-      var12(ilon,ilat,itime) = mimicspoolAn%thetaFrznAn(npt) 
-!     var13(ilon,ilat,itime) = mimicspoolAn%fTAn(npt)   
-      var14(ilon,ilat,itime) = mimicspoolAn%fWAn(npt) 
-      var15(ilon,ilat,itime) = mimicsfluxAn%CSOMpInputAn(npt) 
    end do
 
    ! IGBP PFT
@@ -1455,20 +1465,59 @@ END SUBROUTINE mimics_poolfluxout_CN
    status =  nf_put_var(ncid, varid_cSOMp, var8, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(cSOMp)")
 
-   status =  nf_put_var(ncid, varid_thetaLiq, var11, start3, count3)
+
+   var1(:,:,:) = MISSING_VALUE
+   var2(:,:,:) = MISSING_VALUE
+   var3(:,:,:) = MISSING_VALUE
+   var4(:,:,:) = MISSING_VALUE
+   var5(:,:,:) = MISSING_VALUE
+   var6(:,:,:) = MISSING_VALUE
+   var7(:,:,:) = MISSING_VALUE
+
+!  mimicsfluxAn%CSOMpInputAn(npt)       - inputs to SOMp (gC/m2/yr)
+!  mimicspoolAn%thetaLiqAn(npt)         - MIMICS mean annual fraction of liquid water saturation
+!  mimicspoolAn%thetaFrznAn(npt)        - MIMICS mean annual fraction of frozen water saturation
+!  mimicspoolAn%fTAn(npt)               - MIMICS mean annual soil temperature function
+!  mimicspoolAn%fWAn(npt)               - MIMICS mean annual soil moisture function
+!  mimicsfluxAn%Overflow_rAn(npt)       - Overflow respiration by MICr (gC/m2/yr)
+!  mimicsfluxAn%Overflow_kAn(npt)       - Overflow respiration by MICk (gC/m2/yr)
+
+   itime = 1
+   do npt = 1, mp
+      ilon = casamet%ilon(npt)
+      ilat = casamet%ilat(npt)
+      var1(ilon,ilat,itime) = mimicspoolAn%thetaLiqAn(npt)   
+      var2(ilon,ilat,itime) = mimicspoolAn%thetaFrznAn(npt) 
+!     var3(ilon,ilat,itime) = mimicspoolAn%fTAn(npt)   
+      var4(ilon,ilat,itime) = mimicspoolAn%fWAn(npt) 
+      var5(ilon,ilat,itime) = mimicsfluxAn%CSOMpInputAn(npt) 
+      var6(ilon,ilat,itime) = mimicsfluxAn%Overflow_rAn(npt) 
+      var7(ilon,ilat,itime) = mimicsfluxAn%Overflow_kAn(npt) 
+   end do
+
+   status =  nf_put_var(ncid, varid_thetaLiq, var1, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(thetaLiq)")
 
-   status =  nf_put_var(ncid, varid_thetaFrzn, var12, start3, count3)
+   status =  nf_put_var(ncid, varid_thetaFrzn, var2, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(thetaFrzn)")
 
-!  status =  nf_put_var(ncid, varid_fT, var13, start3, count3)
+!  status =  nf_put_var(ncid, varid_fT, var3, start3, count3)
 !  if (status /= nf_noerr) call handle_err(status, "put_var(fT)")
 
-   status =  nf_put_var(ncid, varid_fW, var14, start3, count3)
+   status =  nf_put_var(ncid, varid_fW, var4, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(fW)")
 
-   status =  nf_put_var(ncid, varid_cSOMpIn, var15, start3, count3)
+   status =  nf_put_var(ncid, varid_cSOMpIn, var5, start3, count3)
    if (status /= nf_noerr) call handle_err(status, "put_var(cSOMpIn)")
+
+
+   ! Added annual Overflow_r and Overflow_k variables. -mdh 10/12/2020
+
+   status =  nf_put_var(ncid, varid_of_r, var6, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cOverflow_r)")
+
+   status =  nf_put_var(ncid, varid_of_k, var7, start3, count3)
+   if (status /= nf_noerr) call handle_err(status, "put_var(cOverflow_k)")
 
 
    ! Added annual N variables. -mdh 12/1/2019
@@ -1500,12 +1549,6 @@ END SUBROUTINE mimics_poolfluxout_CN
    do npt = 1, mp
       ilon = casamet%ilon(npt)
       ilat = casamet%ilat(npt)
-      if (casamet%ijgcm(npt) .ne. clmgrid%cellid(ilon,ilat)) then
-         print *, 'WritePoolFluxNcFile_mimics_annual: casamet%ijgcm(', npt, ')=', casamet%ijgcm(npt)
-         print *, '   clmgrid%cellid(', ilon, ',', ilat, ')=', clmgrid%cellid(ilon,ilat)
-         STOP
-      endif
-
       var1(ilon,ilat,itime)  = mimicsfluxAn%NLitInputAn(npt,METBC)
       var2(ilon,ilat,itime)  = mimicsfluxAn%NLitInputAn(npt,STRUC)
       var3(ilon,ilat,itime)  = mimicspoolAn%NlitterAn(npt,METBC)
@@ -1559,7 +1602,7 @@ END SUBROUTINE mimics_poolfluxout_CN
    if (status /= nf_noerr) call handle_err(status, "put_var(DIN)")
 
 
-   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,var11,var12,var13,var14,var15,IGBP_PFT,landarea)
+   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,IGBP_PFT,landarea)
 
    status = nf_close(ncid)
 
@@ -1628,6 +1671,8 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       integer :: varid_cSOMpIn                  ! NetCDF variable ID for physically protected soil C inputs
       integer :: varid_cLitIn_m                 ! NetCDF variable ID for metabolic litter Input C
       integer :: varid_cLitIn_s                 ! NetCDF variable ID for structural litter Input C
+      integer :: varid_of_r                     ! NetCDF variable ID for Overflow_r respiration
+      integer :: varid_of_k                     ! NetCDF variable ID for Overflow_k respiration
 
       integer :: varid_nLITm                    ! NetCDF variable ID for metablic litter N
       integer :: varid_nLITs                    ! NetCDF variable ID for structural litter N
@@ -1664,11 +1709,6 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       real(4), allocatable :: var8(:,:,:)       ! gridded output variable
       real(4), allocatable :: var9(:,:,:)       ! gridded output variable
       real(4), allocatable :: var10(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var11(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var12(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var13(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var14(:,:,:)      ! gridded output variable
-      real(4), allocatable :: var15(:,:,:)      ! gridded output variable
       real(r_2) :: unitConv                     ! mgC/cm3 * depth(cm)* (1g/10^3mg)*(10^4cm2)/m2 = gC/m2
 
       if (verbose .gt. 0) print *, iday, "Writing output to file ", trim(filename_ncOut), "..."
@@ -1797,6 +1837,15 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    
       status = nf_def_var(ncid, 'cLitInput_struc', NF_REAL, 3, dims, varid_cLitIn_s)
       if (status /= nf_noerr) call handle_err(status, "cLitInput_struc")
+
+
+      ! Added daily overflow respiration variables. -mdh 10/12/2020
+
+      status = nf_def_var(ncid, 'cOverflow_r', NF_REAL, 3, dims, varid_of_r)
+      if (status /= nf_noerr) call handle_err(status, "cOverflow_r")
+
+      status = nf_def_var(ncid, 'cOverflow_k', NF_REAL, 3, dims, varid_of_k)
+      if (status /= nf_noerr) call handle_err(status, "cOverflow_k")
 
 
       ! Added daily N variables. -mdh 11/30/2019
@@ -1991,6 +2040,19 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       call PutVariableAttributeReal(ncid, varid_cSOMp, attr_name, attr_units, MISSING_VALUE)
 
 
+      ! Added daily overflow respiration variables. -mdh 10/12/2020
+
+      ! Attributes of cOverflow_r variable
+      attr_name = 'Overflow respiration from MICr'
+      attr_units = 'gC m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_of_r, attr_name, attr_units, MISSING_VALUE)
+
+      ! Attributes of cOverflow_k variable
+      attr_name = 'Overflow respiration from MICk'
+      attr_units = 'gC m-2 day-1'
+      call PutVariableAttributeReal(ncid, varid_of_k, attr_name, attr_units, MISSING_VALUE)
+
+
       ! Added N variables. -mdh 11/30/2019
    
       ! Attributes of nLITm variable
@@ -2179,6 +2241,15 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       status = nf_inq_varid(ncid, 'cLitInput_struc', varid_cLitIn_s)
       if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cLitInput_struc)")
 
+   
+      ! Added daily Overflow_r and Overflow_k variables. -mdh 10/12/2020
+
+      status = nf_inq_varid(ncid, 'cOverflow_r', varid_of_r)
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cOverflow_r)")
+
+      status = nf_inq_varid(ncid, 'cOverflow_k', varid_of_k)
+      if (status /= nf_noerr) call handle_err(status, "nf_inq_varid(cOverflow_k)")
+
 
       ! Added daily N variables. -mdh 11/30/2019
 
@@ -2245,17 +2316,11 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    allocate(var8(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
    allocate(var9(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
    allocate(var10(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
-   allocate(var11(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
-   allocate(var12(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
-   allocate(var13(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
-   allocate(var14(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
-   allocate(var15(1:clmgrid%nlon,1:clmgrid%nlat,1:nwrtimes))
 
 !  Daily values for fluxes and pools
 !  mimicsflux%ClitInput(npt,metbc)   - metabolic litter inputs (mgC/cm3/day)
 !  mimicsflux%ClitInput(npt,struc)   - structural litter inputs (mgC/cm3/day)
 !  mimicsflux%Chresp(npt)            - heterotrphic respiration flux (mgC/cm3/day)
-!  mimicsflux%CSOMpInput(npt)        - inputs to SOMp (mgC/cm3/day)
 !  mimicspool%LITm(npt)              - metabolic litter pool (mgC/cm3)
 !  mimicspool%LITs(npt)              - structural litter pool (mgC/cm3)
 !  mimicspool%MICr(npt)              - r-selected microbe pool (mgC/cm3)
@@ -2263,10 +2328,7 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
 !  mimicspool%SOMa(npt)              - available SOM pool (mgC/cm3)
 !  mimicspool%SOMc(npt)              - chemically protected SOM pool (mgC/cm3)
 !  mimicspool%SOMp(npt)              - physically protected SOM pool (mgC/cm3)
-!  mimicspool%thetaLiq(npt)          - fraction of liquid soil water saturation (0.0-1.0)
-!  mimicspool%thetaFrzn(npt)         - fraction of frozen soil water saturation (0.0-1.0)
-!  mimicspool%fT(npt)                - MIMICS soil temperature function
-!  mimicspool%fW(npt)                - MIMICS soil moisture function
+
 
    var1(:,:,:) = MISSING_VALUE
    var2(:,:,:) = MISSING_VALUE
@@ -2278,13 +2340,6 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    var8(:,:,:) = MISSING_VALUE
    var9(:,:,:) = MISSING_VALUE
    var10(:,:,:) = MISSING_VALUE
-   var11(:,:,:) = MISSING_VALUE
-   var12(:,:,:) = MISSING_VALUE
-   var13(:,:,:) = MISSING_VALUE
-   var14(:,:,:) = MISSING_VALUE
-   var15(:,:,:) = MISSING_VALUE
-
-
 
    itime = 1
    do npt = 1, mp
@@ -2302,11 +2357,6 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
       var6(ilon,ilat,itime)  = mimicspool%SOMa(npt)   * unitConv
       var7(ilon,ilat,itime)  = mimicspool%SOMc(npt)   * unitConv
       var8(ilon,ilat,itime)  = mimicspool%SOMp(npt)   * unitConv
-      var11(ilon,ilat,itime) = mimicspool%thetaLiq(npt)   
-      var12(ilon,ilat,itime) = mimicspool%thetaFrzn(npt) 
-!     var13(ilon,ilat,itime) = mimicspool%fT(npt)   
-      var14(ilon,ilat,itime) = mimicspool%fW(npt) 
-      var15(ilon,ilat,itime) = mimicsflux%CSOMpInput(npt) * unitConv
    end do
 
 
@@ -2358,25 +2408,72 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    status =  nf_put_vara_real(ncid, varid_cSOMp, start3, count3, var8)
    if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cSOMp)")
 
-!! status =  nf_put_var(ncid, varid_thetaLiq, var11, start3, count3)
-   status =  nf_put_vara_real(ncid, varid_thetaLiq, start3, count3, var11)
+
+   var1(:,:,:) = MISSING_VALUE
+   var2(:,:,:) = MISSING_VALUE
+   var3(:,:,:) = MISSING_VALUE
+   var4(:,:,:) = MISSING_VALUE
+   var5(:,:,:) = MISSING_VALUE
+   var6(:,:,:) = MISSING_VALUE
+   var7(:,:,:) = MISSING_VALUE
+
+!  Daily values for fluxes and pools
+!  mimicspool%thetaLiq(npt)          - fraction of liquid soil water saturation (0.0-1.0)
+!  mimicspool%thetaFrzn(npt)         - fraction of frozen soil water saturation (0.0-1.0)
+!  mimicspool%fT(npt)                - MIMICS soil temperature function
+!  mimicspool%fW(npt)                - MIMICS soil moisture function
+!  mimicsflux%CSOMpInput(npt)        - inputs to SOMp (mgC/cm3/day)
+!  mimicsflux%Overflow_r(npt)        - Overflow respiration from MICr (mgC/cm3/day)
+!  mimicsflux%Overflow_k(npt)        - Overflow respiration from MICk (mgC/cm3/day)
+
+   itime = 1
+   do npt = 1, mp
+      ilon = casamet%ilon(npt)
+      ilat = casamet%ilat(npt)
+      unitConv = 10.0 * mimicsbiome%depth(veg%iveg(npt))     ! mgC/cm3 * depth(cm)* (1g/10^3mg)*(10^4cm2)/m2 = gC/m2
+      var1(ilon,ilat,itime) = mimicspool%thetaLiq(npt)   
+      var2(ilon,ilat,itime) = mimicspool%thetaFrzn(npt) 
+!     var3(ilon,ilat,itime) = mimicspool%fT(npt)   
+      var4(ilon,ilat,itime) = mimicspool%fW(npt) 
+      var5(ilon,ilat,itime) = mimicsflux%CSOMpInput(npt) * unitConv
+      var6(ilon,ilat,itime) = mimicsflux%Overflow_r(npt) * unitConv
+      var7(ilon,ilat,itime) = mimicsflux%Overflow_k(npt) * unitConv
+   end do
+
+
+!! status =  nf_put_var(ncid, varid_thetaLiq, var1, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_thetaLiq, start3, count3, var1)
    if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(thetaLiq)")
 
-!! status =  nf_put_var(ncid, varid_thetaFrzn, var12, start3, count3)
-   status =  nf_put_vara_real(ncid, varid_thetaFrzn, start3, count3, var12)
+!! status =  nf_put_var(ncid, varid_thetaFrzn, var2, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_thetaFrzn, start3, count3, var2)
    if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(thetaFrzn)")
 
-!! status =  nf_put_var(ncid, varid_fT, var13, start3, count3)
-!  status =  nf_put_vara_real(ncid, varid_fT, start3, count3, var13)
+!! status =  nf_put_var(ncid, varid_fT, var3, start3, count3)
+!  status =  nf_put_vara_real(ncid, varid_fT, start3, count3, var3)
 !  if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(fT)")
 
-!! status =  nf_put_var(ncid, varid_fW, var14, start3, count3)
-   status =  nf_put_vara_real(ncid, varid_fW, start3, count3, var14)
+!! status =  nf_put_var(ncid, varid_fW, var4, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_fW, start3, count3, var4)
    if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(fW)")
 
-!! status =  nf_put_var(ncid, varid_cSOMpIn, var15, start3, count3)
-   status =  nf_put_vara_real(ncid, varid_cSOMpIn, start3, count3, var15)
+!! status =  nf_put_var(ncid, varid_cSOMpIn, var5, start3, count3)
+   status =  nf_put_vara_real(ncid, varid_cSOMpIn, start3, count3, var5)
    if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cSOMpIn)")
+
+
+  ! Added daily Overflow_r and Overflow_k variables. -mdh 10/12/2020
+  ! ATTENTION: These lines are commented out because of an error:
+!Done reading met file /project/tss/wwieder/CASACLM/GRID/INPUT_MET_GRID_CRU_NCEP_SOILLIQ/met_1901_1901.nc...
+! NetCDF: Index exceeds dimension bound: nf_put_vara_real(cOverflow_r)
+! STOP Stopped
+
+
+!  status =  nf_put_vara_real(ncid, varid_of_r, var6, start3, count3)
+!  if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cOverflow_r)")
+!
+!  status =  nf_put_vara_real(ncid, varid_of_k, var7, start3, count3)
+!  if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cOverflow_k)")
 
 
    ! Added daily N variables. -mdh 12/1/2019
@@ -2469,9 +2566,7 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    if (status /= nf_noerr) call handle_err(status, "put_var(DIN)")
 
 
-
-
-   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,var11,var12,var13,var14,var15)
+   deallocate(var1,var2,var3,var4,var5,var6,var7,var8,var9,var10)
 
    status = nf_close(ncid)
 

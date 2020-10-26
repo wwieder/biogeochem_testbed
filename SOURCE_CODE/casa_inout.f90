@@ -4839,6 +4839,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
             !! are accumulated in mimics_caccum (mimics_cycle.f90). The means are computed 
             !! in mimics_poolfluxout (mimics_cycle.f90). -MDH 01/26/2015
             mimicsfluxAn%ClitInputAn=0.0; mimicsfluxAn%ChrespAn=0.0 ;  mimicsfluxAn%CSOMpInputAn=0.0
+            mimicsfluxAn%Overflow_rAn=0.0; mimicsfluxAn%Overflow_kAn=0.0
             mimicspoolAn%ClitterAn=0.0;   mimicspoolAn%CmicrobeAn=0.0; mimicspoolAn%CsoilAn=0.0
             mimicspoolAn%NlitterAn=0.0;   mimicspoolAn%NmicrobeAn=0.0; mimicspoolAn%NsoilAn=0.0; 
             mimicsfluxAn%NlitInputAn=0.0; mimicspoolAn%fTAn=0.0;       mimicspoolAn%fWAn=0.0; 
