@@ -1656,7 +1656,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           ! Flows to and from MICr
 
           ! Multiply by recipical of MICr to speed up calculations. -mdh 10/26/2020
-          MICr_recip = mimicspool%MICr(npt) + 1.0e-10
+          MICr_recip = 1.0 / (mimicspool%MICr(npt) + 1.0e-10)
   
           !MICr decomp of METABOLIC litter (f1. LITm-->MICr), reverse Michaelis-Menton Kinetics
           LITmin(1) = mimicspool%MICr(npt) * mimicsbiome%Vmax(npt,R1) * mimicspool%LITm(npt) &
@@ -1703,7 +1703,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           !Flows to and from MICk
 
           ! Multiply by recipical of MICk to speed up calculations. -mdh 10/26/2020
-          MICk_recip = mimicspool%MICk(npt) + 1.0e-10
+          MICk_recip = 1.0 / (mimicspool%MICk(npt) + 1.0e-10)
       
           !decomp of METABOLIC litter (f5. LITm-->MICk), reverse Michaelis-Menton Kinetics
           LITmin(3) = mimicspool%MICk(npt) * mimicsbiome%Vmax(npt,K1) * mimicspool%LITm(npt) &
