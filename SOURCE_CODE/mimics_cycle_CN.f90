@@ -116,12 +116,12 @@ SUBROUTINE mimics_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool,
               ! Reset mimicsbiome%ligninNratio (initially calculated in readbiome) to ratioLignintoN. -mdh 1/20/2020
     
 !             ! using max function to avoid dividing by zero, ypw 14/may/2008
-!             ratioLignintoN(:,leaf) = (casapool%Cplant(:,leaf) &
-!                                  /(max(1.0e-10,casapool%Nplant(:,leaf)) *casabiome%ftransNPtoL(veg%iveg(:),leaf))) &
-!                                  * casabiome%fracLigninplant(veg%iveg(:),leaf)  
-!             ratioLignintoN(:,froot)= (casapool%Cplant(:,froot)&
-!                                      /(max(1.0e-10,casapool%Nplant(:,froot))*casabiome%ftransNPtoL(veg%iveg(:),froot))) &
-!                                  * casabiome%fracLigninplant(veg%iveg(:),froot) 
+!             ratioLignintoN(npt,leaf) = (casapool%Cplant(npt,leaf) &
+!                                  /(max(1.0e-10,casapool%Nplant(npt,leaf)) *casabiome%ftransNPtoL(veg%iveg(npt),leaf))) &
+!                                  * casabiome%fracLigninplant(veg%iveg(npt),leaf)  
+!             ratioLignintoN(npt,froot)= (casapool%Cplant(npt,froot)&
+!                                      /(max(1.0e-10,casapool%Nplant(npt,froot))*casabiome%ftransNPtoL(veg%iveg(npt),froot))) &
+!                                  * casabiome%fracLigninplant(veg%iveg(npt),froot) 
     
               CNplantMax(leaf) = 1.0 / casabiome%ratioNCplantmin(veg%iveg(npt),leaf)
               CNplantMax(froot) = 1.0 / casabiome%ratioNCplantmin(veg%iveg(npt),froot)
@@ -145,8 +145,8 @@ SUBROUTINE mimics_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool,
                                        * casabiome%fracLigninplant(veg%iveg(npt),froot)  
               endif
     
-              mimicsbiome%ligninNratio(:,leaf) = ratioLignintoN(:,leaf)
-              mimicsbiome%ligninNratio(:,froot) = ratioLignintoN(:,froot)
+              mimicsbiome%ligninNratio(npt,leaf) = ratioLignintoN(npt,leaf)
+              mimicsbiome%ligninNratio(npt,froot) = ratioLignintoN(npt,froot)
           end if
 
 !         if (npt == 19) then
@@ -1370,6 +1370,8 @@ SUBROUTINE mimics_caccum(mp,cwd2co2)
       mimicsfluxAn%ChrespAn(npt) = mimicsfluxAn%ChrespAn(npt) + mimicsflux%Chresp(npt) * unitConv 
       ! mimicsflux%CSOMpInput is in units of mg/c3 whereas mimicsfluxAn%CSOMpInputAn is gC/m2. -mdh 12/3/2018
       mimicsfluxAn%CSOMpInputAn(npt) = mimicsfluxAn%CSOMpInputAn(npt) + mimicsflux%CSOMpInput(npt) * unitConv 
+      mimicsfluxAn%Overflow_rAn(npt) = mimicsfluxAn%Overflow_rAn(npt) + mimicsflux%Overflow_r(npt) * unitConv 
+      mimicsfluxAn%Overflow_kAn(npt) = mimicsfluxAn%Overflow_kAn(npt) + mimicsflux%Overflow_k(npt) * unitConv 
 
       ! Added f(T), f(W), thetaLiq, thetaFrzn to MIMICS output. -mdh 11/27/2017
       mimicspoolAn%fTAn(npt) = mimicspoolAn%fTAn(npt) + mimicspool%fT(npt) 
@@ -1472,8 +1474,9 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
   real(r_2) :: CNup_r, CNup_k
   real(r_2) :: DINup_r, DINup_k 
   real(r_2) :: Overflow_r, Overflow_k, Nspill_r, Nspill_k 
-  real(r_2) :: unitConv
-  real(r_2) :: NHOURSf, NHOURSfrac
+  real(r_2) :: unitConv, unitConvCtoM
+  real(r_2) :: NHOURSf, NHOURSfrac, NDAYSfrac
+  real(r_2) :: MICr_recip, MICk_recip
   real(r_2) :: Tsoil           ! average soil temperature for the day (degrees C)
   real(r_2) :: theta_liq       ! WW average liquid soil water
   real(r_2) :: theta_frzn      ! WW average frozen soil water
@@ -1498,16 +1501,18 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 
   NHOURSf = real(NHOURS)
   NHOURSfrac = 1.0/NHOURSf
+  NDAYSfrac = 1.0/365.0
 
   do npt=1,mp
 
   IF(casamet%iveg2(npt) /= icewater) THEN
 
       ! (mg N/cm3)*(1/1000)(g/mg)*(10000)(cm2/m2)*depth(cm) = g N/m2
-      unitConv = 10.0*mimicsbiome%depth(veg%iveg(npt))    ! Convert mgN/cm3 to gN/m2 by multipling by this factor
+      unitConv = 10.0*mimicsbiome%depth(veg%iveg(npt))    ! Convert mgN/cm3 to gN/m2 (MIMICS to CASA) by multipling by this factor
+      unitConvCtoM = 1.0/unitConv ! Convert gN/m2 to mgN/cm3 (CASA to MIMICS) to by multipling by this factor
 
       ! Convert annual NPP (gC/m2/yr) to mgC/cm3/hour
-      ClitInputNPPhr = NHOURSfrac * casaflux%CnppAn(npt) / unitConv / 365.0 
+      ClitInputNPPhr = NHOURSfrac * casaflux%CnppAn(npt) * unitConvCtoM * NDAYSfrac 
 
       ! CASACNP fluxes computed by MIMICS-CN. MIMICS-CN fluxes (mg N/cm3) will be converted to gN/m2.
       casaflux%Nlittermin(npt) = 0.0  ! Gross N mineralization from litter decomposition (gN/m2/day)
@@ -1523,11 +1528,14 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       ! mimicsbiome%fracDINavailMIC is a new parameter which allows only a fraction of soil mineral N
       ! to be available to microbes.  Emily's model did not have it since there was no N competition
       ! with plants. -mdh 6/21/2019
-      mimicspool%DIN(npt) = mimicsbiome%fracDINavailMIC*casapool%Nsoilmin(npt)/unitConv  ! Convert gN/m2 to mgN/cm3
+      mimicspool%DIN(npt) = mimicsbiome%fracDINavailMIC*casapool%Nsoilmin(npt) * unitConvCtoM  ! Convert gN/m2 to mgN/cm3
       DINstart = mimicspool%DIN(npt)
 
       mimicsflux%Chresp(npt) = 0.0
       mimicsflux%CSOMpInput(npt) = 0.0
+      ! Accumulate daily Overflow_r and Overflow_k respiration and add to output netCDF file. -mdh 10/12/2020
+      mimicsflux%Overflow_r(npt) = 0.0
+      mimicsflux%Overflow_k(npt) = 0.0
 
       ! Vmax - temperature sensitive maximum reaction velocities (mg C (mg MIC)-1 h-1) 
       Tsoil = casamet%tsoilavg(npt) - tkzeroc
@@ -1646,6 +1654,9 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       do ihr = 1, NHOURS
 
           ! Flows to and from MICr
+
+          ! Multiply by recipical of MICr to speed up calculations. -mdh 10/26/2020
+          MICr_recip = 1.0 / (mimicspool%MICr(npt) + 1.0e-10)
   
           !MICr decomp of METABOLIC litter (f1. LITm-->MICr), reverse Michaelis-Menton Kinetics
           LITmin(1) = mimicspool%MICr(npt) * mimicsbiome%Vmax(npt,R1) * mimicspool%LITm(npt) &
@@ -1663,21 +1674,25 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 
           !MICr turnover to SOMp (f41. MICr-->SOMp) 
           !MICtrn(1) = mimicspool%MICr(npt) * mimicsbiome%tauR(npt) * mimicsbiome%fPHYS(npt,1)
+
           MICtrn(1) = mimicspool%MICr(npt)**(mimicsbiome%densDep) * mimicsbiome%tauR(npt) * mimicsbiome%fPHYS(npt,1)
       
-          MICtrnN(1) = MICtrn(1) * mimicspool%MICrN(npt) / (mimicspool%MICr(npt) + 1.0e-10)
+          !MICtrnN(1) = MICtrn(1) * mimicspool%MICrN(npt) / (mimicspool%MICr(npt) + 1.0e-10)
+          MICtrnN(1) = MICtrn(1) * mimicspool%MICrN(npt) * MICr_recip
 
           !MICr turnover to SOMc (f42. MICr-->SOMc)                  
           !MICtrn(2) = mimicspool%MICr(npt) * mimicsbiome%tauR(npt) * mimicsbiome%fCHEM(npt,1)   
           MICtrn(2) = mimicspool%MICr(npt)**(mimicsbiome%densDep) * mimicsbiome%tauR(npt) * mimicsbiome%fCHEM(npt,1)   
 
-          MICtrnN(2) = MICtrn(2) * mimicspool%MICrN(npt) / (mimicspool%MICr(npt) + 1.0e-10)
+          !MICtrnN(2) = MICtrn(2) * mimicspool%MICrN(npt) / (mimicspool%MICr(npt) + 1.0e-10)
+          MICtrnN(2) = MICtrn(2) * mimicspool%MICrN(npt) * MICr_recip
       
           !MICr turnover to SOMa (f43. MICr-->SOMa)               
           !MICtrn(3) = mimicspool%MICr(npt) * mimicsbiome%tauR(npt) * mimicsbiome%fAVAL(npt,1)    
           MICtrn(3) = mimicspool%MICr(npt)**(mimicsbiome%densDep) * mimicsbiome%tauR(npt) * mimicsbiome%fAVAL(npt,1) 
 
-          MICtrnN(3) = MICtrn(3) * mimicspool%MICrN(npt) / (mimicspool%MICr(npt) + 1.0e-10)   
+          !MICtrnN(3) = MICtrn(3) * mimicspool%MICrN(npt) / (mimicspool%MICr(npt) + 1.0e-10)   
+          MICtrnN(3) = MICtrn(3) * mimicspool%MICrN(npt) * MICr_recip  
       
           !decomp of SOMa by MICr (f3. SOMa-->MICr), reverse Michaelis-Menton Kinetics
           SOMmin(1) = mimicspool%MICr(npt) * mimicsbiome%Vmax(npt,R3) * mimicspool%SOMa(npt) &
@@ -1686,6 +1701,9 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           SOMminN(1) = SOMmin(1) * mimicspool%SOMaN(npt) / (mimicspool%SOMa(npt) + 1.0e-10)
       
           !Flows to and from MICk
+
+          ! Multiply by recipical of MICk to speed up calculations. -mdh 10/26/2020
+          MICk_recip = 1.0 / (mimicspool%MICk(npt) + 1.0e-10)
       
           !decomp of METABOLIC litter (f5. LITm-->MICk), reverse Michaelis-Menton Kinetics
           LITmin(3) = mimicspool%MICk(npt) * mimicsbiome%Vmax(npt,K1) * mimicspool%LITm(npt) &
@@ -1706,19 +1724,22 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           !MICtrn(4) = mimicspool%MICk(npt) * mimicsbiome%tauK(npt) * mimicsbiome%fPHYS(npt,2) 
           MICtrn(4) = mimicspool%MICk(npt)**(mimicsbiome%densDep) * mimicsbiome%tauK(npt) * mimicsbiome%fPHYS(npt,2)     
 
-          MICtrnN(4) = MICtrn(4) * mimicspool%MICkN(npt) / (mimicspool%MICk(npt) + 1.0e-10)
+          !MICtrnN(4) = MICtrn(4) * mimicspool%MICkN(npt) / (mimicspool%MICk(npt) + 1.0e-10)
+          MICtrnN(4) = MICtrn(4) * mimicspool%MICkN(npt) * MICk_recip
       
           !MICk turnover to SOMc (f82. MICk-->SOMc)             
           !MICtrn(5) = mimicspool%MICk(npt) * mimicsbiome%tauK(npt) * mimicsbiome%fCHEM(npt,2) 
           MICtrn(5) = mimicspool%MICk(npt)**(mimicsbiome%densDep) * mimicsbiome%tauK(npt) * mimicsbiome%fCHEM(npt,2) 
 
-          MICtrnN(5) = MICtrn(5) * mimicspool%MICkN(npt) / (mimicspool%MICk(npt) + 1.0e-10)
+          !MICtrnN(5) = MICtrn(5) * mimicspool%MICkN(npt) / (mimicspool%MICk(npt) + 1.0e-10)
+          MICtrnN(5) = MICtrn(5) * mimicspool%MICkN(npt) * MICk_recip
       
           !MICk turnover to SOMa (f83. MICk-->SOMa)
           !MICtrn(6) = mimicspool%MICk(npt) * mimicsbiome%tauK(npt) * mimicsbiome%fAVAL(npt,2)       
           MICtrn(6) = mimicspool%MICk(npt)**(mimicsbiome%densDep) * mimicsbiome%tauK(npt) * mimicsbiome%fAVAL(npt,2)  
 
-          MICtrnN(6) = MICtrn(6) * mimicspool%MICkN(npt) / (mimicspool%MICk(npt) + 1.0e-10)     
+          !MICtrnN(6) = MICtrn(6) * mimicspool%MICkN(npt) / (mimicspool%MICk(npt) + 1.0e-10)     
+          MICtrnN(6) = MICtrn(6) * mimicspool%MICkN(npt) * MICk_recip    
       
           !decomp of SOMa by MICk (f7. SOMa-->MICk, reverse Michaelis-Menton Kinetics         
           SOMmin(2) = mimicspool%MICk(npt) * mimicsbiome%Vmax(npt,K3) * mimicspool%SOMa(npt) &
@@ -1752,12 +1773,16 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           CNup_r = upMICrC/(upMICrN + 1e-10) !avoiding /0
           Overflow_r = upMICrC - upMICrN*min(mimicsbiome%CN_r, CNup_r) 
           Nspill_r   = upMICrN - upMICrC/max(mimicsbiome%CN_r, CNup_r) 
+          ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
+          mimicsflux%Overflow_r(npt) = mimicsflux%Overflow_r(npt) + Overflow_r
 
           upMICkC = mimicsbiome%MGE(3)*(LITmin(3)+ SOMmin(2)) + mimicsbiome%MGE(4)*(LITmin(4))
           upMICkN = mimicsbiome%NUE(3)*(LITminN(3) + SOMminN(2)) + mimicsbiome%NUE(4)*LITminN(4) + DINup_k
           CNup_k = upMICkC/(upMICkN + 1e-10)
           Overflow_k = upMICkC - upMICkN*min(mimicsbiome%CN_k, CNup_k) 
           Nspill_k = upMICkN - upMICkC/max(mimicsbiome%CN_k, CNup_k)   
+          ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
+          mimicsflux%Overflow_k(npt) = mimicsflux%Overflow_k(npt) + Overflow_k
 
           ! Divide total litter inputs (mgC/cm3/day) by number of hours in the daily timestep (NHOURSf)
           ! Optimization: Multiply by NHOURSfrac = 1/NHOURSf
@@ -1851,7 +1876,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 !         endif 
 !     endif 
 
-      end do ! End of 24-hour lopp
+      end do ! End of 24-hour loop
 
       ! This is from casa_delsoil. Incorporate into this subroutine. -mdh 6/24/2019
       ! casaflux%Nsnet(npt)=casaflux%Nlittermin(npt)   &
@@ -1954,11 +1979,11 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
                   LITminN, MICtrnN, SOMminN, DEsorbN, OXIDATN, &
                   dLITmN, dLITsN, dMICrN, dMICkN, dSOMaN, dSOMcN, dSOMpN, dDIN, &
                   DINup_r, DINup_k, upMICrC, upMICrN, upMICkC, upMICkN, & 
-                  Overflow_r, Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance)
+                  mimicsflux%Overflow_r, mimicsflux%Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance)
           endif 
       endif 
        
-  ENDIF
+  ENDIF  !IF(casamet%iveg2(npt) /= icewater)
 
   end do
 

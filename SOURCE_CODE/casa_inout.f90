@@ -1117,7 +1117,7 @@ end SUBROUTINE write_cnpflux_header
 
 
 !--------------------------------------------------------------------------------
-SUBROUTINE casa_poolout(filename_cnpepool,iYrCnt,myear,writeToRestartCSVfile)
+SUBROUTINE casa_poolout(filename_cnpepool,iYrCnt,myear,writeRestartCSVfile)
 use define_dimensions
 use define_types
 use casadimension
@@ -1155,7 +1155,7 @@ implicit none
    integer  npt,nout,iYrCnt,nso,myear
    character(len=100) filename_cnpepool
    real(r_2) xyear
-   logical writeToRestartCSVfile
+   logical writeRestartCSVfile
 
 !--------------------------------------------------------------------------
 !  Added calculations for average annual pool values
@@ -1191,7 +1191,7 @@ implicit none
    endif
 !--------------------------------------------------------------------------
 
-  if (writeToRestartCSVfile) then
+  if (writeRestartCSVfile) then
      nout=103
      open(nout,file=filename_cnpepool)
 
@@ -1308,7 +1308,7 @@ end SUBROUTINE casa_poolout
 
 
 !--------------------------------------------------------------------------------
-SUBROUTINE casa_fluxout(filename_cnpflux,myear,clitterinput,csoilinput,writeToRestartCSVfile)
+SUBROUTINE casa_fluxout(filename_cnpflux,myear,clitterinput,csoilinput,writeRestartCSVfile)
 use define_dimensions
 use define_types
 use casadimension
@@ -1320,7 +1320,7 @@ implicit none
   integer  npt,nout,myear
   real(r_2) xyear
   character(len=100) filename_cnpflux
-  logical :: writeToRestartCSVfile
+  logical :: writeRestartCSVfile
 
    !xyear=1.0/real(myear)
 
@@ -1348,7 +1348,7 @@ implicit none
    csoilinput   = csoilinput   * xyear
 
 
-  if (writeToRestartCSVfile) then
+  if (writeRestartCSVfile) then
       nout=104
       open(nout,file=filename_cnpflux)
       ! Write a header to the casacnp end-of-simulation flux file. -mdh 1/30/2018
@@ -4642,15 +4642,15 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
 
    ! mloop = sumber of times to cycle through the current met.nc file.
    ! mdaily = 0 for annual output, =1 for daily output
-   ! deltYr = the value of iYrCnt (defined below) to begin using deltsoil and deltair
+   ! deltYr = the value of casafile%iYrCnt (defined below) to begin using deltsoil and deltair
    ! calyr = the calendar year (transient runs only)
 
    integer,   INTENT(IN) :: mloop, mdaily, deltYr, calyr
 
    ! co2air = atmospheric CO2 concentration (ppm)
-   ! deltsoil = add this to soil temperature when iYrCnt >= deltYr
-   ! deltair  = add this to air temperature when iYrCnt >= deltYr
-   ! nppMult  = multiple NPP by this when iYrCnt >= deltYr
+   ! deltsoil = add this to soil temperature when casafile%iYrCnt >= deltYr
+   ! deltair  = add this to air temperature when casafile%iYrCnt >= deltYr
+   ! nppMult  = multiple NPP by this when casafile%iYrCnt >= deltYr
 
    real(r_2), INTENT(IN) :: co2air, deltsoil, deltair, nppMult
 
@@ -4658,12 +4658,12 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
    integer :: nloop,npt,nyear,nday,ns,iyear,imon,iday,iday1,iday2,ndoy,idoy
    integer :: ndoy1,ndoy2
    integer :: myear          ! Number of years in met.nc file
-   integer :: iYrCnt         ! Counter of years executed in this subroutine call (1..mloop*myear)
    integer :: wrtYr          ! Time variable value in the output NetCDF files associated with current simulation year
    integer :: linesWritten   ! For CORPSE, used to determine the the position to write the current year's daily values in NetCDF file.
-   logical writeAnSpinNcOutput, writeToRestartCSVfile
+   integer :: nctime         ! year label in netCDF output file name
+   logical writeNcOutput, writeRestartCSVfile
    
-   ! Names if daily and annual NetCDF output files for the 3 SOM models
+   ! Names of daily and annual NetCDF output files for the 3 SOM models
    character(len=100) :: filename_ncOut_casa_spin_yr
    character(len=100) :: filename_ncOut_mimics_spin_yr
    character(len=100) :: filename_ncOut_corpse_spin_yr
@@ -4736,7 +4736,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
                          xtairk, xndepDay, xtsoil, xmoist, xfrznmoist)
       xcnpp = xcgpp / 2.0  !Initialization only
 
-      ! Compute the average air temperature over the entire simulation cycle.
+      ! Compute the average air temperature (C) over the entire simulation cycle.
       yavgtair(:) = 0.0
       nyavgtair(:) = 0
       do nyear=1,myear
@@ -4744,9 +4744,9 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
          ndoy2=nyear*365
          do npt=1,mp
             do iday=ndoy1,ndoy2
-               if(xtairk(npt,iday) > 273.12) then
+               if(xtairk(npt,iday) > tkzeroc) then
                   nyavgtair(npt) = nyavgtair(npt) + 1
-                  yavgtair(npt)  = yavgtair(npt) + xtairk(npt,iday) - 273.12
+                  yavgtair(npt)  = yavgtair(npt) + (xtairk(npt,iday) - tkzeroc)
                endif
             enddo
          enddo
@@ -4782,14 +4782,30 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
   !!The monthly values are not used anywhere. -mdh 3/9/2020
   !FCgppmon=0.0;FCnppmon=0.0;FCrsmon=0.0;FCneemon=0.0
 
-  iYrCnt = 0    ! Count the number of years (1..mloop*myear)
   DO nloop=1,mloop
 
-     ! If writeAnSpinNcOutput == .true., write to netcdf files each year during a spinup
-     ! Eventually I will need to make writeAnSpinNcOutput an option in the .lst file
-     writeAnSpinNcOutput = .true.
-
      do iyear=1,myear
+
+        ! casafile%iYrCnt, the simulation year count, has already been set in main program 
+        ! (offline_casacnp) when initcasa >=2. -mdh 10/6/2020
+        if (initcasa < 2) casafile%iYrCnt = casafile%iYrCnt + 1
+      
+        ! Write netcdf files on the first and last simulation years, plus each output interval. 
+        ! -mdh 10/6/2020
+        if (casafile%iYrCnt == 1 .or. MOD(casafile%iYrCnt,casafile%ncOutputInterval) == 0 &
+            .or. casafile%iYrCnt == casafile%totYrCnt) then
+            writeNcOutput = .true.
+        else
+            writeNcOutput = .false.
+        endif
+
+        ! Write to output restart CSV files every 100 years or at end of the simulation.
+        if (MOD(casafile%iYrCnt,100) == 0 .or. casafile%iYrCnt == casafile%totYrCnt) then
+           writeRestartCSVfile = .true.
+           write(*,*) 'Writing to restart files year: ', casafile%iYrCnt
+        else
+           writeRestartCSVfile = .false.
+        endif
 
         !! Initialize average annual fluxes for the year.
         !! For output only. These are accumulated in casa_cnpflux.
@@ -4823,49 +4839,44 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
             !! are accumulated in mimics_caccum (mimics_cycle.f90). The means are computed 
             !! in mimics_poolfluxout (mimics_cycle.f90). -MDH 01/26/2015
             mimicsfluxAn%ClitInputAn=0.0; mimicsfluxAn%ChrespAn=0.0 ;  mimicsfluxAn%CSOMpInputAn=0.0
+            mimicsfluxAn%Overflow_rAn=0.0; mimicsfluxAn%Overflow_kAn=0.0
             mimicspoolAn%ClitterAn=0.0;   mimicspoolAn%CmicrobeAn=0.0; mimicspoolAn%CsoilAn=0.0
             mimicspoolAn%NlitterAn=0.0;   mimicspoolAn%NmicrobeAn=0.0; mimicspoolAn%NsoilAn=0.0; 
             mimicsfluxAn%NlitInputAn=0.0; mimicspoolAn%fTAn=0.0;       mimicspoolAn%fWAn=0.0; 
             mimicspoolAn%thetaLiqAn=0.0;  mimicspoolAn%thetaFrznAn=0.0
         endif
    
-        iYrCnt = iYrCnt + 1
         if (initcasa < 2) then
-           wrtYr = iYrCnt
+           wrtYr = casafile%iYrCnt
         else
            wrtYr = calyr
         endif
-        if (iYrCnt >= deltYr) then
-           write(*,34) 'Soil Temperature Increment for year', iYrCnt, ' = ', deltsoil
-           write(*,34) 'Air Temperature Increment for year', iYrCnt, ' = ', deltair
-           write(*,34) 'NPP multiplier', iYrCnt, ' = ', nppMult
+        if (casafile%iYrCnt >= deltYr) then
+           write(*,34) 'Soil Temperature Increment for year', casafile%iYrCnt, ' = ', deltsoil
+           write(*,34) 'Air Temperature Increment for year', casafile%iYrCnt, ' = ', deltair
+           write(*,34) 'NPP multiplier', casafile%iYrCnt, ' = ', nppMult
 34 format(a30,1x,i4,a3,f6.2)
         endif
  
-        if(mdaily == 1) then
+        if(mdaily == 1 .and. writeNcOutput) then
            ! This is the beginning of another simulation year.
            ! Determine the names of the daily .nc output files for the current year.
            ! The daily names are derived from the annual names.
            if (initcasa < 2) then
-              !Non-transint run.  Use iYrCnt for simulation year
-              call CreateDailyNcFileName(filename_ncOut_casa_day, filename_ncOut_casa, iYrCnt)
-              if (isomModel == MIMICS) then
-                 call CreateDailyNcFileName(filename_ncOut_mimics_day, filename_ncOut_mimics, iYrCnt)
-              endif
-              if (isomModel == CORPSE) then
-                 call CreateDailyNcFileName(filename_ncOut_corpse_day, filename_ncOut_corpse, iYrCnt)
-              endif
+              !Non-transient run.  Use casafile%iYrCnt for simulation year
+              nctime = casafile%iYrCnt
            else
-              ! Transient file names already include calendar year so do not replace year with iYrCnt.
-              call CreateDailyNcFileName(filename_ncOut_casa_day, filename_ncOut_casa, -1)
-              if (isomModel == MIMICS) then
-                 call CreateDailyNcFileName(filename_ncOut_mimics_day, filename_ncOut_mimics, -1)
-              endif
-              if (isomModel == CORPSE) then
-                 call CreateDailyNcFileName(filename_ncOut_corpse_day, filename_ncOut_corpse, -1)
-              endif
+              !Transient file names already include the calendar year. Don't replace it.
+              nctime = -1
            endif
-        endif  ! if (mdaily==1)
+           call CreateDailyNcFileName(filename_ncOut_casa_day, filename_ncOut_casa, nctime)
+           if (isomModel == MIMICS) then
+              call CreateDailyNcFileName(filename_ncOut_mimics_day, filename_ncOut_mimics, nctime)
+           endif
+           if (isomModel == CORPSE) then
+              call CreateDailyNcFileName(filename_ncOut_corpse_day, filename_ncOut_corpse, nctime)
+           endif
+        endif  ! endif (mdaily==1 .and. writeNcOutput)
 
         monlai = -1.0
   
@@ -4890,7 +4901,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
               ndoy=(iyear-1)*365+iday
               casaflux%Cgpp(:)  = xcgpp(:,ndoy)                ! Added -mdh 3/24/2014 
               casaflux%Cnpp(:)  = xcnpp(:,ndoy) * xnplimit(:)  ! casaflux%Cnpp(:) is reassigned in SUBROUTINE casa_rplant
-              if (iYrCnt >= deltYr) then
+              if (casafile%iYrCnt >= deltYr) then
                  casamet%tairk(:)  = xtairk(:,ndoy)    + deltair
                  casamet%tsoil(:,:)= xtsoil(:,:,ndoy)  + deltsoil
               else
@@ -4905,20 +4916,21 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
               !!call biogeochem(iday,xnlimit,xplimit,xnplimit,xnuptake,xpuptake,xnpuptake)
               !!call biogeochem(iday,veg,soil,casabiome,casapool,casaflux, &
               !!                casamet,casabal,phen)
-              if (iYrCnt >= deltYr) then
+              if (casafile%iYrCnt >= deltYr) then
                  nppScalar = nppMult
               else
                  nppScalar = 1.0
               endif
 
-              !call biogeochem(iYrCnt,iday,nppScalar)
+              !call biogeochem(casafile%iYrCnt,iday,nppScalar)
               !When calling biogeochem, pass back plant litter fluxes for daily output. -mdh 5/14/2018
-              call biogeochem(iYrCnt,iday,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+              call biogeochem(casafile%iYrCnt,iday,mdaily,nppScalar, &
+                              cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
 
               if (casafile%iptToSaveIndx > 0) then
                  ! Write point-specific output. Write end-of-year values only when mdaily==0. -mdh 5/14/2018
                  if ((mdaily == 1) .or. (iday == 365)) then
-                     call WritePointCASA(iYrCnt,iday,mp,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
+                     call WritePointCASA(casafile%iYrCnt,iday,mp,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd)
                  endif
               endif
 
@@ -4934,33 +4946,21 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
                  if(iday==middoy(imon)) monlai(:,imon) = casamet%glai(:)
               endif 
 
-              if(mdaily == 1) then
+              if(mdaily == 1 .and. writeNcOutput) then
                  !Write current day's values to NetCDF output file
                  !Annual output occurs below, after the year loop.
-                 if (initcasa > 1) then
-                    ! Write daily output to NetCDF file each year for transient runs
-                    call WritePoolFluxNcFile_casacnp_daily(filename_ncOut_casa_day, mp, wrtYr, iday)
-                    if (isomModel == MIMICS) then
-                       call WritePoolFluxNcFile_mimics_daily(filename_ncOut_mimics_day, mp, wrtYr, iday)
-                    else if (isomModel == CORPSE) then
-                       ! CORPSE daily NetCDF output occurs at the end year, all 365 days at once
-                    endif
-                !!else if (iyear == myear .and. writeAnSpinNcOutput) then
-                else if (writeAnSpinNcOutput) then
-                   ! Write daily spinup files each year, not just every myear years.  -mdh 9/19/2016
-                   call WritePoolFluxNcFile_casacnp_daily(filename_ncOut_casa_day, mp, wrtYr, iday)
-                   if (isomModel == MIMICS) then
-                      call WritePoolFluxNcFile_mimics_daily(filename_ncOut_mimics_day, mp, wrtYr, iday)
-                   else if (isomModel == CORPSE) then
-                      ! CORPSE daily NetCDF output occurs at the end year, all 365 days at once
-                   endif
-                endif
-             endif
+                 call WritePoolFluxNcFile_casacnp_daily(filename_ncOut_casa_day, mp, wrtYr, iday)
+                 if (isomModel == MIMICS) then
+                    call WritePoolFluxNcFile_mimics_daily(filename_ncOut_mimics_day, mp, wrtYr, iday)
+                 else if (isomModel == CORPSE) then
+                    ! CORPSE daily NetCDF output occurs at the end year, all 365 days at once
+                 endif
+              endif  ! endif (mdaily==1 .and. writeNcOutput)
 
-          enddo  !end do iday
-       enddo  ! end do imon
+           enddo  !end do iday
+        enddo  ! end do imon
 
-      !END OF SIMULATION YEAR
+       !END OF SIMULATION YEAR
 
 !      !Write to laimonth_mod.csv
 !      if(nloop==mloop) then
@@ -4971,32 +4971,25 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
 !         enddo
 !      endif
 
-       !!if (initcasa < 2 .and. writeAnSpinNcOutput .and. iyear .eq. myear) then
-       ! Write annual spinup files each year, not just every myear years.  -mdh 9/19/2016
        ! Daily output occurs above, within the day loop.
-       ! Output for transient runs occurs "at the end of the simulation" since transient 
-       ! simulations are one year long.
-       if (initcasa < 2 .and. writeAnSpinNcOutput) then
+       ! Output for transient runs(inticasa >=2) occurs at the end of this subroutine since transient 
+       ! simulations are run one year at a time.
+
+       if (initcasa < 2 .and. writeNcOutput) then
 
           filename_ncOut_casa_spin_yr = filename_ncOut_casa
           filename_ncOut_mimics_spin_yr = filename_ncOut_mimics
           filename_ncOut_corpse_spin_yr = filename_ncOut_corpse
 
-          call InsertYearInNcFileName(filename_ncOut_casa_spin_yr, iYrCnt)
-          call InsertYearInNcFileName(filename_ncOut_mimics_spin_yr, iYrCnt)
-          call InsertYearInNcFileName(filename_ncOut_corpse_spin_yr, iYrCnt)
-          call CreateDailyNcFileName(filename_ncOut_corpse_spin_day, filename_ncOut_corpse, iYrCnt)
+          call InsertYearInNcFileName(filename_ncOut_casa_spin_yr, casafile%iYrCnt)
+          call InsertYearInNcFileName(filename_ncOut_mimics_spin_yr, casafile%iYrCnt)
+          call InsertYearInNcFileName(filename_ncOut_corpse_spin_yr, casafile%iYrCnt)
+          call CreateDailyNcFileName(filename_ncOut_corpse_spin_day, filename_ncOut_corpse, casafile%iYrCnt)
   
           !! Compute annual means in casa_poolout and casa_fluxout but only write 
           !! to output CSV files every 100 years.
-          if (MOD((nloop-1)*myear+iyear, 100) == 0) then
-             writeToRestartCSVfile = .true.
-             write(*,*) 'Writing to restart files year: ', (nloop-1)*myear+iyear
-          else
-             writeToRestartCSVfile = .false.
-          endif
-          call casa_poolout(filename_cnpepool,iYrCnt,myear,writeToRestartCSVfile)
-          call casa_fluxout(filename_cnpflux,myear,clitterinput,csoilinput,writeToRestartCSVfile)
+          call casa_poolout(filename_cnpepool,casafile%iYrCnt,myear,writeRestartCSVfile)
+          call casa_fluxout(filename_cnpflux,myear,clitterinput,csoilinput,writeRestartCSVfile)
 
           if (mdaily /= 1) then
              !NOTE: The daily .nc output for CASACNP occurs above within the iday loop
@@ -5005,9 +4998,9 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
 
           if (isomModel == MIMICS) then
              if (icycle == 1) then
-                call mimics_poolfluxout(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+                call mimics_poolfluxout(filename_mimicsepool,mp,casafile%iYrCnt,myear,writeRestartCSVfile)
              else
-                call mimics_poolfluxout_CN(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+                call mimics_poolfluxout_CN(filename_mimicsepool,mp,casafile%iYrCnt,myear,writeRestartCSVfile)
              endif
              if (mdaily /= 1) then
                 !NOTE: The daily .nc output for MIMICS occurs above within the iday loop
@@ -5015,7 +5008,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
              endif
           else if (isomModel == CORPSE) then
              ! Output current year's CORPSE results for non-transient run(-mdh 5/16/2016)
-             call corpse_poolfluxout(filename_corpseepool,mp,writeToRestartCSVfile)
+             call corpse_poolfluxout(filename_corpseepool,mp,writeRestartCSVfile)
              if (mdaily == 1) then
                 linesWritten = pt(mp)%litterlayer_outputs%linesWritten  ! all pools and points have the same # of output lines
                 call InitPoolFluxNcFile_corpse(filename_ncOut_corpse_spin_day, 365, mdaily)
@@ -5028,7 +5021,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
                                                 pt(mp)%soil_outputs(1), mp, linesWritten, linesWritten, mdaily, wrtYr)
              endif
           endif
-        endif  ! if writeAnSpinNcOutput
+        endif  ! endif (initcasa < 2 .and. writeNcOutput)
 
         !Annual NPP from the previous year is needed for MIMICS and CORPSE models.
         !Calculation added here. -mdh 3/9/2020
@@ -5041,33 +5034,33 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
      !Write END-OF-SIMULATION-CYCLE pools and fluxes to NetCDF file
      if(nloop==mloop) then
 
-        ! This is the end of the simulation cyle.  Always write to CSV files and netcdf files.
-        writeToRestartCSVfile = .true.
-        call casa_poolout(filename_cnpepool,iYrCnt,myear,writeToRestartCSVfile)
-        call casa_fluxout(filename_cnpflux,myear,clitterinput,csoilinput,writeToRestartCSVfile)
-        if (mdaily /= 1) then
+        ! This is the end of the simulation cyle.  
+        call casa_poolout(filename_cnpepool,casafile%iYrCnt,myear,writeRestartCSVfile)
+        call casa_fluxout(filename_cnpflux,myear,clitterinput,csoilinput,writeRestartCSVfile)
+        if (mdaily /= 1 .and. writeNcOutput) then
            call WritePoolFluxNcFile_casacnp_annual(filename_ncOut_casa, mp, wrtYr)
         endif
 
         if (isomModel == MIMICS) then
 
            if (icycle == 1) then
-              call mimics_poolfluxout(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+              call mimics_poolfluxout(filename_mimicsepool,mp,casafile%iYrCnt,myear,writeRestartCSVfile)
            else
-              call mimics_poolfluxout_CN(filename_mimicsepool,mp,iYrCnt,myear,writeToRestartCSVfile)
+              call mimics_poolfluxout_CN(filename_mimicsepool,mp,casafile%iYrCnt,myear,writeRestartCSVfile)
            endif
-           if (mdaily /= 1) then
+           if (mdaily /= 1 .and. writeNcOutput) then
               call WritePoolFluxNcFile_mimics_annual(filename_ncOut_mimics, mp, wrtYr)
            endif
 
         else if (isomModel == CORPSE) then
 
-           call corpse_poolfluxout(filename_corpseepool,mp,writeToRestartCSVfile)
+           call corpse_poolfluxout(filename_corpseepool,mp,writeRestartCSVfile)
            if (casafile%iptToSaveIndx > 0) then
               !Write point-specific output to sPtFileNameCORPSE
               call WritePointCORPSE(sPtFileNameCORPSE,casafile%iptToSaveIndx)
            endif
            ! Output current year's CORPSE results for transient run (-mdh 5/16/2016)
+           ! Note: since CORPSE does output differently than CASA or MIMICS, not using writeNcOutput here. -mdh 10/5/2020
            if (mdaily == 1) then
               linesWritten = pt(mp)%litterlayer_outputs%linesWritten  ! all pools and points have the same # of output lines
               call InitPoolFluxNcFile_corpse(filename_ncOut_corpse_day, 365, mdaily)

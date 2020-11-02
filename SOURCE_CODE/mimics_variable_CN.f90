@@ -116,6 +116,8 @@ MODULE mimicsvariable
     REAL(r_2), DIMENSION(:,:),POINTER :: ClitInput
     REAL(r_2), DIMENSION(:)  ,POINTER :: Chresp
     REAL(r_2), DIMENSION(:)  ,POINTER :: CSOMpInput
+    REAL(r_2), DIMENSION(:)  ,POINTER :: Overflow_r
+    REAL(r_2), DIMENSION(:)  ,POINTER :: Overflow_k
     REAL(r_2), DIMENSION(:,:),POINTER :: NlitInput
   END TYPE mimics_flux
 
@@ -168,7 +170,8 @@ MODULE mimicsvariable
     REAL(r_2), DIMENSION(:,:), POINTER :: ClitInputAn
     REAL(r_2), DIMENSION(:),   POINTER :: ChrespAn
     REAL(r_2), DIMENSION(:),   POINTER :: CSOMpInputAn
-
+    REAL(r_2), DIMENSION(:),   POINTER :: Overflow_rAn
+    REAL(r_2), DIMENSION(:),   POINTER :: Overflow_kAn
     REAL(r_2), DIMENSION(:,:), POINTER :: NlitInputAn
 
   END TYPE mimics_annual_flux
@@ -243,7 +246,8 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
   ALLOCATE(mimicsflux%ClitInput(arraysize,nmimicslit))
   ALLOCATE(mimicsflux%Chresp(arraysize))
   ALLOCATE(mimicsflux%CSOMpInput(arraysize))
-
+  ALLOCATE(mimicsflux%Overflow_r(arraysize))
+  ALLOCATE(mimicsflux%Overflow_k(arraysize))
   ALLOCATE(mimicsflux%NlitInput(arraysize,nmimicslit))
 
   ALLOCATE(mimicspool%LITm(arraysize),        &
@@ -283,7 +287,8 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
   ALLOCATE(mimicsfluxAn%ClitInputAn(arraysize,nmimicslit))
   ALLOCATE(mimicsfluxAn%ChrespAn(arraysize))
   ALLOCATE(mimicsfluxAn%CSOMpInputAn(arraysize))
-
+  ALLOCATE(mimicsfluxAn%Overflow_rAn(arraysize))
+  ALLOCATE(mimicsfluxAn%Overflow_kAn(arraysize))
   ALLOCATE(mimicsfluxAn%NlitInputAn(arraysize,nmimicslit))
 
 END SUBROUTINE alloc_mimicsvariable

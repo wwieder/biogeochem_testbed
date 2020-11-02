@@ -36,10 +36,18 @@ PROGRAM offline_casacnp
   USE corpsevariable
 
   IMPLICIT NONE
-  integer mst, mvt, mloop, mdaily, myear
-  integer tyear1, tyear2, ityear, idx
-  !integer idx2, nloop
-  integer mreps, irep, iYrCnt, nctime
+  integer mvt             !! number of vegetation types (.lst file)
+  integer mloop           !! number of times to loop through the met.nc file (.lst) 
+  integer myear           !! number of years in the met.nc file
+  integer mreps, irep     !! number of times to repeat transient sequence (1 when initcasa=2, set from mloop when initcasa=3)
+  integer mdaily          !! 0=output annual netcdf output, 1=daily netcdf output (.lst file)
+  integer tyear1, tyear2  !! calendar years for transient weather files (.lst file)
+  integer ityear          !! loop index tyear1..tyear2
+  !integer iYrCnt         !! replaced by casafile%iYrCnt = # years simulated so far for transient runs (initcasa = 2 or 3)      
+  integer nctime          !! year label in netCDF output file name
+  integer mst             !! number of soil types (no longer used excpet to dimension some variables) 
+  integer idx             !! index used to locate positions of substrings in larger strings
+
   character(len=100) :: filename_cnppoint,filename_phen, &
                         filename_cnpipool,filename_cnpmet, &
                         filename_cnpepool,filename_cnpflux, &
@@ -186,13 +194,20 @@ PROGRAM offline_casacnp
   !! Read in point output file location from fcasacnp_clm_testbed.lst
 
   read(10,*) casafile%iptToSave         !! If > 0, save daily output for this point in .csv file
+  read(10,101) dirPtFile                !! Directory where point file will be written to if casafile%iptToSave > 0
+  call rmcomments(dirPtFile)
   if (casafile%iptToSave > 0) then
-      read(10,101) dirPtFile            !! Directory where point file will be written to
-      call rmcomments(dirPtFile)
       write(*,*) 'Directory for Point Files = ', trim(dirPtFile)
-  else
-      dirPtFile = ""
   endif
+
+  !! ----------------------------------------------------------------------------------------------------
+  !! Read netCDF output interval
+
+  read(10,*) casafile%ncOutputInterval    !! Number of years between successive netCDF output
+  if (casafile%ncOutputInterval <= 0) then
+      casafile%ncOutputInterval = 1
+  endif
+  write(*,*) 'netCDF output interval (years): ', casafile%ncOutputInterval
 
   !! ----------------------------------------------------------------------------------------------------
   ! ALLOCATE VARIABLES
@@ -281,8 +296,7 @@ PROGRAM offline_casacnp
       !! The allocation of output variables may need to be moved after met.nc file is read 
       !! to get the exact # simulation years.
       if (initcasa < 2) then
-          !maxSteps = mloop * 365 * 7                         ! 7 is the maximum number of years in a spinup file (daily time step - mdh 3/21/2016)
-          maxSteps = mloop * 365 * myear                      ! myear is the number of years in a spinup file (daily time step - mdh 1/30/2018)
+          maxSteps = mloop * 365 * myear                      ! myear = number of years in the met.nc file (daily time step - mdh 1/30/2018)
       else
           maxSteps = mloop * 365 * abs(tyear2 - tyear1 + 1)   ! Assumes each transient year met.nc file has 365 days  (daily time step - mdh 3/21/2016)
       endif
@@ -299,10 +313,13 @@ PROGRAM offline_casacnp
      !Non-transient run.  One met.nc file is used for the entire simulation.
 
      print *, 'calling casacnpdriver'
+     casafile%iYrCnt = 0                ! number of years simulated so far
+     casafile%totYrCnt = myear * mloop  ! Total number of years in this simulation
+     nctime = 0
      call casacnpdriver(filename_cnpmet,filename_cnpepool,filename_cnpflux, filename_ncOut, &
                         filename_mimicsepool, filename_ncOut_mimics, &
                         filename_corpseepool, filename_ncOut_corpse, &
-                        mloop, mdaily, co2air, deltsoil, deltair, deltYr, nppMult, 0)
+                        mloop, mdaily, co2air, deltsoil, deltair, deltYr, nppMult, nctime)
   else
 
      !Transient run. Read a different met.nc file each year, output to different NetCDF files each year.
@@ -329,10 +346,12 @@ PROGRAM offline_casacnp
      endif
      mloop = 1    ! For transient runs, mloop=1 is the number of times to loop through each met.nc file.
 
+     casafile%totYrCnt = mreps * (tyear2 - tyear1 + 1)  ! Total number of years in this simulation
+
      do irep = 1, mreps
          do ityear = tyear1, tyear2
 
-            iYrCnt = (irep-1)*(tyear2-tyear1+1) + (ityear-tyear1+1)
+            casafile%iYrCnt = (irep-1)*(tyear2-tyear1+1) + (ityear-tyear1+1)
 
             ! Determine the name of the met.nc file to read by replacing the last 9 characters before ".nc" with 
             ! yyyy_yyyy, where yyyy is the value of ityear.
@@ -362,10 +381,10 @@ PROGRAM offline_casacnp
                 nctime = ityear
             else
                 !This is a repeated transient run, so insert the year count in the output file names
-                call InsertYearInNcFileName(filename_ncOut, iYrCnt)
-                call InsertYearInNcFileName(filename_ncOut_mimics, iYrCnt)
-                call InsertYearInNcFileName(filename_ncOut_corpse, iYrCnt)
-                nctime = iYrCnt
+                call InsertYearInNcFileName(filename_ncOut, casafile%iYrCnt)
+                call InsertYearInNcFileName(filename_ncOut_mimics, casafile%iYrCnt)
+                call InsertYearInNcFileName(filename_ncOut_corpse, casafile%iYrCnt)
+                nctime = casafile%iYrCnt
             endif
 
     !!      Since N dep is read from met.nc, no longer need annual filename_cnppoint file. -mdh 8/22/2016
