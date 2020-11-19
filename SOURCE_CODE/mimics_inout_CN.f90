@@ -2461,19 +2461,13 @@ END SUBROUTINE WritePoolFluxNcFile_mimics_annual
    status =  nf_put_vara_real(ncid, varid_cSOMpIn, start3, count3, var5)
    if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cSOMpIn)")
 
-
   ! Added daily Overflow_r and Overflow_k variables. -mdh 10/12/2020
-  ! ATTENTION: These lines are commented out because of an error:
-!Done reading met file /project/tss/wwieder/CASACLM/GRID/INPUT_MET_GRID_CRU_NCEP_SOILLIQ/met_1901_1901.nc...
-! NetCDF: Index exceeds dimension bound: nf_put_vara_real(cOverflow_r)
-! STOP Stopped
 
+   status =  nf_put_vara_real(ncid, varid_of_r, start3, count3, var6)
+   if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cOverflow_r)")
 
-!  status =  nf_put_vara_real(ncid, varid_of_r, var6, start3, count3)
-!  if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cOverflow_r)")
-!
-!  status =  nf_put_vara_real(ncid, varid_of_k, var7, start3, count3)
-!  if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cOverflow_k)")
+   status =  nf_put_vara_real(ncid, varid_of_k, start3, count3, var7)
+   if (status /= nf_noerr) call handle_err(status, "nf_put_vara_real(cOverflow_k)")
 
 
    ! Added daily N variables. -mdh 12/1/2019
