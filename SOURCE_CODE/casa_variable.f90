@@ -437,6 +437,9 @@ MODULE casavariable
     CHARACTER(LEN=100) :: sPtFileNameCASA
     INTEGER :: iptToSave = 0
     INTEGER :: iptToSaveIndx = 0
+    INTEGER :: ncOutputInterval = 1
+    INTEGER :: iYrCnt = 0
+    INTEGER :: totYrCnt = 0
 !   LOGICAL           :: l_ndep
   END TYPE casafiles_type
   TYPE(casafiles_type) :: casafile

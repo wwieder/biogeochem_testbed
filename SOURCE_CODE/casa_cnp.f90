@@ -637,6 +637,8 @@ SUBROUTINE casa_coeffplant(xkleafcold,xkleafdry,xkleaf,veg,casabiome,casapool, &
                            casaflux,casamet)
 ! calculate the plant litter fall rate, litter fall and sOM decomposition rate (1/day)
 ! and the transfer coefficients between different pools
+! NOTE: this subroutine is not called when MIMICS or CORPSE are the SOM model.
+!       See mimics_coeffplant.
 !
 ! inputs:
 !     xkleafcold(mp):  cold stress induced leaf senescence rate (1/day)
@@ -695,6 +697,8 @@ END SUBROUTINE casa_coeffplant
 SUBROUTINE casa_coeffsoil(xklitter,xksoil,veg,soil,casabiome,casaflux,casamet)
 !  calculate the plant litter fall rate, litter fall and sOM decomposition rate (1/day)
 !  and the transfer coefficients between different pools
+!  NOTE: this subroutine is not called when MIMICS or CORPSE are the SOM model.
+!        See mimics_soil_forwardMM and mimics_soil_reverseMM.
 !
 ! inputs:
 !     xk(mp):          modifier of soil litter decomposition rate (dimensionless)
@@ -839,6 +843,8 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
 !  calculate the chnage in plant C, N and P pools
 !  uptake of N and P will be computed in casa_uptake
 !  labile C pool will be computed casa_labile
+!  NOTE: this subroutine is not called when MIMICS or CORPSE are the SOM model.
+!        See mimics_delplant (C only) and mimics_delplant_CN (C&N).
 
   IMPLICIT NONE
   TYPE (veg_parameter_type), INTENT(INOUT) :: veg  ! vegetation parameters
@@ -1042,6 +1048,8 @@ END SUBROUTINE casa_delplant
 
 SUBROUTINE casa_delsoil(veg,casapool,casaflux,casamet,casabiome)
 ! calculate changes in litter and soil pools
+! NOTE: this subroutine not called when MIMICS or CORPSE are the SOM model.
+!       See mimics_soil_forwardMM and mimics_soil_reverseMM.
 
   IMPLICIT NONE
   TYPE (veg_parameter_type),    INTENT(INOUT) :: veg  ! vegetation parameters

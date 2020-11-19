@@ -4,6 +4,8 @@
 # gfortran -v
 # gcc version 8.1.0 (GCC)
 
+# For profiling (use -pg instead of -g):
+#PROG = ./casaclm_mimics-cn_corpse.p
 PROG = ./casaclm_mimics-cn_corpse
 
 #FC = ifort                    # compiler on both cherax and shine (-CB = check bounds)
@@ -13,8 +15,13 @@ PROG = ./casaclm_mimics-cn_corpse
 FC = gfortran     
                 
 #FFLAGS = -g -C -fbacktrace -fbounds-check
-FFLAGS = -g -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8 -fcheck=all -Wall
+#FFLAGS = -g -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8 -fcheck=all -Wall
 #FFLAGS = -g -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8
+# For profiling (use -pg instead of -g):
+#FFLAGS = -pg -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8 -fcheck=all -Wall
+#FFLAGS = -g -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8 -fcheck=all -Wall
+# Turn off debugging option and compile with optimization at level 1 (~4x speedup)
+FFLAGS = -O1 -C -fbacktrace -fbounds-check -fdefault-real-8 -fdefault-double-8 -fcheck=all -Wall
 
 #LIB_NETCDF=	/usr/local/netcdf/lib 
 #INCS=	/usr/local/include
