@@ -210,7 +210,6 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   write(*,'(2x,a13,2x,f10.6)') 'tau_k(1)=', mimicsbiome%tau_k(1)
   write(*,'(2x,a13,2x,f10.6)') 'tau_k(2)=', mimicsbiome%tau_k(2)
 
-
   read(101,*) mimicsbiome%tauModDenom
   read(101,*) mimicsbiome%tauMod_MIN
   read(101,*) mimicsbiome%tauMod_MAX
@@ -304,13 +303,15 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   write(*,'(2x,a7,2x,f10.6)') 'NUE(3)=', mimicsbiome%NUE(3)
   write(*,'(2x,a7,2x,f10.6)') 'NUE(4)=', mimicsbiome%NUE(4)
 
-  read(101,*) mimicsbiome%CN_r
-  read(101,*) mimicsbiome%CN_k
+  read(101,*) mimicsbiome%CNr
+  read(101,*) mimicsbiome%CNk
   read(101,*) mimicsbiome%fracDINavailMIC
+  read(101,*) mimicsbiome%cnModDenom
 
-  write(*,'(2x,a5,2x,f10.6)')  'CN_r=', mimicsbiome%CN_r
-  write(*,'(2x,a5,2x,f10.6)')  'CN_k=', mimicsbiome%CN_k
+  write(*,'(2x,a5,2x,f10.6)')  'CNr=', mimicsbiome%CNr
+  write(*,'(2x,a5,2x,f10.6)')  'CNk=', mimicsbiome%CNk
   write(*,'(2x,a16,2x,f10.6)') 'fracDINavailMIC=', mimicsbiome%fracDINavailMIC
+  write(*,'(2x,a13,2x,f10.6)') 'cnModDenom=', mimicsbiome%cnModDenom
   !! ----------------------------------------------------------------------
 
 
@@ -448,8 +449,8 @@ SUBROUTINE mimics_init(filename_mimicsipool,mp,ms,mst)
 
       mimicspool%LITmN(:) = mimicspool%LITm(:)/10.0
       mimicspool%LITsN(:) = mimicspool%LITs(:)/10.0
-      mimicspool%MICrN(:) = mimicspool%MICr(:)/mimicsbiome%CN_r
-      mimicspool%MICkN(:) = mimicspool%MICk(:)/mimicsbiome%CN_k
+      mimicspool%MICrN(:) = mimicspool%MICr(:)/mimicsbiome%CNr
+      mimicspool%MICkN(:) = mimicspool%MICk(:)/mimicsbiome%CNk
       mimicspool%SOMaN(:) = mimicspool%SOMa(:)/10.0
       mimicspool%SOMcN(:) = mimicspool%SOMc(:)/10.0
       mimicspool%SOMpN(:) = mimicspool%SOMp(:)/10.0

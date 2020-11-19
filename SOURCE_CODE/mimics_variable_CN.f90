@@ -66,12 +66,13 @@ MODULE mimicsvariable
     REAL(r_2), POINTER :: tauModDenom, tauMod_MIN, tauMod_MAX
 
     REAL(r_2), POINTER :: densDep, &
-                          CN_r,    &
-                          CN_k,    &
-                          fracDINavailMIC
+                          fracDINavailMIC, &
+                          cnModDenom, CNr, CNk
 
     REAL(r_2), DIMENSION(:),    POINTER :: fmet,    &
                                            ligninNratioAvg, &
+                                           CN_r,    &
+                                           CN_k,    &
                                            Vslope,  &
                                            Kslope,  &
                                            Vmod,    &
@@ -203,8 +204,9 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
            mimicsbiome%tauMod_MIN, &
            mimicsbiome%tauMod_MAX, &
            mimicsbiome%densDep, &
-           mimicsbiome%CN_r, &
-           mimicsbiome%CN_k, &
+           mimicsbiome%CNr, &
+           mimicsbiome%CNk, &
+           mimicsbiome%cnModDenom, &
            mimicsbiome%fracDINavailMIC)
 
   ALLOCATE(mimicsbiome%Vint(nRK), &
@@ -226,6 +228,8 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
            mimicsbiome%desorb(arraysize),  &
            mimicsbiome%fmet(arraysize),    &
            mimicsbiome%ligninNratioAvg(arraysize), &
+           mimicsbiome%CN_r(arraysize),    &
+           mimicsbiome%CN_k(arraysize),    &
            mimicsbiome%tauR(arraysize),    &      
            mimicsbiome%tauK(arraysize),    &      
            mimicsbiome%tauMod(arraysize),  & 

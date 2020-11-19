@@ -1591,6 +1591,8 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       ! 0.3      tau_r(2)
       ! 0.00024  tau_k(1)
       ! 0.1      tau_k(2)
+      mimicsbiome%CN_r(npt) = mimicsbiome%CNr * SQRT(mimicsbiome%fmet(npt)/mimicsbiome%cnModDenom)
+      mimicsbiome%CN_k(npt) = mimicsbiome%CNk * SQRT(mimicsbiome%fmet(npt)/mimicsbiome%cnModDenom)
 
       mimicsbiome%tauR(npt) = mimicsbiome%tau_r(1) * &
                                 exp(mimicsbiome%tau_r(2) * mimicsbiome%fmet(npt)) * mimicsbiome%tauMod(npt)
@@ -1771,16 +1773,16 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           upMICrC = mimicsbiome%MGE(1)*(LITmin(1)+SOMmin(1)) + mimicsbiome%MGE(2)*(LITmin(2))
           upMICrN = mimicsbiome%NUE(1)*(LITminN(1)+SOMminN(1)) + mimicsbiome%NUE(2)*(LITminN(2)) + DINup_r
           CNup_r = upMICrC/(upMICrN + 1e-10) !avoiding /0
-          Overflow_r = upMICrC - upMICrN*min(mimicsbiome%CN_r, CNup_r) 
-          Nspill_r   = upMICrN - upMICrC/max(mimicsbiome%CN_r, CNup_r) 
+          Overflow_r = upMICrC - upMICrN*min(mimicsbiome%CN_r(npt), CNup_r) 
+          Nspill_r   = upMICrN - upMICrC/max(mimicsbiome%CN_r(npt), CNup_r) 
           ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
           mimicsflux%Overflow_r(npt) = mimicsflux%Overflow_r(npt) + Overflow_r
 
           upMICkC = mimicsbiome%MGE(3)*(LITmin(3)+ SOMmin(2)) + mimicsbiome%MGE(4)*(LITmin(4))
           upMICkN = mimicsbiome%NUE(3)*(LITminN(3) + SOMminN(2)) + mimicsbiome%NUE(4)*LITminN(4) + DINup_k
           CNup_k = upMICkC/(upMICkN + 1e-10)
-          Overflow_k = upMICkC - upMICkN*min(mimicsbiome%CN_k, CNup_k) 
-          Nspill_k = upMICkN - upMICkC/max(mimicsbiome%CN_k, CNup_k)   
+          Overflow_k = upMICkC - upMICkN*min(mimicsbiome%CN_k(npt), CNup_k) 
+          Nspill_k = upMICkN - upMICkC/max(mimicsbiome%CN_k(npt), CNup_k)   
           ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
           mimicsflux%Overflow_k(npt) = mimicsflux%Overflow_k(npt) + Overflow_k
 
