@@ -306,12 +306,12 @@ SUBROUTINE mimics_readbiome(fname_mimicsbiome, mp, mvtype)
   read(101,*) mimicsbiome%CNr
   read(101,*) mimicsbiome%CNk
   read(101,*) mimicsbiome%fracDINavailMIC
-  read(101,*) mimicsbiome%cnModDenom
+  read(101,*) mimicsbiome%cnModNum
 
   write(*,'(2x,a5,2x,f10.6)')  'CNr=', mimicsbiome%CNr
   write(*,'(2x,a5,2x,f10.6)')  'CNk=', mimicsbiome%CNk
   write(*,'(2x,a16,2x,f10.6)') 'fracDINavailMIC=', mimicsbiome%fracDINavailMIC
-  write(*,'(2x,a13,2x,f10.6)') 'cnModDenom=', mimicsbiome%cnModDenom
+  write(*,'(2x,a13,2x,f10.6)') 'cnModNum=', mimicsbiome%cnModNum
   !! ----------------------------------------------------------------------
 
 

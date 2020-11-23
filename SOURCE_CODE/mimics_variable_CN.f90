@@ -67,7 +67,7 @@ MODULE mimicsvariable
 
     REAL(r_2), POINTER :: densDep, &
                           fracDINavailMIC, &
-                          cnModDenom, CNr, CNk
+                          cnModNum, CNr, CNk
 
     REAL(r_2), DIMENSION(:),    POINTER :: fmet,    &
                                            ligninNratioAvg, &
@@ -206,7 +206,7 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
            mimicsbiome%densDep, &
            mimicsbiome%CNr, &
            mimicsbiome%CNk, &
-           mimicsbiome%cnModDenom, &
+           mimicsbiome%cnModNum, &
            mimicsbiome%fracDINavailMIC)
 
   ALLOCATE(mimicsbiome%Vint(nRK), &

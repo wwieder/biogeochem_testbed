@@ -1591,8 +1591,8 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       ! 0.3      tau_r(2)
       ! 0.00024  tau_k(1)
       ! 0.1      tau_k(2)
-      mimicsbiome%CN_r(npt) = mimicsbiome%CNr * SQRT(mimicsbiome%fmet(npt)/mimicsbiome%cnModDenom)
-      mimicsbiome%CN_k(npt) = mimicsbiome%CNk * SQRT(mimicsbiome%fmet(npt)/mimicsbiome%cnModDenom)
+      mimicsbiome%CN_r(npt) = mimicsbiome%CNr * SQRT(mimicsbiome%cnModNum/mimicsbiome%fmet(npt))
+      mimicsbiome%CN_k(npt) = mimicsbiome%CNk * SQRT(mimicsbiome%cnModNum/mimicsbiome%fmet(npt))
 
       mimicsbiome%tauR(npt) = mimicsbiome%tau_r(1) * &
                                 exp(mimicsbiome%tau_r(2) * mimicsbiome%fmet(npt)) * mimicsbiome%tauMod(npt)
