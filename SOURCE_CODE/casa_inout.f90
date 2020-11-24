@@ -1620,8 +1620,8 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
           ! is this where wood decomp is slowed by xkNlimiting, even for MIMICS?
           ! instead of looping through each litter, we'll just do this for leaves, roots 
           ! should only be done for MIMICS, as here, see also line 1565? - ww 11/23/20
-          DO j=1,2 !mlitter
-              casaflux%klitter(:,j) = casaflux%klitter(:,j)* xkNlimiting(:)
+          DO j=1,mlitter
+              casaflux%klitter(:,j) = casaflux%klitter(:,j) ! * xkNlimiting(:)
 !             write(*,*) 'biogeochem:'
 !             write(*,'(a24,3(f6.4,2x))') 'xkNlimiting(1) = ', xkNlimiting(1)
 !             write(*,'(a17,3(f10.6,2x))') 'casaflux%klitter(1,:) = ', casaflux%klitter(1,:)

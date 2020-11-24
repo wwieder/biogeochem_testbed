@@ -259,6 +259,7 @@ SUBROUTINE mimics_xratesoil(veg,soil,casamet,casabiome)
       casaflux%fromLtoCO2(npt,cwd) = 1.0 - 0.40*(1.0 - casabiome%fracLigninplant(veg%iveg(npt),wood)) &
                                          - 0.7 * casabiome%fracLigninplant(veg%iveg(npt),wood) 
       casaflux%fromLtoCO2(npt,cwd) = MAX(0.0, casaflux%fromLtoCO2(npt,cwd))
+      casaflux%fromLtoCO2(npt,cwd) = MIN(1.0, casaflux%fromLtoCO2(npt,cwd))
 
     END IF
   END DO
@@ -383,6 +384,9 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                 + mimicsbiome%ligninNratio(npt,froot) * (croot2met(npt) + croot2str(npt)) &
                                 + mimicsbiome%ligninNratio(npt,wood)  * (cwd2str(npt)) ) &
                                 / max(0.001,cleaf2met(npt)+cleaf2str(npt)+croot2met(npt)+croot2str(npt)+cwd2str(npt))
+          ! set limits on Lignin:N to keep fmet > 0.2 -ww 11/20 
+          ! necessary for litter quality in boreal forests with high cwd flux
+          mimicsbiome%ligninNratioAvg(npt) = min(40.0, mimicsbiome%ligninNratioAvg(npt))
 
       ENDIF
   ENDDO
@@ -643,6 +647,9 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
                                 + mimicsbiome%ligninNratio(npt,froot) * (croot2met(npt) + croot2str(npt)) &
                                 + mimicsbiome%ligninNratio(npt,wood)  * (cwd2str(npt)) ) &
                                 / max(0.001,cleaf2met(npt)+cleaf2str(npt)+croot2met(npt)+croot2str(npt)+cwd2str(npt))
+          ! set limits on Lignin:N to keep fmet > 0.2 -ww 11/20 
+          ! necessary for litter quality in boreal forests with high cwd flux
+          mimicsbiome%ligninNratioAvg(npt) = min(40.0, mimicsbiome%ligninNratioAvg(npt))
 
       ENDIF
   ENDDO
