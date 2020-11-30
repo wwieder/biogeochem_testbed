@@ -5,6 +5,10 @@ import cftime
 import numpy as np
 import xarray as xr
 
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.lines as mlines
+
 import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -17,14 +21,18 @@ def sum_pools(ds_in, mod='MIM', CN='True'):
     if mod == 'mim':
         ds_in['cTOT'] = ds_in['cLITm']+ds_in['cLITs']+ds_in['cMICr']+ds_in['cMICk']+ \
                         ds_in['cSOMa']+ds_in['cSOMc']+ds_in['cSOMp']
-        ds_in['cTOT'].attrs['long_name'] = 'sum of MIMICS SOC pools'
+        ds_in['cTOT'].attrs['long_name'] = 'sum of all pools'
         ds_in['cTOT'].attrs['units'] = ds_in['cLITm'].attrs['units']
 
-        ds_in['relMIC'] = (ds_in['cMICr']+ds_in['cMICk'])/ds_in['cTOT'] * 100
+        ds_in['cMICtot'] = ds_in['cMICr']+ds_in['cMICk']
+        ds_in['cMICtot'].attrs['long_name'] = 'sum of MIC pools'
+        ds_in['cMICtot'].attrs['units'] = ds_in['cMICr'].attrs['units']
+        
+        ds_in['relMIC'] = ds_in['cMICtot']/ds_in['cTOT'] * 100
         ds_in['relMIC'].attrs['long_name'] = 'MIC:SOC'
         ds_in['relMIC'].attrs['units'] = '%'
 
-        ds_in['specRESP'] = ds_in['cHresp'] / (ds_in['cMICr']+ds_in['cMICk'])
+        ds_in['specRESP'] = ds_in['cHresp'] / ds_in['cMICtot']
         ds_in['specRESP'].attrs['long_name'] = 'specific respiration'
         ds_in['specRESP'].attrs['units'] = ds_in['cHresp'].attrs['units'] +'/'+ ds_in['cMICk'].attrs['units']
         
@@ -43,6 +51,10 @@ def sum_pools(ds_in, mod='MIM', CN='True'):
             
             ds_in['cnMIC']= (ds_in['cMICr'] + ds_in['cMICk'])/ (ds_in['nMICr'] + ds_in['nMICk'])
             ds_in['cnMIC'].attrs['long_name'] = 'MIMICS microbial C:N ratio'
+            
+            ds_in['cnLIT']= (ds_in['cLitInput_metb'] + ds_in['cLitInput_struc']) / (ds_in['nLitInput_metb'] + ds_in['nLitInput_struc'])
+            ds_in['cnLIT'].attrs['long_name'] = 'Litterfall C:N ratio'
+            
         
     if mod == 'cas':
         ds_in['cTOT'] = ds_in['clitmetb']+ds_in['clitstr']+ds_in['csoilmic']+ \
@@ -61,6 +73,61 @@ def sum_pools(ds_in, mod='MIM', CN='True'):
 
     return ds_in
 
+
+####### Function to calculate global fluxes / stocks ###########################
+def globalSum ( dsIn, var, time=-1, conversion=1e-15, units=None, plot=True ):
+    area = dsIn.landarea *1e6
+    temp = dsIn[var] * area 
+    temp = temp.sum(dim=('lat','lon')) * conversion
+    if plot==True:
+        plt.figure(figsize=[25,6]);
+        for i in range(len(var)):
+            plt.subplot(1, 4, (1+i))
+            plt.ylabel('Global '+var[i]+' (Pg C y^-1)')
+            plt.plot(temp['time'], temp[var[i]]);
+
+    else:
+        for i in range(len(var)):
+            print('global '+var[i]+' '+str(np.round(temp[var[i]].isel(time=time).values,1) )+' Pg C')
+
+
+######### Generate a function for making panel plots of maps ###############
+def map_function(da, cb=0, panel=None, cmap=None, ax=None, 
+                 title=None, vmax=None, vmin=None):
+    '''a function to make one subplot'''
+    wrap_data, wrap_lon = add_cyclic_point(da.values, coord=da.lon)
+
+    if ax is None: ax = plt.gca()
+    im = ax.pcolormesh(wrap_lon,da.lat,wrap_data,
+                   transform=ccrs.PlateCarree(),
+                   vmax=vmax,vmin=vmin,cmap=cmap)
+    ax.set_title(title)
+    ax.coastlines()
+    ax.set_extent([-180,180,-65,80], crs=ccrs.PlateCarree())
+    ax.annotate(panel, xy=(0.05, 0.95), xycoords=ax.transAxes,
+                ha='center', va='center',fontsize=16)    
+
+    # allows for different colorbars on each plot
+    if cb == 1:  # here to right of plots
+        fig.colorbar(im, ax=ax,shrink=0.40, pad=0, fraction = 0.1)
+
+    # allows for different colorbars on each plot
+    if cb == 2:  # here below plots
+        fig.colorbar(im, ax=ax,shrink=0.9, pad=0, fraction = 1, orientation="horizontal")
+
+# strings for labeling panels
+panel = ['(a)','(b)','(c)','(d)','(e)','(f)','(g)','(h)','(i)','(j)','(k)','(l)'] 
+
+################### Function to truncate color map ###################
+def truncate_colormap(cmapIn='jet', minval=0.0, maxval=1.0, n=100):
+    cmapIn = plt.get_cmap(cmapIn)
+
+    new_cmap = colors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmapIn.name, a=minval, b=maxval),
+        cmapIn(np.linspace(minval, maxval, n)))
+
+    arr = np.linspace(0, 50, 100).reshape((10, 10))
+    return new_cmap
 
 # add cyclic point
 def cyclic_dataarray(da, coord='lon'):
