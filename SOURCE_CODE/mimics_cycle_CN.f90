@@ -1078,7 +1078,10 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
       CorgSum1 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
 
-      do ihr = 1, NHOURS
+      ! Desorption a function of soil temperautre, Q10 = 1.3 w/ reference temperature of 25C
+      mimicsbiome%desorb(npt) = mimicsbiome%desorb(npt) * 1.3 * exp((Tsoil-25)/10)
+
+do ihr = 1, NHOURS
 
           ! Flows to and from MICr
   
