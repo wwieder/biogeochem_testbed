@@ -1078,8 +1078,6 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
       CorgSum1 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
 
-      ! Desorption a function of soil temperautre, Q10 = 1.2 w/ reference temperature of 25C
-      mimicsbiome%desorb(npt) = mimicsbiome%desorb(npt) * 1.2 * exp((Tsoil-25)/10)
 
 do ihr = 1, NHOURS
 
@@ -1486,7 +1484,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
   real(r_2) :: Overflow_r, Overflow_k, Nspill_r, Nspill_k 
   real(r_2) :: unitConv, unitConvCtoM
   real(r_2) :: NHOURSf, NHOURSfrac, NDAYSfrac
-  real(r_2) :: MICr_recip, MICk_recip
+  real(r_2) :: MICr_recip, MICk_recip,desorption
   real(r_2) :: Tsoil           ! average soil temperature for the day (degrees C)
   real(r_2) :: theta_liq       ! WW average liquid soil water
   real(r_2) :: theta_frzn      ! WW average frozen soil water
@@ -1658,9 +1656,9 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       mimicsbiome%Km(npt,K3) = exp(mimicsbiome%Kslope(K3) * Tsoil + mimicsbiome%Kint(K3)) &
                                * mimicsbiome%ak(K3) / mimicsbiome%Kmod(npt,K3)
 
-      ! Desorption a function of soil temperautre, Q10 = 1.2 w/ reference
+      ! Desorption a function of soil temperautre, Q10 = 1.1 w/ reference
       ! temperature of 25C
-      mimicsbiome%desorb(npt) = mimicsbiome%desorb(npt) * 1.2 * exp((Tsoil-25)/10)
+      desorption = mimicsbiome%desorb(npt) * (1.1 * exp((Tsoil-25)/10))
 
       CorgSum1 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
@@ -1764,7 +1762,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           SOMminN(2) = SOMmin(2) * mimicspool%SOMaN(npt) / (mimicspool%SOMa(npt) + 1.0e-10)
       
           ! Desorbtion of SOMp to SOMa (function of fCLAY) (f9. SOMp-->SOMa)
-          DEsorb = mimicspool%SOMp(npt) * mimicsbiome%desorb(npt)  
+          DEsorb = mimicspool%SOMp(npt) * desorption               
 
           DEsorbN = DEsorb * mimicspool%SOMpN(npt) / (mimicspool%SOMp(npt) + 1.0e-10)
 
