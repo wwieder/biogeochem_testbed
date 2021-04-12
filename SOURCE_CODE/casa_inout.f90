@@ -1420,6 +1420,10 @@ implicit none
   casaflux%ClitInptStrucAn = casaflux%ClitInptStrucAn + casaflux%ClitInptStruc
   casaflux%CpassInptAn = casaflux%CpassInptAn + casaflux%CpassInpt
 
+! Added annual autotrophic respiration fluxes. -mdh 11/18/2020
+  casaflux%CrmplantAn = casaflux%CrmplantAn + casaflux%Crmplant
+  casaflux%CrgplantAn = casaflux%CrgplantAn + casaflux%Crgplant
+
   ! Added this along with MIMICS-CN (-MDH 6/22/2019)
   casaflux%NlitInptMetAn = casaflux%NlitInptMetAn + casaflux%NlitInptMet
   casaflux%NlitInptStrucAn = casaflux%NlitInptStrucAn + casaflux%NlitInptStruc
@@ -4826,6 +4830,7 @@ SUBROUTINE casacnpdriver(filename_cnpmet, filename_cnpepool, filename_cnpflux, f
         casapoolAn%PsoilAn=0.0; casapoolAn%PplantAn=0.0; casapoolAn%PlitterAn=0.0
         casaflux%ClitInptMetAn = 0.0; casaflux%ClitInptStrucAn = 0.0; casaflux%CpassInptAn = 0.0
         casaflux%NlitInptMetAn = 0.0; casaflux%NlitInptStrucAn = 0.0
+        casaflux%CrmplantAn = 0.0; casaflux%Crgplant = 0.0
         casapoolAn%tairAn=0.0; casapoolAn%tsoilAn=0.0
         casapoolAn%fTAn=0.0; casapoolAn%fWAn=0.0; casapoolAn%thetaLiqAn=0.0;
         !! Added annual N pools and fluxes 11/25/2019 -mdh

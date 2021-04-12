@@ -280,6 +280,7 @@ MODULE casavariable
                                        CnppAn,        &
                                        Crp,           &
                                        Crgplant,      &
+                                       CrgplantAn,    &
                                        ClitInptMet,        &
                                        ClitInptMetAn,      &
                                        ClitInptStruc,      &
@@ -305,6 +306,7 @@ MODULE casavariable
                                        fracNalloc,    &
                                        fracPalloc,    &
                                        Crmplant,      &
+                                       CrmplantAn,    &
                                        kplant
     REAL(r_2), DIMENSION(:,:,:),POINTER :: fromPtoL
     REAL(r_2), DIMENSION(:),POINTER :: Cnep,        &
@@ -437,6 +439,9 @@ MODULE casavariable
     CHARACTER(LEN=100) :: sPtFileNameCASA
     INTEGER :: iptToSave = 0
     INTEGER :: iptToSaveIndx = 0
+    INTEGER :: ncOutputInterval = 1
+    INTEGER :: iYrCnt = 0
+    INTEGER :: totYrCnt = 0
 !   LOGICAL           :: l_ndep
   END TYPE casafiles_type
   TYPE(casafiles_type) :: casafile
@@ -584,6 +589,7 @@ SUBROUTINE alloc_casavariable(mp,mvtype,ms)
            casaflux%CnppAn(arraysize),                   &
            casaflux%Crp(arraysize),                      &
            casaflux%Crgplant(arraysize),                 &
+           casaflux%CrgplantAn(arraysize),               &
            casaflux%ClitInptMet(arraysize),              &
            casaflux%ClitInptMetAn(arraysize),            &
            casaflux%ClitInptStruc(arraysize),            &
@@ -612,6 +618,7 @@ SUBROUTINE alloc_casavariable(mp,mvtype,ms)
            casaflux%fracPalloc(arraysize,mplant),        &
            casaflux%kplant(arraysize,mplant),            &
            casaflux%Crmplant(arraysize,mplant),          &
+           casaflux%CrmplantAn(arraysize,mplant),        &
            casaflux%fromPtoL(arraysize,mlitter,mplant),  &
            casaflux%Cnep(arraysize),                     &
            casaflux%Crsoil(arraysize),                   &
