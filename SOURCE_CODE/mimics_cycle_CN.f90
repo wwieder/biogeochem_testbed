@@ -259,6 +259,7 @@ SUBROUTINE mimics_xratesoil(veg,soil,casamet,casabiome)
       casaflux%fromLtoCO2(npt,cwd) = 1.0 - 0.40*(1.0 - casabiome%fracLigninplant(veg%iveg(npt),wood)) &
                                          - 0.7 * casabiome%fracLigninplant(veg%iveg(npt),wood) 
       casaflux%fromLtoCO2(npt,cwd) = MAX(0.0, casaflux%fromLtoCO2(npt,cwd))
+      casaflux%fromLtoCO2(npt,cwd) = MIN(1.0, casaflux%fromLtoCO2(npt,cwd))
 
     END IF
   END DO
@@ -383,6 +384,9 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                 + mimicsbiome%ligninNratio(npt,froot) * (croot2met(npt) + croot2str(npt)) &
                                 + mimicsbiome%ligninNratio(npt,wood)  * (cwd2str(npt)) ) &
                                 / max(0.001,cleaf2met(npt)+cleaf2str(npt)+croot2met(npt)+croot2str(npt)+cwd2str(npt))
+          ! set limits on Lignin:N to keep fmet > 0.2 -ww 11/20 
+          ! necessary for litter quality in boreal forests with high cwd flux
+          mimicsbiome%ligninNratioAvg(npt) = min(40.0, mimicsbiome%ligninNratioAvg(npt))
 
       ENDIF
   ENDDO
@@ -643,6 +647,9 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
                                 + mimicsbiome%ligninNratio(npt,froot) * (croot2met(npt) + croot2str(npt)) &
                                 + mimicsbiome%ligninNratio(npt,wood)  * (cwd2str(npt)) ) &
                                 / max(0.001,cleaf2met(npt)+cleaf2str(npt)+croot2met(npt)+croot2str(npt)+cwd2str(npt))
+          ! set limits on Lignin:N to keep fmet > 0.2 -ww 11/20 
+          ! necessary for litter quality in boreal forests with high cwd flux
+          mimicsbiome%ligninNratioAvg(npt) = min(40.0, mimicsbiome%ligninNratioAvg(npt))
 
       ENDIF
   ENDDO
@@ -718,7 +725,7 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
   ! Local Variables
   integer :: npt, ihr
   integer, parameter :: NHOURS = 24
-  real(r_2) :: LITmin(4), MICtrn(6), SOMmin(2), DEsorb, OXIDAT
+  real(r_2) :: LITmin(4), MICtrn(6), SOMmin(2), DEsorp, OXIDAT, desorption
   real(r_2) :: dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk
   real(r_2) :: NHOURSf
   real(r_2) :: Tsoil           ! average soil temperature for the day (degrees C)
@@ -828,6 +835,11 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
                                * mimicsbiome%ak(K2) / mimicsbiome%Kmod(npt,K2)
       mimicsbiome%Km(npt,K3) = exp(mimicsbiome%Kslope(K3) * Tsoil + mimicsbiome%Kint(K3)) &
                                * mimicsbiome%ak(K3) / mimicsbiome%Kmod(npt,K3)
+
+      ! Desorption a function of soil temperautre, Q10 = 1.1 w/ reference
+      ! temperature of 25C. -WW 4/6/2021. Created parameter names -mdh 4/12/2021
+      ! desorption = mimicsbiome%desorp(npt) * (1.1 * exp((Tsoil-25)/10))
+      desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
     
       do ihr = 1, NHOURS
 
@@ -878,7 +890,8 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
                       / (mimicsbiome%Km(npt,K3) + mimicspool%SOMa(npt))   
       
           ! Desorbtion of SOMp to SOMa (function of fCLAY) (f9. SOMp-->SOMa)
-          DEsorb = mimicspool%SOMp(npt) * mimicsbiome%desorb(npt)  
+          !DEsorp = mimicspool%SOMp(npt) * mimicsbiome%desorp(npt) 
+          DEsorp = mimicspool%SOMp(npt) * desorption 
 
           ! Oxidation of SOMc to SOMa (f10. SOMc-->SOMa)
           OXIDAT = (mimicspool%MICk(npt) * mimicsbiome%Vmax(npt,K2) * mimicspool%SOMc(npt)    &
@@ -889,11 +902,11 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
           !Divide total litter inputs (mgC/cm3/day) by number of hours in the daily timestep (NHOURSf)
           dLITm = mimicsflux%ClitInput(npt,metbc)/NHOURSf * (1.0-mimicsbiome%Fi(metbc)) - LITmin(1) - LITmin(3)
           dMICr = mimicsbiome%MGE(1)*(LITmin(1)+ SOMmin(1)) + mimicsbiome%MGE(2)*(LITmin(2)) - sum(MICtrn(1:3))
-          dSOMp = mimicsflux%ClitInput(npt,metbc)/NHOURSf * mimicsbiome%Fi(metbc) + MICtrn(1) + MICtrn(4)- DEsorb 
+          dSOMp = mimicsflux%ClitInput(npt,metbc)/NHOURSf * mimicsbiome%Fi(metbc) + MICtrn(1) + MICtrn(4)- DEsorp 
           dLITs = mimicsflux%ClitInput(npt,struc)/NHOURSf * (1.0-mimicsbiome%Fi(struc)) - LITmin(2) - LITmin(4)
           dMICk = mimicsbiome%MGE(3)*(LITmin(3)+ SOMmin(2)) + mimicsbiome%MGE(4)*(LITmin(4)) - sum(MICtrn(4:6)) 
           dSOMc = mimicsflux%ClitInput(npt,struc)/NHOURSf * mimicsbiome%Fi(struc) + MICtrn(2) + MICtrn(5) - OXIDAT
-          dSOMa = MICtrn(3) + MICtrn(6) + DEsorb + OXIDAT - SOMmin(1) - SOMmin(2)
+          dSOMa = MICtrn(3) + MICtrn(6) + DEsorp + OXIDAT - SOMmin(1) - SOMmin(2)
       
           !Sum daily heterotrphic respiration flux (mgC/cm3) 
           mimicsflux%Chresp(npt) = mimicsflux%Chresp(npt)  &
@@ -930,7 +943,7 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
           if ((mdaily == 1) .or. (idoy==365)) then
               call WritePointMIMICS(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
                   cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
-                  LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+                  LITmin, MICtrn, SOMmin, DEsorp, OXIDAT, &
                   dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil, Cbalance)
           endif
       endif 
@@ -956,7 +969,7 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
   ! Local Variables
   integer :: npt, ihr
   integer, parameter :: NHOURS = 24
-  real(r_2) :: LITmin(4), MICtrn(6), SOMmin(2), DEsorb, OXIDAT
+  real(r_2) :: LITmin(4), MICtrn(6), SOMmin(2), DEsorp, OXIDAT, desorption
   real(r_2) :: dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk
   real(r_2) :: NHOURSf, NHOURSfrac
   real(r_2) :: Tsoil           ! average soil temperature for the day (degrees C)
@@ -1071,7 +1084,12 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
       CorgSum1 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
 
-      do ihr = 1, NHOURS
+      ! Desorption a function of soil temperautre, Q10 = 1.1 w/ reference
+      ! temperature of 25C. -WW 4/6/2021. Created parameter names -mdh 4/12/2021
+      ! desorption = mimicsbiome%desorp(npt) * (1.1 * exp((Tsoil-25)/10))
+      desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+
+do ihr = 1, NHOURS
 
           ! Flows to and from MICr
   
@@ -1120,7 +1138,8 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
                       / (mimicsbiome%Km(npt,K3) + mimicspool%MICk(npt))   
       
           ! Desorbtion of SOMp to SOMa (function of fCLAY) (f9. SOMp-->SOMa)
-          DEsorb = mimicspool%SOMp(npt) * mimicsbiome%desorb(npt)  
+          !DEsorp = mimicspool%SOMp(npt) * mimicsbiome%desorp(npt)  
+          DEsorp = mimicspool%SOMp(npt) * desorption  
 
           ! Oxidation of SOMc to SOMa (f10. SOMc-->SOMa), reverse Michaelis-Menton Kinetics
           OXIDAT = (mimicspool%MICk(npt) * mimicsbiome%Vmax(npt,K2) * mimicspool%SOMc(npt)    &
@@ -1132,11 +1151,11 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
           ! Optimization: Multiply by NHOURSfrac = 1/NHOURSf
           dLITm = mimicsflux%ClitInput(npt,metbc)*NHOURSfrac * (1.0-mimicsbiome%Fi(metbc)) - LITmin(1) - LITmin(3)
           dMICr = mimicsbiome%MGE(1)*(LITmin(1)+ SOMmin(1)) + mimicsbiome%MGE(2)*(LITmin(2)) - sum(MICtrn(1:3))
-          dSOMp = mimicsflux%ClitInput(npt,metbc)*NHOURSfrac * mimicsbiome%Fi(metbc) + MICtrn(1) + MICtrn(4)- DEsorb 
+          dSOMp = mimicsflux%ClitInput(npt,metbc)*NHOURSfrac * mimicsbiome%Fi(metbc) + MICtrn(1) + MICtrn(4)- DEsorp 
           dLITs = mimicsflux%ClitInput(npt,struc)*NHOURSfrac * (1.0-mimicsbiome%Fi(struc)) - LITmin(2) - LITmin(4)
           dMICk = mimicsbiome%MGE(3)*(LITmin(3)+ SOMmin(2)) + mimicsbiome%MGE(4)*(LITmin(4)) - sum(MICtrn(4:6)) 
           dSOMc = mimicsflux%ClitInput(npt,struc)*NHOURSfrac * mimicsbiome%Fi(struc) + MICtrn(2) + MICtrn(5) - OXIDAT
-          dSOMa = MICtrn(3) + MICtrn(6) + DEsorb + OXIDAT - SOMmin(1) - SOMmin(2)
+          dSOMa = MICtrn(3) + MICtrn(6) + DEsorp + OXIDAT - SOMmin(1) - SOMmin(2)
       
           !Sum daily heterotrophic respiration flux (mgC/cm3) 
           mimicsflux%Chresp(npt) = mimicsflux%Chresp(npt)  &
@@ -1191,7 +1210,7 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
           if ((mdaily == 1) .or. (idoy==365)) then
               call WritePointMIMICS(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
                   cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
-                  LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+                  LITmin, MICtrn, SOMmin, DEsorp, OXIDAT, &
                   dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil, Cbalance)
           endif 
       endif 
@@ -1466,8 +1485,8 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
   ! Local Variables
   integer :: npt, ihr
   integer, parameter :: NHOURS = 24
-  real(r_2) :: LITmin(4), MICtrn(6), SOMmin(2), DEsorb, OXIDAT
-  real(r_2) :: LITminN(4), MICtrnN(6), SOMminN(2), DEsorbN, OXIDATN
+  real(r_2) :: LITmin(4), MICtrn(6), SOMmin(2), DEsorp, OXIDAT
+  real(r_2) :: LITminN(4), MICtrnN(6), SOMminN(2), DEsorpN, OXIDATN
   real(r_2) :: dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk
   real(r_2) :: dLITmN, dLITsN, dSOMaN, dSOMcN, dSOMpN, dMICrN, dMICkN, dDIN
   real(r_2) :: upMICrC, upMICrN, upMICkC, upMICkN
@@ -1476,7 +1495,7 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
   real(r_2) :: Overflow_r, Overflow_k, Nspill_r, Nspill_k 
   real(r_2) :: unitConv, unitConvCtoM
   real(r_2) :: NHOURSf, NHOURSfrac, NDAYSfrac
-  real(r_2) :: MICr_recip, MICk_recip
+  real(r_2) :: MICr_recip, MICk_recip,desorption
   real(r_2) :: Tsoil           ! average soil temperature for the day (degrees C)
   real(r_2) :: theta_liq       ! WW average liquid soil water
   real(r_2) :: theta_frzn      ! WW average frozen soil water
@@ -1591,6 +1610,8 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       ! 0.3      tau_r(2)
       ! 0.00024  tau_k(1)
       ! 0.1      tau_k(2)
+      mimicsbiome%CN_r(npt) = mimicsbiome%CNr * SQRT(mimicsbiome%cnModNum/mimicsbiome%fmet(npt))
+      mimicsbiome%CN_k(npt) = mimicsbiome%CNk * SQRT(mimicsbiome%cnModNum/mimicsbiome%fmet(npt))
 
       mimicsbiome%tauR(npt) = mimicsbiome%tau_r(1) * &
                                 exp(mimicsbiome%tau_r(2) * mimicsbiome%fmet(npt)) * mimicsbiome%tauMod(npt)
@@ -1645,7 +1666,12 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
                                * mimicsbiome%ak(K2) / mimicsbiome%Kmod(npt,K2)
       mimicsbiome%Km(npt,K3) = exp(mimicsbiome%Kslope(K3) * Tsoil + mimicsbiome%Kint(K3)) &
                                * mimicsbiome%ak(K3) / mimicsbiome%Kmod(npt,K3)
-    
+
+      ! Desorption a function of soil temperautre, Q10 = 1.1 w/ reference
+      ! temperature of 25C. -WW 4/6/2021. Created parameter names -mdh 4/12/2021
+      ! desorption = mimicsbiome%desorp(npt) * (1.1 * exp((Tsoil-25)/10))
+      desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+
       CorgSum1 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
       NorgSum1 = mimicspool%LITmN(npt) + mimicspool%LITsN(npt) + &
@@ -1748,9 +1774,10 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           SOMminN(2) = SOMmin(2) * mimicspool%SOMaN(npt) / (mimicspool%SOMa(npt) + 1.0e-10)
       
           ! Desorbtion of SOMp to SOMa (function of fCLAY) (f9. SOMp-->SOMa)
-          DEsorb = mimicspool%SOMp(npt) * mimicsbiome%desorb(npt)  
+          !DEsorp = mimicspool%SOMp(npt) * mimicsbiome%desorp(npt)  
+          DEsorp = mimicspool%SOMp(npt) * desorption               
 
-          DEsorbN = DEsorb * mimicspool%SOMpN(npt) / (mimicspool%SOMp(npt) + 1.0e-10)
+          DEsorpN = DEsorp * mimicspool%SOMpN(npt) / (mimicspool%SOMp(npt) + 1.0e-10)
 
           ! Oxidation of SOMc to SOMa (f10. SOMc-->SOMa), reverse Michaelis-Menton Kinetics
           OXIDAT = (mimicspool%MICk(npt) * mimicsbiome%Vmax(npt,K2) * mimicspool%SOMc(npt)    &
@@ -1771,16 +1798,16 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           upMICrC = mimicsbiome%MGE(1)*(LITmin(1)+SOMmin(1)) + mimicsbiome%MGE(2)*(LITmin(2))
           upMICrN = mimicsbiome%NUE(1)*(LITminN(1)+SOMminN(1)) + mimicsbiome%NUE(2)*(LITminN(2)) + DINup_r
           CNup_r = upMICrC/(upMICrN + 1e-10) !avoiding /0
-          Overflow_r = upMICrC - upMICrN*min(mimicsbiome%CN_r, CNup_r) 
-          Nspill_r   = upMICrN - upMICrC/max(mimicsbiome%CN_r, CNup_r) 
+          Overflow_r = upMICrC - upMICrN*min(mimicsbiome%CN_r(npt), CNup_r) 
+          Nspill_r   = upMICrN - upMICrC/max(mimicsbiome%CN_r(npt), CNup_r) 
           ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
           mimicsflux%Overflow_r(npt) = mimicsflux%Overflow_r(npt) + Overflow_r
 
           upMICkC = mimicsbiome%MGE(3)*(LITmin(3)+ SOMmin(2)) + mimicsbiome%MGE(4)*(LITmin(4))
           upMICkN = mimicsbiome%NUE(3)*(LITminN(3) + SOMminN(2)) + mimicsbiome%NUE(4)*LITminN(4) + DINup_k
           CNup_k = upMICkC/(upMICkN + 1e-10)
-          Overflow_k = upMICkC - upMICkN*min(mimicsbiome%CN_k, CNup_k) 
-          Nspill_k = upMICkN - upMICkC/max(mimicsbiome%CN_k, CNup_k)   
+          Overflow_k = upMICkC - upMICkN*min(mimicsbiome%CN_k(npt), CNup_k) 
+          Nspill_k = upMICkN - upMICkC/max(mimicsbiome%CN_k(npt), CNup_k)   
           ! Add Overflow_r and Overflow_k to output netCDF file. Units conversion occurs in subroutine mimics_caccum. -mdh 10/12/2020
           mimicsflux%Overflow_k(npt) = mimicsflux%Overflow_k(npt) + Overflow_k
 
@@ -1789,20 +1816,20 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           dLITm = mimicsflux%ClitInput(npt,metbc)*NHOURSfrac * (1.0-mimicsbiome%Fi(metbc)) - LITmin(1) - LITmin(3)
           !dMICr = mimicsbiome%MGE(1)*(LITmin(1)+ SOMmin(1)) + mimicsbiome%MGE(2)*(LITmin(2)) - sum(MICtrn(1:3))
           dMICr = upMICrC - sum(MICtrn(1:3)) - Overflow_r
-          dSOMp = mimicsflux%ClitInput(npt,metbc)*NHOURSfrac * mimicsbiome%Fi(metbc) + MICtrn(1) + MICtrn(4)- DEsorb 
+          dSOMp = mimicsflux%ClitInput(npt,metbc)*NHOURSfrac * mimicsbiome%Fi(metbc) + MICtrn(1) + MICtrn(4)- DEsorp 
           dLITs = mimicsflux%ClitInput(npt,struc)*NHOURSfrac * (1.0-mimicsbiome%Fi(struc)) - LITmin(2) - LITmin(4)
           !dMICk = mimicsbiome%MGE(3)*(LITmin(3)+ SOMmin(2)) + mimicsbiome%MGE(4)*(LITmin(4)) - sum(MICtrn(4:6))
           dMICk = upMICkC - sum(MICtrn(4:6))- Overflow_k
           dSOMc = mimicsflux%ClitInput(npt,struc)*NHOURSfrac * mimicsbiome%Fi(struc) + MICtrn(2) + MICtrn(5) - OXIDAT
-          dSOMa = MICtrn(3) + MICtrn(6) + DEsorb + OXIDAT - SOMmin(1) - SOMmin(2)
+          dSOMa = MICtrn(3) + MICtrn(6) + DEsorp + OXIDAT - SOMmin(1) - SOMmin(2)
 
           dLITmN = mimicsflux%NlitInput(npt,metbc)*NHOURSfrac * (1.0-mimicsbiome%Fi(metbc)) - LITminN(1) - LITminN(3)
           dMICrN = upMICrN - sum(MICtrnN(1:3)) - Nspill_r
-          dSOMpN = mimicsflux%NlitInput(npt,metbc)*NHOURSfrac * mimicsbiome%Fi(metbc) + MICtrnN(1) + MICtrnN(4)- DEsorbN 
+          dSOMpN = mimicsflux%NlitInput(npt,metbc)*NHOURSfrac * mimicsbiome%Fi(metbc) + MICtrnN(1) + MICtrnN(4)- DEsorpN 
           dLITsN = mimicsflux%NlitInput(npt,struc)*NHOURSfrac * (1.0-mimicsbiome%Fi(struc)) - LITminN(2) - LITminN(4)
           dMICkN = upMICkN - sum(MICtrnN(4:6)) - Nspill_k
           dSOMcN = mimicsflux%NlitInput(npt,struc)*NHOURSfrac * mimicsbiome%Fi(struc) + MICtrnN(2) + MICtrnN(5) - OXIDATN
-          dSOMaN = MICtrnN(3) + MICtrnN(6) + DEsorbN + OXIDATN - SOMminN(1) - SOMminN(2)
+          dSOMaN = MICtrnN(3) + MICtrnN(6) + DEsorpN + OXIDATN - SOMminN(1) - SOMminN(2)
           dDIN = (1-mimicsbiome%NUE(1))*(LITminN(1)+SOMminN(1)) + (1-mimicsbiome%NUE(2))*(LITminN(2)) +  &
                  (1-mimicsbiome%NUE(3))*(LITminN(3)+SOMminN(2)) + (1-mimicsbiome%NUE(4))*(LITminN(4)) +  &
                  Nspill_r + Nspill_k - DINup_r - DINup_k
@@ -1865,11 +1892,11 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
 !         if ((mdaily == 1) .or. (idoy==365)) then
 !             call WritePointMIMICS_CN(214, sPtFileNameMIMICS, npt, mp, ihr, idoy, &
 !                 cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
-!                 LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+!                 LITmin, MICtrn, SOMmin, DEsorp, OXIDAT, &
 !                 dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil, &
 !
 !                 nleaf2met,nleaf2str,nroot2met,nroot2str,nwd2str,nwood2cwd, &
-!                 LITminN, MICtrnN, SOMminN, DEsorbN, OXIDATN, &
+!                 LITminN, MICtrnN, SOMminN, DEsorpN, OXIDATN, &
 !                 dLITmN, dLITsN, dMICrN, dMICkN, dSOMaN, dSOMcN, dSOMpN, dDIN, &
 !                 DINup_r, DINup_k, upMICrC, upMICrN, upMICkC, upMICkN, & 
 !                 Overflow_r, Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance)
@@ -1972,11 +1999,11 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
           if ((mdaily == 1) .or. (idoy==365)) then
               call WritePointMIMICS_CN(214, sPtFileNameMIMICS, npt, mp, iYrCnt, idoy, &
                   cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2,cwood2cwd, &
-                  LITmin, MICtrn, SOMmin, DEsorb, OXIDAT, &
+                  LITmin, MICtrn, SOMmin, DEsorp, OXIDAT, &
                   dLITm, dLITs, dSOMa, dSOMc, dSOMp, dMICr, dMICk, Tsoil, &
 
                   nleaf2met,nleaf2str,nroot2met,nroot2str,nwd2str,nwood2cwd, &
-                  LITminN, MICtrnN, SOMminN, DEsorbN, OXIDATN, &
+                  LITminN, MICtrnN, SOMminN, DEsorpN, OXIDATN, &
                   dLITmN, dLITsN, dMICrN, dMICkN, dSOMaN, dSOMcN, dSOMpN, dDIN, &
                   DINup_r, DINup_k, upMICrC, upMICrN, upMICkC, upMICkN, & 
                   mimicsflux%Overflow_r, mimicsflux%Overflow_k, Nspill_r, Nspill_k, Cbalance, Nbalance)

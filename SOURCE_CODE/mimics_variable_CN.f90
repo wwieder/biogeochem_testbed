@@ -66,12 +66,14 @@ MODULE mimicsvariable
     REAL(r_2), POINTER :: tauModDenom, tauMod_MIN, tauMod_MAX
 
     REAL(r_2), POINTER :: densDep, &
-                          CN_r,    &
-                          CN_k,    &
-                          fracDINavailMIC
+                          fracDINavailMIC, &
+                          cnModNum, CNr, CNk,  &
+                          desorpQ10, desorpTref
 
     REAL(r_2), DIMENSION(:),    POINTER :: fmet,    &
                                            ligninNratioAvg, &
+                                           CN_r,    &
+                                           CN_k,    &
                                            Vslope,  &
                                            Kslope,  &
                                            Vmod,    &
@@ -84,7 +86,7 @@ MODULE mimicsvariable
                                            NUE,     &
                                            KO,      &
                                            Pscalar, &
-                                           desorb,  &
+                                           desorp,  &
                                            tauR,    &
                                            tau_r,   &
                                            tauK,    &
@@ -203,9 +205,12 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
            mimicsbiome%tauMod_MIN, &
            mimicsbiome%tauMod_MAX, &
            mimicsbiome%densDep, &
-           mimicsbiome%CN_r, &
-           mimicsbiome%CN_k, &
-           mimicsbiome%fracDINavailMIC)
+           mimicsbiome%CNr, &
+           mimicsbiome%CNk, &
+           mimicsbiome%cnModNum, &
+           mimicsbiome%fracDINavailMIC, &
+           mimicsbiome%desorpQ10, &
+           mimicsbiome%desorpTref)
 
   ALLOCATE(mimicsbiome%Vint(nRK), &
            mimicsbiome%av(nRK),   &
@@ -223,9 +228,11 @@ SUBROUTINE alloc_mimicsvariable(mp,mvtype,mplant)
            mimicsbiome%KO(2),          &
            mimicsbiome%depth(mvtype),      &
            mimicsbiome%Pscalar(arraysize), &
-           mimicsbiome%desorb(arraysize),  &
+           mimicsbiome%desorp(arraysize),  &
            mimicsbiome%fmet(arraysize),    &
            mimicsbiome%ligninNratioAvg(arraysize), &
+           mimicsbiome%CN_r(arraysize),    &
+           mimicsbiome%CN_k(arraysize),    &
            mimicsbiome%tauR(arraysize),    &      
            mimicsbiome%tauK(arraysize),    &      
            mimicsbiome%tauMod(arraysize),  & 

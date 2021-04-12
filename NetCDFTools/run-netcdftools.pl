@@ -14,7 +14,9 @@
 #   Run the netcdfTools program from $startYr to $endYr to create met*.nc files 
 #   for the CASACNP model. Meterologcial and GPP values written to the met*.nc files 
 #   come from for CLM daily climate files.  
-#   Daily CLM history files (NetCDF) are available for years 1901-2011.
+#   Daily CLM history files (NetCDF) are available for years 
+#      1901-2014 (GSWP3) or 
+#      1901-2019 w/ CRUJRA (TRENDY)
 #
 # DESCRIPTION:
 #   This script runs netcdfTools repeatedly, one year at a time, from $startYr to $endYr.
@@ -54,40 +56,21 @@
 # Executable program
 $exefile = "./netcdfTools";
 
-
 # Directory where input NetCDF CLM DAILY history files
-#$inNcDir = "/project/bgc01/bonan/casa-cnp/clm/";
-#$inNcDir = "/project/tss/wwieder/CASACLM/clm_forcing/CRU_hist/";
-#$inNcDir = "/project/tss/wwieder/CASACLM/clm_forcing/GSWP3_hist/";
-#$inNcDir = "/project/tss/wwieder/CASACLM/clm_forcing/CRU_RCP45/";
-#$inNcDir = "/project/tss/wwieder/CASACLM/clm_forcing/CRU_RCP85/";
-$inNcDir = "/project/tss/wwieder/CASACLM/clm_forcing/CLM5sp_GSWP3_hist/";
+$inNcDir = "/project/tss/wwieder/biogeochem_testbed_1.1/clm_forcing/clm50_dev110_spHIST/";
 
 # Directory where surface data set and N deposition are stored
-$inNcDir2 = "/project/tss/wwieder/CASACLM/";
-$inNcDir3 = "/project/tss/wwieder/CASACLM/";
+$inNcDir2 = "/project/tss/wwieder/biogeochem_testbed_1.1/clm_forcing/";
+$inNcDir3 = "/project/tss/wwieder/biogeochem_testbed_1.1/clm_forcing/";
 
 # Directory where output NetCDF met*.nc files will be stored
-#$outNcDir = "/project/bgc01/melannie/CASACLM/GRID/INPUT_MET_GRID";
-#$outNcDir = "/project/bgc01/melannie/CASACLM/GRID/INPUT_MET_GRID_CRU_NCEP_SOILLIQ";
-#$outNcDir = "/project/tss/wwieder/CASACLM/GRID/INPUT_MET_GRID_CRU_NCEP_SOILLIQ";
-#$outNcDir = "/project/bgc01/melannie/CASACLM/GRID/INPUT_MET_GRID_GSWP3";
-#$outNcDir = "/project/tss/bgc01/melannie/CASACLM/GRID/INPUT_MET_GRID_CRU_RCP85";
-#$outNcDir = "/project/tss/wwieder/CASACLM/GRID/INPUT_MET_GRID_GSWP3_SOILLIQ";
-#$outNcDir = "/project/tss/wwieder/CASACLM/GRID/INPUT_MET_GRID_CRU_RCP45";
-$outNcDir = "/project/tss/wwieder/CASACLM/GRID/INPUT_MET_GRID_GSWP3_CLM5_hist";
-# Directory where output NetCDF GPP*.nc files will be stored
-# $outNcDir2 = "/project/bgc01/melannie/CanopyModel/";
+$outNcDir = "/project/tss/wwieder/biogeochem_testbed_1.1/GRID_CN/INPUT_MET_GRID_GSWP3_CLM5dev110_hist";
 
 $filesin = "./files.ini";
-#$histNcFile = "${inNcDir}clm45sp_2deg4506_hist.clm2.h1.1901-01-01-00000.nc";
-#$histNcFile = "${inNcDir}clm4_5_12_r191_CLM45spHIST_CRU.clm2.h1.1901-01-01-00000.nc";
-#$histNcFile = "${inNcDir}clm4_5_12_r191_CLM45spHIST_GSWP3.clm2.h1.1901-01-01-00000.nc";
-$histNcFile = "${inNcDir}CLM5sp_HIST_GSWP3.clm2.h1.1901-01-01-00000.nc";
-#$histNcFile = "${inNcDir}clm4_5_12_r191_CLM45sp_RCP85.clm2.h1.2011-01-01-00000.nc";
+$histNcFile = "${inNcDir}clm50_dev110_spHIST.clm2.h1.1901-01-01-00000.nc";
 
-$surfDataNcFile = "${inNcDir3}surfdata_1.9x2.5_16pfts_Irrig_CMIP6_simyr1850_c170824.nc";
-$ndepNcFile = "${inNcDir2}fndep_clm_rcp4.5_simyr1849-2106_1.9x2.5_c100428.nc";
+$surfDataNcFile = "${inNcDir3}surfdata_1.9x2.5_hist_16pfts_Irrig_CMIP6_simyr1850_c190304.nc";
+$ndepNcFile = "${inNcDir2}fndep_clm_rcp8.5_simyr1849-2106_1.9x2.5_c100428.nc";
 $co2file = "./CO2_1768-2100.txt";
 
 system("cp clmGrid_IGBP_grid.csv clmGrid_IGBP.csv");
