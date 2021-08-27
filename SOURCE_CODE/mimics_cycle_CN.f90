@@ -836,10 +836,15 @@ SUBROUTINE mimics_soil_forwardMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
       mimicsbiome%Km(npt,K3) = exp(mimicsbiome%Kslope(K3) * Tsoil + mimicsbiome%Kint(K3)) &
                                * mimicsbiome%ak(K3) / mimicsbiome%Kmod(npt,K3)
 
-      ! Desorption a function of soil temperautre, Q10 = 1.1 w/ reference
+      ! Desorption a function of soil temperature, Q10 = 1.1 w/ reference
       ! temperature of 25C. -WW 4/6/2021. Created parameter names -mdh 4/12/2021
       ! desorption = mimicsbiome%desorp(npt) * (1.1 * exp((Tsoil-25)/10))
-      desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+      ! Make the Q10 modification to desorption optional. -mdh 6/30/2021
+      if (mimicsbiome%desorpQ10 < 0.0) then
+          desorption = mimicsbiome%desorp(npt) 
+      else
+          desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+      endif
     
       do ihr = 1, NHOURS
 
@@ -1084,10 +1089,15 @@ SUBROUTINE mimics_soil_reverseMM(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,croot
       CorgSum1 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
 
-      ! Desorption a function of soil temperautre, Q10 = 1.1 w/ reference
+      ! Desorption a function of soil temperature, Q10 = 1.1 w/ reference
       ! temperature of 25C. -WW 4/6/2021. Created parameter names -mdh 4/12/2021
       ! desorption = mimicsbiome%desorp(npt) * (1.1 * exp((Tsoil-25)/10))
-      desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+      ! Make the Q10 modification to desorption optional. -mdh 6/30/2021
+      if (mimicsbiome%desorpQ10 < 0.0) then
+          desorption = mimicsbiome%desorp(npt) 
+      else
+          desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+      endif
 
 do ihr = 1, NHOURS
 
@@ -1667,10 +1677,15 @@ SUBROUTINE mimics_soil_reverseMM_CN(mp,iYrCnt,idoy,mdaily,cleaf2met,cleaf2str,cr
       mimicsbiome%Km(npt,K3) = exp(mimicsbiome%Kslope(K3) * Tsoil + mimicsbiome%Kint(K3)) &
                                * mimicsbiome%ak(K3) / mimicsbiome%Kmod(npt,K3)
 
-      ! Desorption a function of soil temperautre, Q10 = 1.1 w/ reference
+      ! Desorption a function of soil temperature, Q10 = 1.1 w/ reference
       ! temperature of 25C. -WW 4/6/2021. Created parameter names -mdh 4/12/2021
       ! desorption = mimicsbiome%desorp(npt) * (1.1 * exp((Tsoil-25)/10))
-      desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+      ! Make the Q10 modification to desorption optional. -mdh 6/30/2021
+      if (mimicsbiome%desorpQ10 < 0.0) then
+          desorption = mimicsbiome%desorp(npt) 
+      else
+          desorption = mimicsbiome%desorp(npt) * (mimicsbiome%desorpQ10 * exp((Tsoil-mimicsbiome%desorpTref)/10.0))
+      endif
 
       CorgSum1 = mimicspool%LITm(npt) + mimicspool%LITs(npt) + &
                  mimicspool%SOMa(npt) + mimicspool%SOMc(npt) + mimicspool%SOMp(npt)
