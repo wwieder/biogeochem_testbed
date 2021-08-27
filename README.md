@@ -42,10 +42,10 @@ git remote add upstream https://github.com/wwieder/biogeochem_testbed_1.1.git
 
 git remote -v
 
-### Let's create a branch  
+#### Let's create a branch  
 git checkout --no-track -b Testbed_CN origin/Testbed_CN
 
-or maybe this would be better **not sure it works?**
+  - or maybe this would be better **not sure it works?**
 
 git checkout -b --track Testbed_CN upstream/Testbed_CN
 
