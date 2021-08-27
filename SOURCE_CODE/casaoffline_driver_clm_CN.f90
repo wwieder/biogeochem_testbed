@@ -279,6 +279,9 @@ PROGRAM offline_casacnp
   print *, 'calling casa_init'
   call casa_init(filename_cnpipool,mp,ms,mst)
 
+  ! Call added here 6/28/2021 to retrieve myear for casafile%totYrCnt calculation below.
+  call GetMetNcFileDim(filename_cnpmet, ms, myear)
+
   if (casafile%iptToSave > 0) then
       !casa_init must be called to initialize casamet before calling this subroutine
       call WritePointFileHeaders(dirPtFile,mp)
@@ -291,7 +294,7 @@ PROGRAM offline_casacnp
 
   else if (isomModel == CORPSE) then
 
-      call GetMetNcFileDim(filename_cnpmet, ms, myear)
+      !call GetMetNcFileDim(filename_cnpmet, ms, myear) !new call to this subroutine is above for all models
 
       !! The allocation of output variables may need to be moved after met.nc file is read 
       !! to get the exact # simulation years.
@@ -320,6 +323,7 @@ PROGRAM offline_casacnp
                         filename_mimicsepool, filename_ncOut_mimics, &
                         filename_corpseepool, filename_ncOut_corpse, &
                         mloop, mdaily, co2air, deltsoil, deltair, deltYr, nppMult, nctime)
+     !write(*,*) 'offline_casacnp: initcasa =', initcasa, '; myear =', myear, '; mloop =', mloop
   else
 
      !Transient run. Read a different met.nc file each year, output to different NetCDF files each year.
