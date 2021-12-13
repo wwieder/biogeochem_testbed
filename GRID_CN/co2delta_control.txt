@@ -1,0 +1,2 @@
+CO2 ppm, dtSoil, dtAir, year to start, NPP_mult
+360.0   0.0   0.0   10000  1.0
