@@ -91,7 +91,8 @@ SUBROUTINE casa_xnp(xnplimit,xNPuptake,veg,casabiome,casapool,casaflux,casamet)
   xnplimit = 1.0
   casaflux%fracClabile(:) = 0.0
   ! WW added, as C exudate is now a function of GPP
-  casaflux%Cexudate = 0.0
+  ! Moved to biogeochem subroutine in casa_input 
+  ! casaflux%Cexudate = 0.0
 
   !print *, 'xnp:icycle', icycle
   SELECT CASE(icycle)
@@ -166,8 +167,7 @@ SUBROUTINE casa_xnp(xnplimit,xNPuptake,veg,casabiome,casapool,casaflux,casamet)
      if(casamet%iveg2(np)/=icewater.and.casaflux%Cnpp(np) > 0.0.and.xNPuptake(np) < 1.0) then
 !       write(*,*) 'NPP BEFORE REDUCTION casaflux%Cnpp(',np,')=', casaflux%Cnpp(np)
         casaflux%fracClabile(np) =min(1.0,max(0.0,(1.0- xNPuptake(np)))) * max(0.0,casaflux%Cnpp(np))/(casaflux%Cgpp(np) +1.0e-10)
-        casaflux%Cexudate(np) = max(0.0, casabiome%fracRootExud(veg%iveg(np)) * casaflux%Cgpp(np) ) !WW added for exudate test
-        casaflux%Cgpp(np)    = casaflux%Cgpp(np) - casaflux%Cexudate(np)                            !WW added for exudate test
+        ! WW moving Cexudate flux to the biogeochem sub routine in casa_input
         casaflux%Cnpp(np)    = casaflux%Cnpp(np) - casaflux%fracClabile(np) * casaflux%Cgpp(np)
 !       write(*,*) 'NPP REDUCED casaflux%Cnpp(',np,')=', casaflux%Cnpp(np)
      endif

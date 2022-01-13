@@ -1531,6 +1531,9 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
   INTEGER  j 
 
   xKNlimiting = 1.0
+  ! WW added, as C exudate is now a function of GPP
+  casaflux%Cexudate = 0.0
+
   call phenology(idoy,veg,phen)
   call avgsoil(veg,soil,casamet)
   call casa_rplant(veg,casabiome,casapool,casaflux,casamet)
@@ -1542,6 +1545,15 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
   casapool%fT(:) = 0.0 
   casapool%fW(:) = 0.0 
   casapool%thetaLiq(:) = 0.0 
+
+  !WW added for exudate test
+  do np =1, mp
+    if(casamet%iveg2(np)/=icewater.and.casaflux%Cnpp(np) > 0.0.and.xNPuptake(np) < 1.0) then
+      casaflux%Cexudate(np) = max(0.0, casabiome%fracRootExud(veg%iveg(np)) * casaflux%Cgpp(np) ) 
+      casaflux%Cgpp(np)    = casaflux%Cgpp(np) - casaflux%Cexudate(np)
+
+    endif
+  enddo
 
   if (isomModel == CASACNP) then
 
