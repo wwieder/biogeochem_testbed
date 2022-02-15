@@ -1528,7 +1528,7 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
   REAL(r_2),    DIMENSION(mp) :: xnplimit,xNPuptake
   REAL(r_2),    DIMENSION(mp) :: xklitter,xksoil,xkNlimiting
   REAL(r_2),    DIMENSION(mp) :: xkleafcold,xkleafdry,xkleaf
-  INTEGER  j 
+  INTEGER  j, np 
 
   xKNlimiting = 1.0
   ! WW added, as C exudate is now a function of GPP
@@ -1548,7 +1548,8 @@ SUBROUTINE biogeochem(iYrCnt,idoy,mdaily,nppScalar,cleaf2met,cleaf2str,croot2met
 
   !WW added for exudate test
   do np =1, mp
-    if(casamet%iveg2(np)/=icewater.and.casaflux%Cnpp(np) > 0.0.and.xNPuptake(np) < 1.0) then
+!   if(casamet%iveg2(np)/=icewater.and.casaflux%Cnpp(np) > 0.0.and.xNPuptake(np) < 1.0) then
+    if(casamet%iveg2(np)/=icewater.and.casaflux%Cgpp(np) > 0.0) then
       casaflux%Cexudate(np) = max(0.0, casabiome%fracRootExud(veg%iveg(np)) * casaflux%Cgpp(np) ) 
       casaflux%Cgpp(np)    = casaflux%Cgpp(np) - casaflux%Cexudate(np)
 
