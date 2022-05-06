@@ -601,8 +601,7 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
           
           ! ATTENTION: Is nwd2str calculation correct? -mdh 6/23/2019
           if (icycle > 1) then 
-              nwd2str(npt) = (1.0-casaflux%fromLtoCO2(npt,cwd)) &
-                             * casaflux%klitter(npt,cwd) * casapool%nlitter(npt,cwd)
+              nwd2str(npt) = casaflux%klitter(npt,cwd) * casapool%nlitter(npt,cwd)
           endif
 
           ! Calculate change in CWD pool.  CWD pool is updated in mimics_ccycle (-mdh 5/4/2015)
