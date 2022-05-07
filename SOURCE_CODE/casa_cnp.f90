@@ -1156,8 +1156,7 @@ IF(casamet%iveg2(nland)/=icewater) THEN
 
       ! Added nwd2str. -mdh 7/15/2019
       IF(icycle>1) THEN
-        nwd2str(nland) = nwd2str(nland) + casaflux%fromLtoS(nland,nS,cwd) &
-                               * casaflux%klitter(nland,cwd) &
+        nwd2str(nland) = nwd2str(nland) + casaflux%klitter(nland,cwd) &
                                * casapool%Nlitter(nland,cwd)
       ENDIF
    ENDDO
