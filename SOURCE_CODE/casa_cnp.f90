@@ -1154,12 +1154,14 @@ IF(casamet%iveg2(nland)/=icewater) THEN
                                * casaflux%klitter(nland,cwd) &
                                * casapool%clitter(nland,cwd)
 
-      ! Added nwd2str. -mdh 7/15/2019
-      IF(icycle>1) THEN
-        nwd2str(nland) = nwd2str(nland) + casaflux%klitter(nland,cwd) &
-                               * casapool%Nlitter(nland,cwd)
-      ENDIF
    ENDDO
+   ! Added nwd2str. -mdh 7/15/2019
+   ! removed this N loop from soil loop above since we're assuming all N in this
+   ! diagnostics is passed to litter (or soil)
+   IF(icycle>1) THEN
+     nwd2str(nland) = nwd2str(nland) + casaflux%klitter(nland,cwd) &
+                            * casapool%Nlitter(nland,cwd)
+   ENDIF
    casaflux%ClitInptStruc(nland) = casaflux%ClitInptStruc(nland) + cwd2str(nland)
    ! Added nwd2str. -mdh 7/15/2019
    casaflux%NlitInptStruc(nland) = casaflux%NlitInptStruc(nland) + nwd2str(nland)
