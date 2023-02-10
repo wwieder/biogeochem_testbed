@@ -94,7 +94,7 @@ end type soil_carbon_pool
 integer,parameter::RHIZ=1,BULK=2
 
 !---- namelist ---------------------------------------------------------------
-real,dimension(nspecies) :: Ea=(/37e3,54e3,50e3/)          !Activation energy (kJ/mol)
+real,dimension(nspecies) :: Ea=(/37e3,54e3,50e3/)          !Activation energy (J/mol)
 real,dimension(nspecies) :: vmaxref=(/4500e0,25e0,600e0/)  !Vmax at reference temperature (yr-1)
 real,dimension(nspecies) :: kC=(/0.01,0.01,0.01/)          !Michaelis-Menton C parameter (dimensionless)
 real                     :: Tmic=0.25                      !Microbial turnover rate (yr-1)
@@ -343,12 +343,12 @@ subroutine update_pool(pool,T,theta_liq,air_filled_porosity,liquid_water,frozen_
                         Prate_limited,dt,tempresp,temp_deadmic,temp_protected,temp_protected_turnover_rate,tempCO2)
         IF (.NOT. check_cohort(pool%litterCohorts(n))) THEN
             if(present(badCohort)) badCohort=n
-            WRITE (*,*),'UPDATE_POOL: Cohort',n,'of',size(pool%litterCohorts),'bad'
+            WRITE (*,*) 'UPDATE_POOL: Cohort',n,'of',size(pool%litterCohorts),'bad'
             call print_cohort(pool%litterCohorts(n))
-            WRITE (*,*),'Dissolved carbon =',pool%dissolved_carbon
-            WRITE (*,*),'Latest respiration:',tempResp*dt
-            WRITE (*,*),'Previous unprotected C:',prevC
-            WRITE (*,*),'npt =', npt, 'doy =',doy, 'hour = ', hr
+            WRITE (*,*) 'Dissolved carbon =',pool%dissolved_carbon
+            WRITE (*,*) 'Latest respiration:',tempResp*dt
+            WRITE (*,*) 'Previous unprotected C:',prevC
+            WRITE (*,*) 'npt =', npt, 'doy =',doy, 'hour = ', hr
             if (.NOT. present(badCohort)) call error_mesg('Update_pool','Bad cohort',FATAL)
         ENDIF
 
@@ -358,6 +358,11 @@ subroutine update_pool(pool,T,theta_liq,air_filled_porosity,liquid_water,frozen_
         deadmic_produced=deadmic_produced+temp_deadmic
         CO2prod=CO2prod+tempCO2
     ENDDO
+
+    if (protected_produced(1) > 0.99) then
+        WRITE (*,*) 'WARNING: npt =', npt, 'doy =',doy
+        WRITE (*,*) 'UPDATE_POOL: protected_produced(1) = ', protected_produced(1) 
+    endif 
 
     fast_C_loss_rate=resp(1)
     slow_C_loss_rate=resp(2)
@@ -575,26 +580,26 @@ subroutine print_cohort(cohort)
     implicit none
     type(litterCohort)::cohort
 
-    WRITE (*,*),'----------------'
-    WRITE (*,*),'Original C =',cohort%originalLitterC
-    WRITE (*,*),'Unprotected C=',cohort%litterC
-    WRITE (*,*),'Living microbial C =',cohort%livingMicrobeC
-    !WRITE (*,*),'Microbial products =',cohort%microbProdC
-    WRITE (*,*),'Protected C =',cohort%protectedC
+    WRITE (*,*) '----------------'
+    WRITE (*,*) 'Original C =',cohort%originalLitterC
+    WRITE (*,*) 'Unprotected C=',cohort%litterC
+    WRITE (*,*) 'Living microbial C =',cohort%livingMicrobeC
+    !WRITE (*,*) 'Microbial products =',cohort%microbProdC
+    WRITE (*,*) 'Protected C =',cohort%protectedC
 
-    !WRITE (*,*),'Mineral complex C =',cohort%minC
-    WRITE (*,*),'CO2 =',cohort%CO2
-    WRITE (*,*),'Rtot =',cohort%Rtot
-    !WRITE (*,*),'Volume fraction =',cohort%cohortVolume
-    WRITE (*,*),'Sum of carbon =',cohortCsum(cohort)
-    WRITE (*,*),'Difference = ',cohortCsum(cohort)-cohort%originalLitterC
+    !WRITE (*,*) 'Mineral complex C =',cohort%minC
+    WRITE (*,*) 'CO2 =',cohort%CO2
+    WRITE (*,*) 'Rtot =',cohort%Rtot
+    !WRITE (*,*) 'Volume fraction =',cohort%cohortVolume
+    WRITE (*,*) 'Sum of carbon =',cohortCsum(cohort)
+    WRITE (*,*) 'Difference = ',cohortCsum(cohort)-cohort%originalLitterC
     if (cohort%originalLitterC > 0.0) then
-        WRITE(*,*),'Fractional difference =',(cohortCsum(cohort)-cohort%originalLitterC)/cohort%originalLitterC
+        WRITE(*,*) 'Fractional difference =',(cohortCsum(cohort)-cohort%originalLitterC)/cohort%originalLitterC
     else
-        WRITE(*,*),'Fractional difference = 0.0'
+        WRITE(*,*) 'Fractional difference = 0.0'
     endif
 
-    WRITE (*,*),'----------------'
+    WRITE (*,*) '----------------'
 end subroutine
 
 

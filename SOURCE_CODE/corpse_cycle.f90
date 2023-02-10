@@ -49,12 +49,12 @@ SUBROUTINE corpse_delplant(mp,veg,casabiome,casapool,casaflux,casamet,          
   TYPE (casa_flux),          INTENT(INOUT) :: casaflux
   TYPE (casa_met),           INTENT(INOUT) :: casamet
 
-  real, dimension(mp),INTENT(OUT) :: cleaf2met,cleaf2str,croot2met,croot2str,cwood2cwd,  &
+  real(r_2), dimension(mp),INTENT(OUT) :: cleaf2met,cleaf2str,croot2met,croot2str,cwood2cwd,  &
                                      nleaf2met,nleaf2str,nroot2met,nroot2str,nwood2cwd,  &
                                      pleaf2met,pleaf2str,proot2met,proot2str,pwood2cwd,  &
                                      cwd2co2,cwd2str
   ! Local Variables
-  integer ::  npt,nL,nP,nland
+  integer ::  npt
 
   casaflux%FluxCtolitter = 0.0
   casaflux%FluxNtolitter = 0.0
@@ -120,7 +120,7 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
   ! Function Arguments
   integer, INTENT(IN) :: mp,idoy  ! number of grid points, day of year
   !Daily Litter Inputs (gC/m2)
-  real, dimension(mp),INTENT(IN) :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2
+  real(r_2), dimension(mp),INTENT(IN) :: cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,cwd2co2
 
   ! Local Variables
   integer :: npt, ihr, jj, doy
@@ -128,6 +128,8 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
   real    :: zeroThreshold
   real    :: air_filled_porosity
   real,dimension(mp) :: theta_liq, theta_frzn, fT, fW
+  real,dimension(nspecies) :: ftemp                              ! temporary array
+  real,dimension(mp,num_lyr,nspecies) :: soil_protected_produced ! C inputs into the protected soil carbon pool.
 
   ! Variables to hold the daily litter inputs from the CASACNP model
   real,dimension(nspecies):: daily_leaflitter_input
@@ -139,6 +141,8 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
   theta_frzn(:) = 0.0
   fT(:) = 0.0
   fW(:) = 0.0
+  ftemp(:) = 0.0
+  soil_protected_produced(:,:,:) = 0.0
 
   if (iptToSave_corpse > 0) then
       open(215,file=sPtFileNameCORPSE, access='APPEND')
@@ -150,6 +154,7 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
       badLitter = 0
       ! Only the daily_exudate_input(LABILE) value will be reset to non-zero value. -mdh 2/8/2017
       daily_exudate_input(:) = 0
+
 
       IF(casamet%iveg2(npt) /= icewater) THEN
 
@@ -242,6 +247,7 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
                               rhizosphere_frac)
           enddo
 
+
           ! HOURLY
           !!do ihr = 1, NHOURS - commented out to run daily (-mdh 3/21/2016)
   
@@ -264,7 +270,6 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
                            (theta_liq(npt)**3+0.001)*max((air_filled_porosity)**pt(npt)%soil(jj)%gas_diffusion_exp, &
                                                           pt(npt)%soil(jj)%min_anaerobic_resp_factor))
                   fT(npt) = 0.0 ! placeholder for future output variable, if needed
-
                   call update_pool(pool=pt(npt)%soil(jj), &
                                T=T, &
                                theta_liq=theta_liq(npt),&
@@ -285,6 +290,10 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
                                npt=npt, &
                                doy=idoy, &
                                hr=ihr)
+                               ! Save the value of pt(npt)%protected_produced because it will be set to zero for litter layer (below). -mdh 12/3/2018
+                               soil_protected_produced(npt,jj,LABILE) = pt(npt)%protected_produced(LABILE)
+                               soil_protected_produced(npt,jj,RECALCTRNT) = pt(npt)%protected_produced(RECALCTRNT)
+                               soil_protected_produced(npt,jj,DEADMICRB) = pt(npt)%protected_produced(DEADMICRB)
               enddo
       
               ! Update using casamet%frznmoistavg(npt) variable. -mdh 3/13/2107
@@ -314,6 +323,7 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
                            doy=idoy, &
                            hr=ihr)
       
+
           !!enddo   ! End hourly loop
   
 
@@ -336,36 +346,53 @@ SUBROUTINE corpse_soil(mp,idoy,cleaf2met,cleaf2str,croot2met,croot2str,cwd2str,c
   end if
 
   do npt=1,mp
-
-      !Record the output if time step matches recording step
-      if (mod(timestep,recordtime) .eq. 0) then
-          do jj=1,num_lyr
-              !call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), casamet%moistavg(npt), casamet%tsoilavg(npt))
-              call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), &
-                                    theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), doy)
-          enddo
-          !call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, casamet%moistavg(npt), casamet%tsoilavg(npt))
-          call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), &
-                                theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), doy)
-
-          if (casamet%ijgcm(npt) .eq. iptToSave_corpse) then
-              !ATTENTION: TO DO
-              !write(*,*) 'litterlayer_totalC(', npt, ')= ', &
-              !            pt(npt)%litterlayer_outputs%totalC(pt(npt)%litterlayer_outputs%linesWritten)
-              !write(*,*) 'soil_totalC(', npt, ')= ', &
-              !            pt(npt)%soil_outputs(1)%totalC(pt(npt)%soil_outputs(1)%linesWritten)
+    
+!     IF(casamet%iveg2(npt) /= icewater) THEN
+    
+          !Record the output if time step matches recording step
+          if (mod(timestep,recordtime) .eq. 0) then
+    
+              do jj=1,num_lyr
+                  ftemp(1) = soil_protected_produced(npt,jj,LABILE)
+                  ftemp(2) = soil_protected_produced(npt,jj,RECALCTRNT) 
+                  ftemp(3) = soil_protected_produced(npt,jj,DEADMICRB)
+                  !call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), casamet%moistavg(npt), casamet%tsoilavg(npt))
+!                 if (ftemp(1) > 0.99) then
+!                     WRITE (*,*) 'WARNING(3): npt =', npt, 'doy =',doy
+!                     WRITE (*,*) 'corpse_soil: protected_produced(LABILE) = ', ftemp(1) 
+!                     stop
+!                 endif 
+                  call save_output_line(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), &
+                                        theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), ftemp, doy)
+              enddo
+              !call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, casamet%moistavg(npt), casamet%tsoilavg(npt))
+              ftemp = 0.0
+              call save_output_line(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), &
+                                    theta_frzn(npt), fT(npt), fW(npt), casamet%tsoilavg(npt), ftemp, doy)
+    
+              if (casamet%ijgcm(npt) .eq. iptToSave_corpse) then
+                  !ATTENTION: TO DO
+                  !write(*,*) 'litterlayer_totalC(', npt, ')= ', &
+                  !            pt(npt)%litterlayer_outputs%totalC(pt(npt)%litterlayer_outputs%linesWritten)
+                  !write(*,*) 'soil_totalC(', npt, ')= ', &
+                  !            pt(npt)%soil_outputs(1)%totalC(pt(npt)%soil_outputs(1)%linesWritten)
+              endif
           endif
-      endif
+    
+          ! Accumulate C pools and fluxes every day
+          do jj=1,num_lyr
+              ftemp(1) = soil_protected_produced(npt,jj,LABILE)
+              ftemp(2) = soil_protected_produced(npt,jj,RECALCTRNT) 
+              ftemp(3) = soil_protected_produced(npt,jj,DEADMICRB)
+              call corpse_caccum(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), theta_frzn(npt),  &
+                                 fT(npt), fW(npt), casamet%tsoilavg(npt), ftemp, doy, casamet%ijgcm(npt))
+          enddo
+          ftemp = 0.0
+          call corpse_caccum(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), theta_frzn(npt),  &
+                             fT(npt), fW(npt), casamet%tsoilavg(npt), ftemp, doy, casamet%ijgcm(npt))
 
-      ! Accumulate C pools and fluxes every day
-      do jj=1,num_lyr
-          call corpse_caccum(pt(npt)%soil(jj), pt(npt)%soil_outputs(jj), theta_liq(npt), theta_frzn(npt),  &
-                             fT(npt), fW(npt), casamet%tsoilavg(npt), doy, casamet%ijgcm(npt))
-      enddo
-      call corpse_caccum(pt(npt)%litterlayer, pt(npt)%litterlayer_outputs, theta_liq(npt), theta_frzn(npt),  &
-                         fT(npt), fW(npt), casamet%tsoilavg(npt), doy, casamet%ijgcm(npt))
-
-  enddo
+!     END IF
+  END DO
 
 end SUBROUTINE corpse_soil
 

@@ -59,7 +59,7 @@ MODULE corpsevariable
         real,allocatable :: fT(:)                 ! dimensions nlines (Placeholder, not currently written to output -mdh 11/27/2017) 
         real,allocatable :: fW(:)                 ! dimensions nlines  
         real,allocatable :: time(:)               ! dimension nlines
-        real             :: cwd2co2(366)          ! dimension 1..days in a year (added 2/6/2017)
+        real             :: cwd2co2(366)          ! dimension 1..days in a year (added 2/6/2017 -mdh)
         integer :: linesWritten=0
         integer,allocatable::ncohorts(:)
         integer,allocatable::doy(:)               ! Added to allow annual output (doy=365) to daily point files. -mdh 5/14/2018
@@ -76,7 +76,8 @@ MODULE corpsevariable
         real,allocatable :: thetaFrznAn(:)        ! dimensions nlines           
         real,allocatable :: fTAn(:)               ! dimensions nlines (Placeholder, not currently written to output -mdh 11/27/2017) 
         real,allocatable :: fWAn(:)               ! dimensions nlines      
-        real,allocatable :: timeAn(:)             ! dimensions nlines               
+        real,allocatable :: timeAn(:)             ! dimensions nlines   
+        real,allocatable :: protectedProdAn(:,:)  ! dimensions nspecies, nlines (added 12/3/2018 -mdh)           
     end type outputvars
 
     
@@ -125,10 +126,10 @@ MODULE corpsevariable
         integer :: landareaid                ! NetCDF variable ID for land area
         integer :: maskid                    ! NetCDF variable ID for cellMissing(nlon,nlat)
         integer :: igbpid                    ! NetCDF variable ID for IGBP_PFT(nlon,nlat)
+        integer :: protectedProdid           ! NetCDF variable ID for inputs to the protected pool
 
         !! Currently unused IDs
         integer :: Rtotid                    ! NetCDF variable ID for
-        integer :: protectedProdid           ! NetCDF variable ID for
         integer :: leachingid                ! NetCDF variable ID for
         integer :: litterleachingid          ! NetCDF variable ID for
         integer :: leaching_divergenceid     ! NetCDF variable ID for
@@ -185,7 +186,8 @@ SUBROUTINE alloc_corpsevariable(mp)
     integer, INTENT(IN) :: mp    ! number of grid points
 
     ! Local Variables
-    integer::ipt, jj
+    integer::ipt
+    !integer:: jj
 
     !Allocate memory for the grid of mp points
     allocate(pt(mp))

@@ -10,7 +10,7 @@
 ! Please contact cable_help@nf.nci.org.au for any questions on 
 ! registration and the Licence.
 !
-! Unless required by applicable law or agreed to in writing, 
+! Unless required by applicable law or agreed to in writing,
 ! software distributed under the Licence is distributed on an "AS IS" BASIS,
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the Licence for the specific language governing permissions and 
@@ -24,9 +24,18 @@
 ! History: Developed for offline CASA-CNP, code revision likely to better
 !          suit ACCESS and to merge more consistently with CABLE code
 !
-!
 ! ==============================================================================
 ! casa_variable.f90
+!
+! This file contains:
+!   MODULE casadimension
+!   MODULE casaparm
+!   MODULE casavariable
+!     with subroutine alloc_casavariable
+!   MODULE phenvariable
+!     with subroutine alloc_phenvariable
+!   MODULE clmgridvariable
+!     with subroutine alloc_CLMgridVariable
 !
 ! the following modules are used when "casacnp" is coupled to "cable"
 !   casadimension
@@ -81,14 +90,14 @@ MODULE casaparm
   USE casadimension
 
   !! Comment out the next 2 lines.  initcasa is read from startup file (-MDH 6/9/2014)
-  integer :: initcasa = 0		! =0 spin; 1 restart file; 2 transient simulation
+  integer :: initcasa = 0               ! =0 spin; 1 restart file; 2 transient simulation
   !! Updated cropland, iceland values (-MDH 7/7/2014)
   INTEGER, PARAMETER :: iceland  = 15   ! =13 for casa vegtype =15 for IGBP vegtype
   !! Added "barren" and "tundra" (-MDH 6/9/2014)
   integer, parameter :: barren   = 16   ! IGBP barren or sparsely vegetated
   integer, parameter :: tundra  = 18    ! IGBP+tundra classification
   INTEGER, PARAMETER :: cropland = 12   ! IGBP cropland
-  INTEGER, PARAMETER :: croplnd2 = 14  	! IGBP cropland mosaic
+  INTEGER, PARAMETER :: croplnd2 = 14   ! IGBP cropland mosaic
 
   !! Vegetation types
   INTEGER, PARAMETER :: forest  = 3
@@ -163,7 +172,19 @@ MODULE casavariable
                                        maxfinelitter,  &
                                        maxcwd,         &             
                                        nintercept,     &  
-                                       nslope             
+                                       nslope,         &
+
+                                       xkNlimitmin,    &             
+                                       xkNlimitmax,    &             
+                                       fracRootExud,   &             
+                                       CUEmetbmic,     &         
+                                       CUEstrmic,      &         
+                                       CUEstrslow,     &         
+                                       CUEcwdmic,      &         
+                                       CUEcwdslow,     &         
+                                       CUEmicslow,     &         
+                                       CUEmicpass,     &         
+                                       CUEpassslow
 
     REAL(r_2), DIMENSION(:,:),POINTER :: plantrate,     &
                                        rmplant,         &
@@ -248,6 +269,9 @@ MODULE casavariable
                                        fWAn,          &
                                        thetaLiqAn
 
+    REAL(r_2), DIMENSION(:), POINTER :: NsoilminAn
+
+
   END TYPE casa_annual_pool
 
   TYPE casa_flux
@@ -256,31 +280,54 @@ MODULE casavariable
                                        CnppAn,        &
                                        Crp,           &
                                        Crgplant,      &
+                                       CrgplantAn,    &
                                        ClitInptMet,        &
                                        ClitInptMetAn,      &
                                        ClitInptStruc,      &
                                        ClitInptStrucAn,    &
-                                       Nminfix,       &
+                                       NlitInptMet,        &
+                                       NlitInptMetAn,      &
+                                       NlitInptStruc,      &
+                                       NlitInptStrucAn,    &
+
+                                       Cexudate,      &
+                                       Nexudate,      &
+                                       Pexudate,      &
+
                                        Nminuptake,    &
+                                       NminuptakeAn,  &
                                        Plabuptake,    &
                                        Clabloss,      &
-                                       fracClabile
+                                       fracClabile,   &
+                                       xkNlimiting,   &  
+                                       CpassInpt,     &  
+                                       CpassInptAn   
     REAL(r_2), DIMENSION(:,:),POINTER :: fracCalloc,  &
                                        fracNalloc,    &
                                        fracPalloc,    &
                                        Crmplant,      &
+                                       CrmplantAn,    &
                                        kplant
     REAL(r_2), DIMENSION(:,:,:),POINTER :: fromPtoL
     REAL(r_2), DIMENSION(:),POINTER :: Cnep,        &
                                        Crsoil,      &
                                        Nmindep,     &
+                                       NmindepAn,   &
+                                       Nminfix,       &
+                                       NminfixAn,     &
                                        Nminloss,    &
+                                       NminlossAn,  &
                                        Nminleach,   &
-                                       Nupland,     &
+                                       NminleachAn, &
                                        Nlittermin,  &
+                                       NlitterminAn,&
                                        Nsmin,       &
+                                       NsminAn,     &
                                        Nsimm,       &
+                                       NsimmAn,     &
                                        Nsnet,       &
+                                       NsnetAn,     &
+                                       Nupland,     &
                                        fNminloss,   &
                                        fNminleach,  &
                                        Pdep,        &
@@ -392,6 +439,9 @@ MODULE casavariable
     CHARACTER(LEN=100) :: sPtFileNameCASA
     INTEGER :: iptToSave = 0
     INTEGER :: iptToSaveIndx = 0
+    INTEGER :: ncOutputInterval = 1
+    INTEGER :: iYrCnt = 0
+    INTEGER :: totYrCnt = 0
 !   LOGICAL           :: l_ndep
   END TYPE casafiles_type
   TYPE(casafiles_type) :: casafile
@@ -411,10 +461,10 @@ Contains
 
 
 ! Inserted the previous subroutine declaration (-MDH 6/9/2014)
-SUBROUTINE alloc_casavariable(mp,mvtype,mst,ms)
+SUBROUTINE alloc_casavariable(mp,mvtype,ms)
   USE casadimension
   implicit none
-  integer, INTENT(IN)  :: mp, mvtype, mst, ms
+  integer, INTENT(IN)  :: mp, mvtype, ms
   integer :: arraysize
   arraysize = mp
 
@@ -447,6 +497,19 @@ SUBROUTINE alloc_casavariable(mp,mvtype,mst,ms)
            casabiome%maxcwd(mvtype),                 &
            casabiome%nintercept(mvtype),             &
            casabiome%nslope(mvtype),                 &
+
+           casabiome%xkNlimitmin(mvtype),            &             
+           casabiome%xkNlimitmax(mvtype),            &             
+           casabiome%fracRootExud(mvtype),           &             
+           casabiome%CUEmetbmic(mvtype),             &         
+           casabiome%CUEstrmic(mvtype),              &         
+           casabiome%CUEstrslow(mvtype),             &         
+           casabiome%CUEcwdmic(mvtype),              &         
+           casabiome%CUEcwdslow(mvtype),             &         
+           casabiome%CUEmicslow(mvtype),             &         
+           casabiome%CUEmicpass(mvtype),             &         
+           casabiome%CUEpassslow(mvtype),            &
+
            casabiome%plantrate(mvtype,mplant),       &
            casabiome%rmplant(mvtype,mplant),         &
            casabiome%fracnpptoP(mvtype,mplant),      &
@@ -517,19 +580,36 @@ SUBROUTINE alloc_casavariable(mp,mvtype,mst,ms)
            casapoolAn%tsoilAn(arraysize),                &
            casapoolAn%fTAn(arraysize),                   &
            casapoolAn%fWAn(arraysize),                   &
-           casapoolAn%thetaLiqAn(arraysize))
+           casapoolAn%thetaLiqAn(arraysize),             &
+           casapoolAn%NsoilminAn(arraysize))
+
 
   ALLOCATE(casaflux%Cgpp(arraysize),                     &
            casaflux%Cnpp(arraysize),                     &
            casaflux%CnppAn(arraysize),                   &
            casaflux%Crp(arraysize),                      &
            casaflux%Crgplant(arraysize),                 &
+           casaflux%CrgplantAn(arraysize),               &
            casaflux%ClitInptMet(arraysize),              &
            casaflux%ClitInptMetAn(arraysize),            &
            casaflux%ClitInptStruc(arraysize),            &
            casaflux%ClitInptStrucAn(arraysize),          &
+           casaflux%NlitInptMet(arraysize),              &
+           casaflux%NlitInptMetAn(arraysize),            &
+           casaflux%NlitInptStruc(arraysize),            &
+           casaflux%NlitInptStrucAn(arraysize),          &
+
+           casaflux%Cexudate(arraysize),                 &
+           casaflux%Nexudate(arraysize),                 &
+           casaflux%Pexudate(arraysize),                 &
+
+           casaflux%xkNlimiting(arraysize),              &
+           casaflux%CpassInpt(arraysize),                &
+           casaflux%CpassInptAn(arraysize),              &
            casaflux%Nminfix(arraysize),                  &
+           casaflux%NminfixAn(arraysize),                &
            casaflux%Nminuptake(arraysize),               &
+           casaflux%NminuptakeAn(arraysize),             &
            casaflux%Plabuptake(arraysize),               &
            casaflux%Clabloss(arraysize),                 &
            casaflux%fracClabile(arraysize),              &
@@ -538,17 +618,25 @@ SUBROUTINE alloc_casavariable(mp,mvtype,mst,ms)
            casaflux%fracPalloc(arraysize,mplant),        &
            casaflux%kplant(arraysize,mplant),            &
            casaflux%Crmplant(arraysize,mplant),          &
+           casaflux%CrmplantAn(arraysize,mplant),        &
            casaflux%fromPtoL(arraysize,mlitter,mplant),  &
            casaflux%Cnep(arraysize),                     &
            casaflux%Crsoil(arraysize),                   &
            casaflux%Nmindep(arraysize),                  &
+           casaflux%NmindepAn(arraysize),                &
            casaflux%Nminloss(arraysize),                 &
+           casaflux%NminlossAn(arraysize),               &
            casaflux%Nminleach(arraysize),                &
+           casaflux%NminleachAn(arraysize),              &
            casaflux%Nupland(arraysize),                  &
            casaflux%Nlittermin(arraysize),               &
+           casaflux%NlitterminAn(arraysize),             &
            casaflux%Nsmin(arraysize),                    &
+           casaflux%NsminAn(arraysize),                  &
            casaflux%Nsimm(arraysize),                    &
+           casaflux%NsimmAn(arraysize),                  &
            casaflux%Nsnet(arraysize),                    &
+           casaflux%NsnetAn(arraysize),                  &
            casaflux%fNminloss(arraysize),                &
            casaflux%fNminleach(arraysize),               &
            casaflux%Pdep(arraysize),                     &
@@ -696,7 +784,7 @@ CONTAINS
 ! Updated this subroutine declaration (-MDH 6/9/2014)
 SUBROUTINE alloc_phenvariable(mp,mvtype)
   INTEGER,             INTENT(IN) :: mp, mvtype
-  INTEGER 			  :: arraysize
+  INTEGER                         :: arraysize
   arraysize = mp
 
   ALLOCATE(phen%Tkshed(mvtype))
@@ -728,7 +816,7 @@ MODULE clmgridvariable
 
    CONTAINS
 
-   SUBROUTINE Alloc_CLMgridVariable(nlon, nlat)
+   SUBROUTINE alloc_CLMgridVariable(nlon, nlat)
       integer, intent(in) :: nlon, nlat
       clmgrid%nlat = nlat
       clmgrid%nlon = nlon
