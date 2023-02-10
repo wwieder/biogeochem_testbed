@@ -90,6 +90,9 @@ SUBROUTINE casa_xnp(xnplimit,xNPuptake,veg,casabiome,casapool,casaflux,casamet)
   xplimit  = 1.0
   xnplimit = 1.0
   casaflux%fracClabile(:) = 0.0
+  ! WW added, as C exudate is now a function of GPP
+  ! Moved to biogeochem subroutine in casa_input 
+  ! casaflux%Cexudate = 0.0
 
   !print *, 'xnp:icycle', icycle
   SELECT CASE(icycle)
@@ -164,6 +167,7 @@ SUBROUTINE casa_xnp(xnplimit,xNPuptake,veg,casabiome,casapool,casaflux,casamet)
      if(casamet%iveg2(np)/=icewater.and.casaflux%Cnpp(np) > 0.0.and.xNPuptake(np) < 1.0) then
 !       write(*,*) 'NPP BEFORE REDUCTION casaflux%Cnpp(',np,')=', casaflux%Cnpp(np)
         casaflux%fracClabile(np) =min(1.0,max(0.0,(1.0- xNPuptake(np)))) * max(0.0,casaflux%Cnpp(np))/(casaflux%Cgpp(np) +1.0e-10)
+        ! WW moving Cexudate flux to the biogeochem sub routine in casa_input
         casaflux%Cnpp(np)    = casaflux%Cnpp(np) - casaflux%fracClabile(np) * casaflux%Cgpp(np)
 !       write(*,*) 'NPP REDUCED casaflux%Cnpp(',np,')=', casaflux%Cnpp(np)
      endif
@@ -864,7 +868,8 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
    casaflux%FluxNtolitter = 0.0
    casaflux%FluxPtolitter = 0.0
    ! Added root exudate flux -mdh 1/13/2020
-   casaflux%Cexudate = 0.0
+   ! WW C fluxes now calcualted above
+   !casaflux%Cexudate = 0.0
    casaflux%Nexudate = 0.0
    casaflux%Pexudate = 0.0
 
@@ -897,8 +902,9 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                - casaflux%kplant(npt,:)  * casapool%cplant(npt,:)
 
     ! Compute root exudate C flux as a fraction of froot NPP. -mdh 1/13/2020
-    casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) * casaflux%fracCalloc(npt,froot))  
-    casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt)   
+    ! WW turning this off for exudate comes from GPP flux
+!    casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) * casaflux%fracCalloc(npt,froot))  
+!    casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt)   
 
     ! change here made by ypw on 26august 2011
     ! calculate fraction c to labile pool as a fraction of gpp, not npp
@@ -932,11 +938,12 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                         * casabiome%ftransNPtoL(veg%iveg(npt),froot)
 
        ! Compute root exudate N flux as a fraction of froot N uptake. -mdh 1/13/2020
-       if (casaflux%Cexudate(npt) > 0.0) then
-         casaflux%Nexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Nminuptake(npt) &
-                                  * casaflux%fracNalloc(npt,froot))
-         casapool%dNplantdt(npt,froot) = casapool%dNplantdt(npt,froot) - casaflux%Nexudate(npt)
-       endif
+       ! WW removed for exudate test
+       !if (casaflux%Cexudate(npt) > 0.0) then
+       !  casaflux%Nexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Nminuptake(npt) &
+       !                           * casaflux%fracNalloc(npt,froot))
+       !  casapool%dNplantdt(npt,froot) = casapool%dNplantdt(npt,froot) - casaflux%Nexudate(npt)
+       !endif
 
        ! added by ypwang 5/nov/2012
 
@@ -972,11 +979,13 @@ SUBROUTINE casa_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                      * casabiome%ftransPPtoL(veg%iveg(npt),froot)
 
        ! Compute root exudate P flux as a fraction of froot P uptake. -mdh 1/13/2020
-       if (casaflux%Cexudate(npt) > 0.0) then
-         casaflux%Pexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Plabuptake(npt) &
-                                 * casaflux%fracPalloc(npt,froot))
-         casapool%dPplantdt(npt,froot) = casapool%dPplantdt(npt,froot) - casaflux%Pexudate(npt)
-       endif
+       ! WW removed for exudate test
+       !if (casaflux%Cexudate(npt) > 0.0) then
+       !  casaflux%Pexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Plabuptake(npt) &
+       !                          * casaflux%fracPalloc(npt,froot))
+       !  casapool%dPplantdt(npt,froot) = casapool%dPplantdt(npt,froot) - casaflux%Pexudate(npt)
+       !endif
+
        ! added by ypwang 5/nov/2012
 
        pleaf2str(npt) = casaflux%fromPtoL(npt,str,leaf) * casaflux%kplant(npt,leaf)  &
@@ -1145,13 +1154,14 @@ IF(casamet%iveg2(nland)/=icewater) THEN
                                * casaflux%klitter(nland,cwd) &
                                * casapool%clitter(nland,cwd)
 
-      ! Added nwd2str. -mdh 7/15/2019
-      IF(icycle>1) THEN
-        nwd2str(nland) = nwd2str(nland) + casaflux%fromLtoS(nland,nS,cwd) &
-                               * casaflux%klitter(nland,cwd) &
-                               * casapool%Nlitter(nland,cwd)
-      ENDIF
    ENDDO
+   ! Added nwd2str. -mdh 7/15/2019
+   ! removed this N loop from soil loop above since we're assuming all N in this
+   ! diagnostics is passed to litter (or soil)
+   IF(icycle>1) THEN
+     nwd2str(nland) = nwd2str(nland) + casaflux%klitter(nland,cwd) &
+                            * casapool%Nlitter(nland,cwd)
+   ENDIF
    casaflux%ClitInptStruc(nland) = casaflux%ClitInptStruc(nland) + cwd2str(nland)
    ! Added nwd2str. -mdh 7/15/2019
    casaflux%NlitInptStruc(nland) = casaflux%NlitInptStruc(nland) + nwd2str(nland)

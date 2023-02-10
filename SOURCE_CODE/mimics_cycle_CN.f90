@@ -294,7 +294,8 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
   casaflux%FluxNtolitter = 0.0
   casaflux%FluxPtolitter = 0.0
   ! Added root exudate flux -mdh 1/13/2020
-  casaflux%Cexudate = 0.0
+! WW commented out for exudates updates
+!  casaflux%Cexudate = 0.0
   casaflux%Nexudate = 0.0
   casaflux%Pexudate = 0.0
 
@@ -328,9 +329,10 @@ SUBROUTINE mimics_delplant(veg,casabiome,casapool,casaflux,casamet,            &
                                      - casaflux%kplant(npt,:) * casapool%cplant(npt,:)
 
           ! Compute root exudate C flux as a fraction of froot NPP. -mdh 1/13/2020
-          casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) &
-                                   * casaflux%fracCalloc(npt,froot))  
-          casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt) 
+! WW commented out for exudates updates
+!          casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) &
+!                                   * casaflux%fracCalloc(npt,froot))  
+!          casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt) 
    
           ! Calculate fraction C to labile pool as a fraction of GPP, not NPP
           casapool%dClabiledt(npt) = casaflux%Cgpp(npt) * casaflux%fracClabile(npt) - casaflux%clabloss(npt)
@@ -477,7 +479,8 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
   casaflux%FluxNtolitter = 0.0
   casaflux%FluxPtolitter = 0.0
   ! Added root exudate flux -mdh 1/13/2020
-  casaflux%Cexudate = 0.0
+! WW commented out for exudates updates
+!  casaflux%Cexudate = 0.0
   casaflux%Nexudate = 0.0
   casaflux%Pexudate = 0.0
 
@@ -513,9 +516,10 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
                                      - casaflux%kplant(npt,:) * casapool%cplant(npt,:)
 
           ! Compute root exudate C flux as a fraction of froot NPP. -mdh 1/13/2020
-          casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) &
-                                   * casaflux%fracCalloc(npt,froot))  
-          casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt) 
+! WW commented out for exudates updates
+!          casaflux%Cexudate(npt) = max(0.0, casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Cnpp(npt) &
+!                                   * casaflux%fracCalloc(npt,froot))  
+!          casapool%dCplantdt(npt,froot) = casapool%dCplantdt(npt,froot) - casaflux%Cexudate(npt) 
    
           ! Calculate fraction C to labile pool as a fraction of GPP, not NPP
           casapool%dClabiledt(npt) = casaflux%Cgpp(npt) * casaflux%fracClabile(npt) - casaflux%clabloss(npt)
@@ -545,11 +549,12 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
                                               * casabiome%ftransNPtoL(veg%iveg(npt),froot)
 
              ! Compute root exudate N flux as a fraction of froot N uptake. -mdh 1/13/2020
-             if (casaflux%Cexudate(npt) > 0.0) then
-               casaflux%Nexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Nminuptake(npt) &
-                                        * casaflux%fracNalloc(npt,froot))
-               casapool%dNplantdt(npt,froot) = casapool%dNplantdt(npt,froot) - casaflux%Nexudate(npt)
-             endif
+! WW commented out for exudates updates
+!             if (casaflux%Cexudate(npt) > 0.0) then
+!               casaflux%Nexudate(npt) = max(0.0,casabiome%fracRootExud(veg%iveg(npt)) * casaflux%Nminuptake(npt) &
+!                                        * casaflux%fracNalloc(npt,froot))
+!               casapool%dNplantdt(npt,froot) = casapool%dNplantdt(npt,froot) - casaflux%Nexudate(npt)
+!             endif
 
              ! added by ypwang 5/nov/2012
       
@@ -596,8 +601,7 @@ SUBROUTINE mimics_delplant_CN(veg,casabiome,casapool,casaflux,casamet,          
           
           ! ATTENTION: Is nwd2str calculation correct? -mdh 6/23/2019
           if (icycle > 1) then 
-              nwd2str(npt) = (1.0-casaflux%fromLtoCO2(npt,cwd)) &
-                             * casaflux%klitter(npt,cwd) * casapool%nlitter(npt,cwd)
+              nwd2str(npt) = casaflux%klitter(npt,cwd) * casapool%nlitter(npt,cwd)
           endif
 
           ! Calculate change in CWD pool.  CWD pool is updated in mimics_ccycle (-mdh 5/4/2015)

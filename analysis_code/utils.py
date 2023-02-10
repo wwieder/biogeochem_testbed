@@ -37,7 +37,11 @@ def sum_pools_combined(ds_in, mod='MIM', CN='True'):
 
         # CWD fluxes for MIMICS are in cresp, soilC fluxes in cHresp?
         ds_in['cresp'] = ds_in['cHresp'] #+ ds_in['cresp'] 
-        
+
+        ds_in['overRESP'] = ds_in['cOverflow_r'] + ds_in['cOverflow_k']
+        ds_in['overRESP'].attrs['long_name'] = 'overflow respiration'
+        ds_in['overRESP'].attrs['units'] = ds_in['cOverflow_r'].attrs['units'] 
+    
     # CASA specific pools
     if mod == 'cas':
         ds_in['cTOT'] = ds_in['clitmetb']+ds_in['clitstr']+ds_in['csoilmic']+ \
