@@ -1,0 +1,44 @@
+; ---- CASA ---------
+ncrcat casaclm_pool_flux_2* casaclm_pool_flux_2000_cat.nc &
+ncrcat casaclm_pool_flux_190* casaclm_pool_flux_1910* casaclm_pool_flux_1900_cat.nc &
+ncra casaclm_pool_flux_1900_cat.nc casaclm_pool_flux_1900_mean.nc &
+ncra casaclm_pool_flux_2000_cat.nc casaclm_pool_flux_2000_mean.nc
+ncdiff casaclm_pool_flux_2000_mean.nc casaclm_pool_flux_1900_mean.nc casaclm_pool_diff_mean.nc
+
+; ---- MIMICS ---- 
+ncrcat mimics_pool_flux_2* mimics_pool_flux_2000_cat.nc &
+ncrcat mimics_pool_flux_190* mimics_pool_flux_1910* mimics_pool_flux_1900_cat.nc &
+ncra mimics_pool_flux_1900_cat.nc mimics_pool_flux_1900_mean.nc &
+ncra mimics_pool_flux_2000_cat.nc mimics_pool_flux_2000_mean.nc
+ncdiff mimics_pool_flux_2000_mean.nc mimics_pool_flux_1900_mean.nc mimics_pool_diff_mean.nc
+
+; ---- CORPSE ----
+ncrcat corpse_pool_flux_2* corpse_pool_flux_2000_cat.nc &
+ncrcat corpse_pool_flux_190* corpse_pool_flux_1910* corpse_pool_flux_1900_cat.nc
+ncra corpse_pool_flux_1900_cat.nc corpse_pool_flux_1900_mean.nc &
+ncra corpse_pool_flux_2000_cat.nc corpse_pool_flux_2000_mean.nc
+ncdiff corpse_pool_flux_2000_mean.nc corpse_pool_flux_1900_mean.nc corpse_pool_diff_mean.nc
+
+
+; for NEE fluxes
+ncrcat -v cresp,cnpp casaclm_pool_flux_190?_daily.nc casaclm_pool_flux_1910_daily.nc nee_1900.nc
+ncrcat -v cresp,cnpp casaclm_pool_flux_2???_daily.nc nee_2000.nc
+ncap2 -A -s 'cas_nee=cresp-cnpp' nee_1900.nc nee_1900.nc
+ncap2 -A -s 'cas_nee=cresp-cnpp' nee_2000.nc nee_2000.nc
+
+; copy flux file from casa to mimics directory, then...
+ncrcat -A -v cHresp mimics_pool_flux_190?_daily.nc mimics_pool_flux_1910_daily.nc nee_1900.nc
+ncrcat -A -v cHresp mimics_pool_flux_2???_daily.nc nee_2000.nc
+ncap2 -A -s 'mim_nee=cHresp-cnpp' nee_1900.nc
+ncap2 -A -s 'mim_nee=cHresp-cnpp' nee_2000.nc
+
+ncrcat -v LitterLayer_CO2,Soil_CO2 corpse_pool_flux_190?_daily.nc corpse_pool_flux_1910_daily.nc temp_1900.nc
+ncap -s 'Soil_CO2=float(Soil_CO2);LitterLayer_CO2=float(LitterLayer_CO2);lat=float(lat);lon=float(lon);time=float(time)' temp_1900.nc temp2_1900.nc
+ncks -A temp2_1900.nc nee_1900.nc  
+ncap2 -A -s 'cor_nee=LitterLayer_CO2+Soil_CO2-cnpp' nee_1900.nc
+
+
+ncap2 -A -s 'cor_nee=LitterLayer_CO2+Soil_CO2-cnpp' nee_2000.nc
+
+
+
