@@ -1,0 +1,95 @@
+4263       !! mp, number of points to simulate (formerly 3864)
+18         !! mvt, number of vegetation types, =13 for CASA, =18 for IGBP+tundra
+499        !! mloop, number of times to cycle through met file
+0          !! mdaily, =1 output daily and annual fluxes, =0 output annual fluxes only
+3          !! initcasa, =0 spin; =1 read restart file; =2 transient (mloop=1); 3= repeated transient (mloop>1)
+1901 1920  !! Transient years, contents of this line are ignored if initcasa < 2
+2          !! isomModel, SOM model: 1=CASACNP, 2=MIMICS, 3=CORPSE
+2          !! icycle, =1 for C only, =2 for C+N; =3 for C+N+P
+../gridinfo_igbpz_CLM5_GSWP3.csv                        !!  9) Input file with grid info
+../pftlookup_igbp_updated4_exud0.csv                          !! 10) Input file with CASA PFT parameters
+../modis_phenology_wtundra.txt                          !! 11) Input file with CASA phenonlogy
+../gridinfo_soil_CLM5_GSWP3.csv                         !! 12) Input file with soil properties for each grid cell
+../INPUT_GSWP3_CLM5dev110_hist/met_1901_1901.nc         !! 13) Input File for met data, for transient one file per yea
+./cnppool_end_spin_1901-1920_x500.csv                   !! 14) CASA initial conditions (initcasa > 0 only)
+./cnppool_end_spin_1901-1920_x500b.csv                  !! 15) CASA end-of-simulation output file (pools)
+./cnpflux_end_spin_1901-1920_x500b.csv                  !! 16) CASA end-of-simulation output file (fluxes)
+./OUTPUT_CN/SPIN2/casaclm_pool_flux_yyyy.nc             !! 17) CASA annual/daily netcdf output file
+./pftlookup_LIDET-MIM-REV_CN_desorb2xKO4_micCN_FI30.csv !! 18) MIMICS input parameter file 
+./mimicspool_end_spin_1901-1920_x500.csv                !! 19) MIMICS initial conditions (initcasa > 0 only)
+./mimicspool_end_spin_1901-1920_x500b.csv               !! 20) MIMICS end-of-simulation output file (pools)
+./OUTPUT_CN/SPIN2/mimics_pool_flux_yyyy.nc              !! 21) MIMICS annual/daily netcdf output file
+./corpsepool_init_litopt_1.csv                          !! 22) CORPSE initial conditions (initcasa > 0 only)
+./corpsepool_end_spin_1901-1920_x500.csv                !! 23) CORPSE end-of-simulation output file (pools)
+./corpse_params_12.18d.2017.nml                         !! 24) CORPSE input parameter file 
+./OUTPUT_CN/SPIN/corpse_pool_flux_yyyy.nc               !! 25) CORPSE annual/daily netcdf output file
+../co2delta_control.txt                                 !! 26) Input file for perturbations (Tair, Tsoil, NPP)
+-1       !! Save daily output for this point. Set to -1 if no daily point file is to be generated.
+./OUTPUT_CN/SPIN2/                                              !! 28) Location to write point files (if applicable)
+10                                                              !! 29) netCDF output interval (years)
+
+
+
+
+!---------------------------------------------------------------------------------------------------------
+!NOTES: text below line 27 is not read by casaclm_mimics_corpse
+!Any text following a ' ' or '!' on Lines 9-27 is considered a comment and is not part of the filename
+Line  9: Input File. Location of gridinfo file that assigns PFT and area to
+         each grid cell. Includes annual N fixation. N deposition amount in this file is ignored 
+         (N deposition is read from met.nc files now).
+         Internally named filename_cnppoint.
+Line 10: Input File. Contains CASACNP parameters for each PFT.
+         Internally named filename_cnpbiome.
+Line 11: Input File. Describes phenological stages for each grid cell.    
+         Internally named filename_phen. 
+Line 12: Input File. Contains soil properties for each grid cell.
+         Internally named filename_soilprop.
+Line 13: Input File. The name of the met file that drives CASACNP.
+         For transient runs (initcasa=2 or 3), the year in the filename is  
+         replaced by the transient year so N deposition can change over time.
+         Internally named filename_cnpmet.
+Line 14: Input (startup) file.  Contains initial values for the CASACNP pools 
+         when initcasa > 0.  
+         Internally named filename_cnpipool.
+Line 15: Output file.  End-of-simulation pool values for CASACNP.
+         Can be used to initialize subsequent runs.
+         Internally named filename_cnpepool.
+Line 16: Output file. Average annual CASACNP fluxes during the last "myear" 
+         years of the simulation, where myear is the number of years in the 
+         met.nc file. Can be used to initialize subsequent runs.
+         Internally named filename_cnpflux.
+Line 17: Output file. NetCDF file that contains the average daily CASACNP pools
+         during the last "myear" years plus average annual CASACNP fluxes during
+         the last "myear" years of the simulation, where myear is the number of
+         years in the met.nc file. Each year of the transient run will have an 
+         output file with 1901 replaced by the transient year, 1901 ... 2100 in  
+         this case. Note: for transient simulations, myear = 1. 
+         Internally named filename_ncOut.
+Line 18: Input File. Contains MIMICS parameters, some are PFT-specific.
+         Internally named filename_mimicsbiome.
+Line 19: Input (startup) file.  Initial values for MIMICS pools when initcasa > 0.
+         Internally named filename_mimicsipool.
+Line 20: Output file. End-of-simulation pool values for MIMICS.
+         Can be used to initialize subsequent runs.
+         Internally named filename_mimicsepool.
+Line 21: Output file. NetCDF file that contains the average daily MIMICS pools
+         during the last "myear" years plus average annual MIMICS fluxes during
+         the last "myear" years of the simulation, where myear is the number of
+         years in the met.nc file. Each year of the transient run will have an 
+         output file with 1901 replaced by the transient year, 1901 ... 2100 in  
+         this case. Note: for transient simulations, myear = 1.
+         Internally named filename_ncOut_mimics.
+Line 22: Input File. Initial CORPSE pool values. Contains initial values for the CORPSE pools 
+         when initcasa > 0. When initcasa=0 use initial_C values (LABILE,RECALCITRANT,PROTECTED) 
+         in corpse_param.nml (filename_corpsenamelist) file.  
+         Internally named filename_corpseipool. 
+Line 23: Output file.  End-of-simulation pool values for CASACNP.
+         Internally named filename_corpseepool. 
+Line 24: Input file. Namelist parameters for CORPSE.
+         Internally named filename_corpsenamelist.
+Line 25: Output file. NetCDF file that contains end-of-simulation CORPSE pools and fluxes.
+         Internally named filename_ncOut_corpse. 
+Line 26: Input file. Controls changes in air/soil temperature and NPP during the simulation (formerly co2delta.tx)
+Line 27: Save daily output for this point. Set to -1 if no daily point file is to be generated.
+         TEST_daily_casa_pt.csv and (TEST_daily_mimics_pt.csv or TEST_daily_corpse_pt.csv)
+Line 28: Directory for point file.
