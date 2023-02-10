@@ -5,6 +5,7 @@
 # gcc version 8.1.0 (GCC)
 
 # For profiling (use -pg instead of -g):
+#PROG = ./casaclm_mimics_corpse_test
 #PROG = ./casaclm_mimics-cn_corpse.p
 PROG = ./casaclm_mimics-cn_corpse
 
