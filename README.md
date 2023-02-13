@@ -1,18 +1,18 @@
-# biogeochem_testbed
-Soil biogeochemical testbed 
+# Soil biogeochemical testbed 
+[![DOI](https://zenodo.org/badge/101092322.svg)](https://zenodo.org/badge/latestdoi/101092322)
 
-Code Repository
+_Code Repository_
 
 Created by Will Wieder, Melannie Hartman, Ben Sulman, Emily Kyker-Snowman, Brooke Eastman: 
 
 Updated 
-Aug. 29, 2018
 Feb 10, 2023
+Aug. 29, 2018
 
-User’s manual and technical documentation for the biogeochemical testbed accepted in Global Change Biology, Oct 2017.
+User’s manual and technical documentation for the biogeochemical testbed in published in:
+- Wieder et al. Global Change Biology, 2018. 
+- Wieder et al. Geophysical Reserach Letters, 2019
 The biogeochemical testbed code base used in these simulations is included (commit 26b4630).
-
-Updates to the code base address issues documented here and include modifications to CORPSE parameterization and the addition of a soil moisture scalar to MIMICS. Updates to the Example_Grid also simulate RCP4.5 and 8.5 through 2100 for each model.
 
 Feb 2023 updates include: 
 - Representation of coupled C-N biogeochemistry for MIMICS, 
@@ -20,7 +20,9 @@ Feb 2023 updates include: 
 - Switch to using input data from CLM5-SP with GSWP3 forcing
 - This code base was used in single point simulations at the Fernow Experimental Forest by Eastman et al (2023) and global simulations by Wieder et al. (2023).
 
-[![DOI](https://zenodo.org/badge/101092322.svg)](https://zenodo.org/badge/latestdoi/101092322)
+Aug 2018 updates include: 
+- Updates to the code base address issues documented here and include modifications to CORPSE parameterization and the addition of a soil moisture scalar to MIMICS. Updates to the Example_Grid also simulate RCP4.5 and 8.5 through 2100 for each model.
+
 
 # Licence
 
