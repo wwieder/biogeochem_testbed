@@ -1,4 +1,4 @@
-# Soil biogeochemical testbed 
+# Soil biogeochemical testbed
 [![DOI](https://zenodo.org/badge/101092322.svg)](https://zenodo.org/badge/latestdoi/101092322)
 
 _Code Repository_
@@ -9,10 +9,12 @@ Updated
 Feb 10, 2023
 Aug. 29, 2018
 
-User’s manual and technical documentation for the biogeochemical testbed in published in:
+#### User’s manual and technical documentation for the biogeochemical testbed in published in:
 - Wieder et al. Global Change Biology, 2018. 
 - Wieder et al. Geophysical Reserach Letters, 2019
-The biogeochemical testbed code base used in these simulations is included (commit 26b4630).
+  _The biogeochemical testbed code base used in these simulations is included (commit 26b4630)._
+- Eastman et al. Biogeoscciences 2023
+- Wieder et al. JAMES, Submitted 2023
 
 Feb 2023 updates include: 
 - Representation of coupled C-N biogeochemistry for MIMICS, 
@@ -28,7 +30,7 @@ Aug 2018 updates include:
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Will Wieder, Melannie Hartman, & Ben Sulman:
+Copyright (c) 2017 Will Wieder, Melannie Hartman, Ben Sulman, & Ying-Ping Wang:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
