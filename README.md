@@ -3,7 +3,7 @@
 
 _Code Repository_
 
-Created by Will Wieder, Melannie Hartman, Ben Sulman, Emily Kyker-Snowman, Brooke Eastman: 
+Created by Will Wieder, Melannie Hartman, Ben Sulman, Emily Kyker-Snowman, Brooke Eastman, & Ying-Ping Wang: 
 
 Updated 
 Feb 10, 2023
