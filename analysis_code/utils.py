@@ -261,7 +261,7 @@ panel = ['(a)','(b)','(c)','(d)','(e)','(f)','(g)','(h)','(i)','(j)','(k)','(l)'
 
 ################### Function to truncate color map ###################
 def truncate_colormap(cmapIn='jet', minval=0.0, maxval=1.0, n=100):
-    cmapIn = plt.get_cmap(cmapIn)
+    cmapIn = plt.get_cmap(cmapIn,n)
 
     new_cmap = colors.LinearSegmentedColormap.from_list(
         'trunc({n},{a:.2f},{b:.2f})'.format(n=cmapIn.name, a=minval, b=maxval),
